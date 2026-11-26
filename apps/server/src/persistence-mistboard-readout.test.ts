@@ -465,6 +465,85 @@ definePersistenceTests('Mistboard readout', () => {
     ]);
   });
 
+  test('the KataGo jungle figures read the katago block on its decisions, failures on any clock', async () => {
+    const at = '2026-11-10T12:00:00Z';
+    const katagoSeat = {
+      color: 'black' as const,
+      subjectType: 'bot' as const,
+      subjectId: 'katago',
+    };
+    const move = (wait: number | null, extra: Record<string, unknown> = {}) => ({
+      engine_id: 'katago-jungle',
+      think_time_ms: 900,
+      failed_closed: false,
+      katago: {
+        queue_wait_ms: wait,
+        start_ms: 0,
+        search_ms: 700,
+        process: 'warm',
+        restart: false,
+        retried: false,
+        queue_timeouts: 0,
+        engine_failures: 0,
+        ...extra,
+      },
+    });
+    const jungle = (roomId: string, extra: Partial<Parameters<typeof insertGame>[0]> = {}) =>
+      insertGame({
+        roomId,
+        variant: 'jungle',
+        mode: 'pve',
+        endedAt: at,
+        participants: [human, katagoSeat],
+        ...extra,
+      });
+    // Waits 10, 20, ..., 200 ms and four over 300 ms: 24 moves, p95 is 500.
+    await jungle('kg-busy');
+    for (let i = 1; i <= 20; i++) await decision('kg-busy', i, move(i * 10));
+    await decision('kg-busy', 21, move(320, { process: 'cold', start_ms: 1_650, restart: true }));
+    await decision('kg-busy', 22, move(400, { retried: true, engine_failures: 1 }));
+    await decision('kg-busy', 23, move(500));
+    await decision('kg-busy', 24, move(900));
+    // Planted failures: a queue timeout that still got a move, then an engine
+    // resignation (failed closed), on a correspondence clock; and a loss on time.
+    await jungle('kg-queue');
+    await event('kg-queue', 0, 'room-created', { timeControl: { daysPerMove: 3 } });
+    await decision('kg-queue', 1, move(5_000, { retried: true, queue_timeouts: 1 }));
+    await jungle('kg-resign', { result: 'red-wins', termination: 'resignation' });
+    await decision('kg-resign', 1, {
+      ...move(null, { retried: true, queue_timeouts: 2 }),
+      failed_closed: true,
+    });
+    await jungle('kg-flag', { result: 'red-wins', termination: 'timeout' });
+    await event('kg-flag', 1, 'clock-expired', { color: 'black' });
+    // Not counted: a MistyJungle game, bot-vs-bot, and Flip Jungle.
+    await jungle('kg-misty', { participants: [human, bot] });
+    await decision('kg-misty', 1, { engine_id: 'misty-jungle', think_time_ms: 100 });
+    await jungle('kg-eve', {
+      mode: 'eve',
+      participants: [{ ...katagoSeat, color: 'red' }, katagoSeat],
+    });
+    await decision('kg-eve', 1, move(9_000, { queue_timeouts: 1 }));
+    await jungle('kg-flip', { variant: 'jungle-flip' });
+    await decision('kg-flip', 1, move(9_000));
+
+    const timing = await collectBotTiming(getPool(), botNow);
+    assert.deepEqual(timing.katagoJungle, {
+      // kg-busy's 24; kg-queue is correspondence, kg-resign has no wait.
+      moves: 24,
+      slowWaitMoves: 4,
+      p95QueueWaitMs: 500,
+      maxQueueWaitMs: 900,
+      coldStarts: 1,
+      restarts: 1,
+      retriedMoves: 1,
+      // Same end time: newest-first by room id, listed oldest first.
+      queueTimeoutRoomIds: ['kg-queue', 'kg-resign'],
+      engineResignRoomIds: ['kg-resign'],
+      timeLossRoomIds: ['kg-flag'],
+    });
+  });
+
   test('a bot loss on time alerts once across stored readouts, survives a failed collector, and old snapshots', async (t) => {
     await seedBotTiming();
     const first = await botReport();

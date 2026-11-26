@@ -214,6 +214,34 @@ test('a request past its deadline kills the process; the next queued one gets a 
   assert.equal(s.stats().kills, 1);
 });
 
+test('each request says where its wait went: behind another move, or starting the process', async (t) => {
+  const engine = fakeEngine({ FAKE_GTP_GENMOVE_MS: '150' });
+  const s = session(t, { spawner: engine.spawner });
+  const first = s.request(() => ({ commands: ['genmove b'], deadlineMs: 5_000 }));
+  const second = s.request(() => ({ commands: ['echo 2'], deadlineMs: 5_000 }));
+  const [a, b] = await Promise.all([first, second]);
+  // The first paid the start and queued behind nothing.
+  assert.ok(a.queuedMs < 50, `first queued ${a.queuedMs} ms`);
+  assert.ok(a.startMs > 0);
+  assert.equal(a.startMs + a.queuedMs, a.waitedMs);
+  assert.equal(a.restart, false, 'a first start is not a restart');
+  // The second waited out the first's 150 ms search, on the loaded process.
+  assert.ok(b.queuedMs >= 120, `second queued ${b.queuedMs} ms`);
+  assert.equal(b.startMs, 0);
+  assert.equal(b.warm, true);
+});
+
+test('a start that replaces a killed process is a restart; the one after is not', async (t) => {
+  const engine = fakeEngine();
+  const s = session(t, { spawner: engine.spawner });
+  await assert.rejects(s.request(() => ({ commands: ['hang'], deadlineMs: 150 })));
+  const after = await s.request(() => ({ commands: ['echo after'], deadlineMs: 5_000 }));
+  assert.equal(after.warm, false);
+  assert.equal(after.restart, true);
+  const next = await s.request(() => ({ commands: ['echo next'], deadlineMs: 5_000 }));
+  assert.equal(next.restart, false);
+});
+
 test('a process that dies mid-request is replaced for the request behind it', async (t) => {
   const engine = fakeEngine();
   const s = session(t, { spawner: engine.spawner });

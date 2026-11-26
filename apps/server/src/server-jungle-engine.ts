@@ -29,6 +29,7 @@ import {
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
   buildEngineDecisionRecord,
+  type EngineMoveAttempt,
   reportEngineFallback,
   reportEngineMoveOk,
   resolveValidatedEngineMove,
@@ -57,6 +58,7 @@ import {
   katagoJungleLiveEngineMove,
   katagoJungleTierFor,
 } from './jungle-katago-engine.js';
+import { katagoDecisionRecord } from './jungle-katago-monitor.js';
 import { logger } from './obs.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
@@ -299,6 +301,7 @@ export async function playJungleEngineMoveIfReady(
     // runs on the shared warm process and sizes its stages to the budget. A move
     // that cannot answer retries once, then the seat resigns (engine-move-guard).
     let process: KatagoJungleEval['process'];
+    let timing: KatagoJungleEval['katago'];
     await playJungleSearchedEngineMove(
       ctx,
       room,
@@ -315,12 +318,18 @@ export async function playJungleEngineMoveIfReady(
         tier: { nodes: katagoTier.visits, movetimeMs: katagoTier.movetimeCapMs },
         // Whether the move found the process loaded or had to start it.
         mode: () => process,
+        // Queue wait, start, search time and failures, for the readout's
+        // shared-process rule (jungle-katago-monitor.ts).
+        record: (attempts) => ({ katago: katagoDecisionRecord(timing, process, attempts) }),
         search: async (fen, movetimeCapMs) => {
+          process = undefined;
+          timing = undefined;
           const result = await katagoProvider(fen, seat, {
             visits: katagoTier.visits,
             movetimeCapMs,
           });
           process = result.process;
+          timing = result.katago;
           return result;
         },
       },
@@ -486,6 +495,9 @@ type JungleSearchedEngine = {
   tier: { nodes: number; movetimeMs: number };
   /** KataGo: 'warm' or 'cold', whether the move reused the shared process. */
   mode?: () => string | undefined;
+  /** Extra fields for the decision artifact, read once the attempts are done.
+   *  An engine with one also records a failed-closed move. */
+  record?: (attempts: readonly EngineMoveAttempt[]) => Record<string, unknown>;
   search(fen: string, movetimeCapMs: number): Promise<UciEval>;
 };
 
@@ -593,6 +605,32 @@ async function playJungleSearchedEngineMove(
       attempts,
     });
     reportEngineFallback(record, 'jungle_engine_failed_closed', 'Jungle');
+    if (engine.record) {
+      // Durable, so the readout can count resignations the engine caused. Queued
+      // before the resignation, whose append ends the game and flushes the queue.
+      queueEngineDecision(room, {
+        ...buildLiveEngineDecisionPayload({
+          variant: 'jungle',
+          roomId: room.id,
+          engineId,
+          engineVersion: engine.engineVersion,
+          seat,
+          ply: state.moveNumber,
+          budgetMs: movetimeCapMs,
+          remainingMs,
+          incrementMs,
+          tier: engine.tier,
+          search: lastSearch,
+          thinkTimeMs: Date.now() - startedAt,
+          attempts,
+          move: null,
+          fen,
+          legalCount: getJungleLegalMoves(state).length,
+        }),
+        ...(engine.mode?.() ? { mode: engine.mode() } : {}),
+        ...engine.record(attempts),
+      });
+    }
     const resign: TenantRoomEvent<JungleColor, JungleMove, typeof JUNGLE_SPEC_ID> = {
       type: 'seat-resigned',
       at: Date.now(),
@@ -645,6 +683,7 @@ async function playJungleSearchedEngineMove(
       legalCount: getJungleLegalMoves(state).length,
     }),
     ...(engine.mode?.() ? { mode: engine.mode() } : {}),
+    ...(engine.record ? engine.record(attempts) : {}),
     ...replyPacePayload(pace),
   });
   const seq = await ctx.appendEvent(room, event);

@@ -60,6 +60,16 @@ const realTimers: KatagoSessionTimers = {
 /** What a request learns when its turn comes: whether the process was already
  *  loaded, and how long it waited (queue plus any process start). */
 export type KatagoRequestStart = { warm: boolean; waitedMs: number };
+/** Where a request's wait went, for the per-move decision record. */
+export type KatagoRequestTiming = {
+  /** Behind other requests, before this one reached the process. */
+  queuedMs: number;
+  /** Spawn and net load this request paid; 0 on a loaded process. */
+  startMs: number;
+  /** This request's process start replaced one killed by a failure (a
+   *  timeout, a garbled reply or a crash), not an idle close or a first boot. */
+  restart: boolean;
+};
 /** The commands to send and how long the process may take to answer them all. */
 export type KatagoRequestPlan = { commands: readonly string[]; deadlineMs: number };
 export type KatagoRequestResult = {
@@ -69,7 +79,7 @@ export type KatagoRequestResult = {
   waitedMs: number;
   /** Enqueue to last reply. */
   totalMs: number;
-};
+} & KatagoRequestTiming;
 
 export type KatagoJungleSessionOptions = {
   spawner: KatagoGtpSpawner;
@@ -125,6 +135,8 @@ export class KatagoJungleSession {
   private spawns = 0;
   private requests = 0;
   private kills = 0;
+  /** The last process was killed by a failure; the next start is a restart. */
+  private failedSinceStart = false;
 
   constructor(private readonly options: KatagoJungleSessionOptions) {
     this.timers = options.timers ?? realTimers;
@@ -213,13 +225,27 @@ export class KatagoJungleSession {
   private async run(entry: Entry): Promise<void> {
     try {
       const warm = this.proc !== null;
-      if (!warm) await this.start();
+      const queuedMs = this.timers.now() - entry.enqueuedAt;
+      const restart = !warm && this.failedSinceStart;
+      if (!warm) {
+        await this.start();
+        this.failedSinceStart = false;
+      }
       const waitedMs = this.timers.now() - entry.enqueuedAt;
+      const startMs = waitedMs - queuedMs;
       const plan = entry.plan({ warm, waitedMs });
       const replies =
         plan.commands.length > 0 ? await this.send(plan.commands, plan.deadlineMs) : [];
       this.requests += 1;
-      entry.resolve({ replies, warm, waitedMs, totalMs: this.timers.now() - entry.enqueuedAt });
+      entry.resolve({
+        replies,
+        warm,
+        waitedMs,
+        totalMs: this.timers.now() - entry.enqueuedAt,
+        queuedMs,
+        startMs,
+        restart,
+      });
     } catch (err) {
       entry.reject(err instanceof Error ? err : new Error(String(err)));
     }
@@ -233,7 +259,7 @@ export class KatagoJungleSession {
         if (proc && this.proc === proc) this.onData(chunk);
       },
       onExit: (reason) => {
-        if (proc && this.proc === proc) this.drop(`exited (${reason})`);
+        if (proc && this.proc === proc) this.drop(`exited (${reason})`, true);
       },
     });
     if (this.closed) {
@@ -258,7 +284,7 @@ export class KatagoJungleSession {
           timeoutMs,
           replies: this.waiter?.replies.length ?? 0,
         });
-        this.drop(`timed out after ${timeoutMs} ms`);
+        this.drop(`timed out after ${timeoutMs} ms`, true);
       }, timeoutMs);
       this.waiter = {
         expected: commands.length,
@@ -291,7 +317,10 @@ export class KatagoJungleSession {
       const status = block[0];
       if (!waiter || (status !== '=' && status !== '?')) {
         this.kills += 1;
-        this.drop(waiter ? `garbled reply ${JSON.stringify(block.slice(0, 40))}` : 'spoke unasked');
+        this.drop(
+          waiter ? `garbled reply ${JSON.stringify(block.slice(0, 40))}` : 'spoke unasked',
+          true,
+        );
         return;
       }
       waiter.replies.push(block.trim());
@@ -302,9 +331,11 @@ export class KatagoJungleSession {
     }
   }
 
-  /** Kill the current process (if any) and reject the exchange in flight. */
-  private drop(reason: string): void {
+  /** Kill the current process (if any) and reject the exchange in flight.
+   *  `failure` marks a kill the next start restarts from (not idle or evict). */
+  private drop(reason: string, failure = false): void {
     const proc = this.proc;
+    if (failure) this.failedSinceStart = true;
     this.proc = null;
     this.buffer = '';
     this.cancelIdle();

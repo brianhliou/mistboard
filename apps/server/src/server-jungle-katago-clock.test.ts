@@ -290,3 +290,95 @@ test('a KataGo that cannot answer in time resigns the seat, never a MistyJungle 
     ['seat-resigned'],
   );
 });
+
+// What the readout's shared-process rule reads back (jungle-katago-monitor.ts):
+// every KataGo move, played or resigned, leaves a `katago` block on its decision.
+type Decision = { payload: Record<string, unknown> };
+const decisions = (room: unknown) =>
+  (room as { pendingDebugArtifacts?: Decision[] }).pendingDebugArtifacts ?? [];
+
+test('a played move records its queue wait, start, search time and process', async () => {
+  const room = liveRoom(createInitialJungleState(ROOM_ID), tcById('1m1'), 60_000);
+  const { ctx, appended } = recordingCtx();
+  const best = jungleMoveToEngineUci(getJungleLegalMoves(createInitialJungleState(ROOM_ID))[0]!);
+  const katago: KatagoJungleMoveProvider = async () => ({
+    best,
+    cp: null,
+    mate: null,
+    depth: 0,
+    timeMs: 0,
+    process: 'cold',
+    katago: { queuedMs: 420, startMs: 1_650, searchMs: 700, restart: true },
+  });
+  await withEnv(ENV, () =>
+    playJungleEngineMoveIfReady(ctx as never, room as never, forbiddenMisty().provider, katago),
+  );
+  assert.equal(appended[0]?.type, 'move-played');
+  assert.deepEqual(decisions(room)[0]?.payload.katago, {
+    queue_wait_ms: 420,
+    start_ms: 1_650,
+    search_ms: 700,
+    process: 'cold',
+    restart: true,
+    retried: false,
+    queue_timeouts: 0,
+    engine_failures: 0,
+  });
+});
+
+test('a move that needed a second attempt records the retry and the failure', async () => {
+  const room = liveRoom(createInitialJungleState(ROOM_ID), tcById('1m1'), 60_000);
+  const { ctx, appended } = recordingCtx();
+  const best = jungleMoveToEngineUci(getJungleLegalMoves(createInitialJungleState(ROOM_ID))[0]!);
+  let asked = 0;
+  const katago: KatagoJungleMoveProvider = async () => {
+    asked += 1;
+    if (asked === 1) throw new Error('katago-jungle exited (code 3)');
+    return {
+      best,
+      cp: null,
+      mate: null,
+      depth: 0,
+      timeMs: 0,
+      process: 'cold',
+      katago: { queuedMs: 0, startMs: 1_650, searchMs: 650, restart: true },
+    };
+  };
+  await withEnv(ENV, () =>
+    playJungleEngineMoveIfReady(ctx as never, room as never, forbiddenMisty().provider, katago),
+  );
+  assert.equal(appended[0]?.type, 'move-played');
+  const record = decisions(room)[0]?.payload.katago as Record<string, unknown>;
+  assert.equal(record.retried, true);
+  assert.equal(record.engine_failures, 1);
+  assert.equal(record.queue_timeouts, 0);
+  assert.equal(record.restart, true);
+});
+
+test('a seat resigned on queue timeouts leaves a failed-closed decision that says so', async () => {
+  const room = liveRoom(createInitialJungleState(ROOM_ID), tcById('1m1'), 60_000);
+  const { ctx, appended } = recordingCtx();
+  const queued: KatagoJungleMoveProvider = async () => {
+    throw new Error('KataGo jungle queue timed out');
+  };
+  await withEnv(ENV, () =>
+    playJungleEngineMoveIfReady(ctx as never, room as never, forbiddenMisty().provider, queued),
+  );
+  assert.deepEqual(
+    appended.map((event) => event.type),
+    ['seat-resigned'],
+  );
+  const [decision] = decisions(room);
+  assert.equal(decision?.payload.failed_closed, true);
+  assert.equal(decision?.payload.engine_id, KATAGO_JUNGLE_ENGINE_ID);
+  assert.deepEqual(decision?.payload.katago, {
+    queue_wait_ms: null,
+    start_ms: null,
+    search_ms: null,
+    process: null,
+    restart: false,
+    retried: true,
+    queue_timeouts: 2,
+    engine_failures: 0,
+  });
+});

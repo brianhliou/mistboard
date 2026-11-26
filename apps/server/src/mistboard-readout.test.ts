@@ -9,11 +9,13 @@ import {
   type MistboardReadoutBotTimingVariant,
   type MistboardReadoutDeployDrain,
   type MistboardReadoutFacts,
+  type MistboardReadoutKatagoJungle,
   type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
   readoutPeriods,
   readoutSnapshotKey,
   renderBotTiming,
+  renderKatagoJungle,
   renderMistboardReadoutMarkdown,
   scheduledReadoutTrigger,
 } from './mistboard-readout.js';
@@ -1288,4 +1290,149 @@ test('bot timing enters the decision fingerprint', () => {
   const a = reportWith(botFacts(botVariant('xiangqi', [], { p95ReplyMs: 1_000 })));
   const b = reportWith(botFacts(botVariant('xiangqi', [], { p95ReplyMs: 9_000 })));
   assert.notEqual(a.decisionFingerprint, b.decisionFingerprint);
+});
+
+// The shared KataGo jungle process (jungle-katago-monitor.ts). Each planted week
+// below must trip its rule, and each quiet one must not.
+//
+// Blind spots, known and not tested here: the figures come from decision
+// artifacts, which are written at game end, so a game still running is not seen
+// and an aborted game is never seen; a game past 400 bot moves keeps only its
+// first 400 decisions; bot-vs-bot, imported and stats-excluded games load the
+// same process but are not counted, so traffic from them shows only as waits on
+// counted moves; a game whose start failed before the first decision is seen
+// only if it ended on time or with the KataGo bot seated; and a request with no
+// game behind it (the prewarm on room create) can take the restart mark from
+// the move after a crash.
+function katagoWeek(
+  overrides: Partial<MistboardReadoutKatagoJungle> = {},
+): MistboardReadoutKatagoJungle {
+  return {
+    moves: 200,
+    slowWaitMoves: 2,
+    p95QueueWaitMs: 120,
+    maxQueueWaitMs: 340,
+    coldStarts: 3,
+    restarts: 0,
+    retriedMoves: 0,
+    queueTimeoutRoomIds: [],
+    engineResignRoomIds: [],
+    timeLossRoomIds: [],
+    ...overrides,
+  };
+}
+
+function katagoFacts(
+  katago: MistboardReadoutKatagoJungle,
+  jungleTimeLosses: string[] = [],
+): MistboardReadoutFacts {
+  return {
+    ...emptyFacts,
+    botTiming: { variants: [botVariant('jungle', jungleTimeLosses)], katagoJungle: katago },
+  };
+}
+
+const katagoCodes = (report: ReturnType<typeof reportWith>) =>
+  report.actions.map((action) => action.code).filter((code) => code.startsWith('katago-jungle'));
+
+test('quiet KataGo traffic raises nothing', () => {
+  const quiet = reportWith(katagoFacts(katagoWeek()));
+  assert.deepEqual(katagoCodes(quiet), []);
+  assert.equal(quiet.verdict, 'healthy');
+  // At the thresholds, not past them: still quiet.
+  const edge = reportWith(katagoFacts(katagoWeek({ slowWaitMoves: 10, p95QueueWaitMs: 500 })));
+  assert.deepEqual(katagoCodes(edge), []);
+});
+
+test('planted: games overlapping on the shared process warn to add a second one', () => {
+  // 15% of moves waited over 0.3 s, and the 95th percentile is 0.9 s.
+  const busy = reportWith(katagoFacts(katagoWeek({ slowWaitMoves: 30, p95QueueWaitMs: 900 })));
+  assert.deepEqual(katagoCodes(busy), ['katago-jungle-queue-busy']);
+  const action = busy.actions.find((entry) => entry.code === 'katago-jungle-queue-busy')!;
+  assert.equal(action.severity, 'watch');
+  assert.match(
+    action.text,
+    /^Jungle KataGo bot: 15% of its 200 moves in the last 7 days waited more than 0\.3 s for another game's move to finish, and 1 move in 20 waited 0\.9 s or longer\./,
+  );
+  assert.match(action.text, /Add a second Jungle KataGo process/);
+  // Either condition alone trips it: a long tail with few slow moves...
+  const tail = reportWith(katagoFacts(katagoWeek({ slowWaitMoves: 4, p95QueueWaitMs: 650 })));
+  assert.deepEqual(katagoCodes(tail), ['katago-jungle-queue-busy']);
+  // ...or many slow moves under a p95 of 0.5 s.
+  const share = reportWith(katagoFacts(katagoWeek({ slowWaitMoves: 16, p95QueueWaitMs: 450 })));
+  assert.deepEqual(katagoCodes(share), ['katago-jungle-queue-busy']);
+  // Judged on level: a second busy day still warns, under the same alert key.
+  const again = reportWith(
+    katagoFacts(katagoWeek({ slowWaitMoves: 30, p95QueueWaitMs: 900 })),
+    busy,
+  );
+  assert.deepEqual(katagoCodes(again), ['katago-jungle-queue-busy']);
+  assert.equal(again.alertKey, busy.alertKey);
+});
+
+test('under 50 moves the rate rule stays silent, however slow', () => {
+  const thin = reportWith(
+    katagoFacts(katagoWeek({ moves: 49, slowWaitMoves: 30, p95QueueWaitMs: 4_000 })),
+  );
+  assert.deepEqual(katagoCodes(thin), []);
+});
+
+test('planted: one queue timeout alerts, at any traffic, once per game', () => {
+  const quiet = reportWith(katagoFacts(katagoWeek({ moves: 3 })));
+  const day1 = reportWith(
+    katagoFacts(katagoWeek({ moves: 3, queueTimeoutRoomIds: ['jgl_q1'] })),
+    quiet,
+  );
+  assert.equal(day1.verdict, 'action');
+  assert.deepEqual(katagoCodes(day1), ['katago-jungle-engine-failures']);
+  const action = day1.actions.find((entry) => entry.code === 'katago-jungle-engine-failures')!;
+  assert.equal(action.severity, 'action');
+  assert.match(
+    action.text,
+    /^Jungle KataGo bot, new since the last readout \(expected none\): 1 game where a move gave up waiting for the engine \(jgl_q1\)\./,
+  );
+  // Still in the window the next day: already told.
+  const day2 = reportWith(
+    katagoFacts(katagoWeek({ moves: 3, queueTimeoutRoomIds: ['jgl_q1'] })),
+    day1,
+  );
+  assert.deepEqual(katagoCodes(day2), []);
+  // A new game is a new alert key.
+  const day3 = reportWith(
+    katagoFacts(katagoWeek({ moves: 3, queueTimeoutRoomIds: ['jgl_q1', 'jgl_q2'] })),
+    day2,
+  );
+  assert.deepEqual(katagoCodes(day3), ['katago-jungle-engine-failures']);
+  assert.notEqual(day3.alertKey, day1.alertKey);
+});
+
+test('planted: an engine resignation or a loss on time by the KataGo bot alerts once', () => {
+  const resigned = reportWith(katagoFacts(katagoWeek({ engineResignRoomIds: ['jgl_r1'] })));
+  assert.deepEqual(katagoCodes(resigned), ['katago-jungle-engine-failures']);
+  assert.match(
+    resigned.actions[0]!.text,
+    /1 game the bot resigned because the engine gave no move/,
+  );
+
+  // The KataGo loss on time is told by its own rule, not twice.
+  const flagged = reportWith(
+    katagoFacts(katagoWeek({ timeLossRoomIds: ['jgl_t1'] }), ['jgl_t1', 'jgl_misty']),
+  );
+  assert.deepEqual(
+    flagged.actions.map((action) => action.code),
+    ['bot-time-losses', 'katago-jungle-engine-failures'],
+  );
+  assert.match(flagged.actions[0]!.text, /jgl_misty/);
+  assert.doesNotMatch(flagged.actions[0]!.text, /jgl_t1/);
+  assert.match(flagged.actions[1]!.text, /1 game lost on time \(jgl_t1\)/);
+});
+
+test('the KataGo line renders, and an older snapshot without it still renders', () => {
+  const line = renderKatagoJungle(katagoWeek({ slowWaitMoves: 30, p95QueueWaitMs: 900 }));
+  assert.match(line, /^- Jungle KataGo process, last 7 days: 200 moves, 30 waited over 0\.3 s/);
+  const report = reportWith(katagoFacts(katagoWeek()));
+  assert.match(renderMistboardReadoutMarkdown(report), /Jungle KataGo process, last 7 days/);
+  const legacy = reportWith(botFacts(botVariant('jungle', [])));
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(legacy), /Jungle KataGo/);
+  assert.deepEqual(katagoCodes(legacy), []);
 });

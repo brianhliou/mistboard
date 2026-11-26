@@ -259,6 +259,18 @@ export type KatagoJungleResult = {
   waitedMs: number;
   /** The raw GTP replies, kept for the artifact when something goes wrong. */
   replies: string[];
+} & KatagoMoveTiming;
+
+/** Where one move's wall time went, as the decision record stores it. */
+export type KatagoMoveTiming = {
+  /** Behind other games' moves on the shared process. */
+  queuedMs: number;
+  /** Spawn and net load paid by this move; 0 when warm. */
+  startMs: number;
+  /** The search itself: commands sent to last reply. */
+  searchMs: number;
+  /** The start replaced a process a failure had killed. */
+  restart: boolean;
 };
 
 // The queue waits out a cold start and two worst-case moves at the live 6 s
@@ -342,11 +354,18 @@ export async function katagoJungleMove(
     process: result.warm ? 'warm' : 'cold',
     waitedMs: result.waitedMs,
     replies: result.replies,
+    queuedMs: result.queuedMs,
+    startMs: result.startMs,
+    searchMs: Math.max(0, result.totalMs - result.waitedMs),
+    restart: result.restart,
   };
 }
 
 /** What the jungle seat and the EvE runner record for a KataGo move. */
-export type KatagoJungleEval = UciEval & { process?: 'warm' | 'cold' };
+export type KatagoJungleEval = UciEval & {
+  process?: 'warm' | 'cold';
+  katago?: KatagoMoveTiming;
+};
 
 /**
  * The same move in the shape the jungle seat and the EvE runner record for every
@@ -373,6 +392,12 @@ export async function katagoJungleLiveEngineMove(
     depth: 0,
     timeMs: result.elapsedMs,
     process: result.process,
+    katago: {
+      queuedMs: result.queuedMs,
+      startMs: result.startMs,
+      searchMs: result.searchMs,
+      restart: result.restart,
+    },
   };
 }
 
