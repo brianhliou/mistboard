@@ -69,6 +69,7 @@ function database(t: TestContext, visibility = 'public', attempts = [row(1500, 1
       sql.includes('FROM user_relations') ||
       sql.includes('FROM user_puzzle_ratings') ||
       sql.includes('FROM user_achievements') ||
+      sql.includes('FROM puzzle_storm_bests') ||
       (sql.includes('FROM puzzle_attempts') && sql.includes('AND solved'))
     ) {
       return { rows: [] };

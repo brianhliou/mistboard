@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type Article, type ArticleBlock, articles, findArticle } from './articles-data.js';
+import { BANQI_LUCK_GAME } from './articles/content/banqi-luck-game.js';
+import { type Article, type ArticleBlock, articles } from './articles-data.js';
 import { mountBanqiReplay } from './banqi-replay.js';
 import type { Locale } from './i18n/locale.js';
 import { mountJieqiReplay } from './jieqi-replay.js';
@@ -87,11 +88,9 @@ describe('board outer-outline policy', () => {
   });
 
   it('keeps the Reveal and Banqi replay widgets outline-free', () => {
-    // No article carries a Reveal replay block any more (the jieqi pages' sample
-    // games are study embeds), so the widget is mounted on the sample game it was
-    // built around; the Banqi replay is exercised on the one the skill-vs-luck post
-    // holds (the MistyBanqi post's games are study embeds now).
-    const flip = findArticle('skill-vs-luck');
+    // No article carries a Reveal or Banqi replay block any more (sample games
+    // are study or game embeds), so each widget is mounted on the game it was
+    // built around.
     const revealBlock = {
       spec: {
         red: JIEQI_SAMPLE_GAME.red,
@@ -102,13 +101,19 @@ describe('board outer-outline policy', () => {
         moves: JIEQI_SAMPLE_GAME.moves,
       },
     };
-    const flipBlock = flip && articleBlocks(flip).find((block) => block.kind === 'banqi-replay');
-    if (flipBlock?.kind !== 'banqi-replay') throw new Error('missing Banqi replay');
+    const flipSpec = {
+      red: 'Red',
+      black: 'Black',
+      event: 'Fixture',
+      resultText: 'Red wins',
+      deal: BANQI_LUCK_GAME.deal,
+      moves: BANQI_LUCK_GAME.moves,
+    };
 
     const revealHost = document.createElement('div');
     const flipHost = document.createElement('div');
     const revealController = mountJieqiReplay(revealHost, revealBlock.spec);
-    const flipController = mountBanqiReplay(flipHost, flipBlock.spec);
+    const flipController = mountBanqiReplay(flipHost, flipSpec);
 
     expectOutlineFree({ label: 'jieqi:replay', svg: revealHost.innerHTML });
     expectOutlineFree({ label: 'banqi:replay', svg: flipHost.innerHTML });

@@ -271,7 +271,8 @@ describe('country routing', () => {
 
   it('keeps the homepage free of video rows and blocked thumbnails', async () => {
     document.cookie = 'mb_cc=CN; Path=/';
-    const { renderLandingShellForPrerender } = await import('./landing.js');
+    const { loadLandingContent, renderLandingShellForPrerender } = await import('./landing.js');
+    await loadLandingContent();
     const html = renderLandingShellForPrerender();
     expect(html).not.toMatch(/videos-card|videos-grid|videos-ours|youtube\.com|youtu\.be/i);
     expect(html).toContain('landing-play');
