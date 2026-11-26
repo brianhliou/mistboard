@@ -5,6 +5,7 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   DEFAULT_DAYS_PER_MOVE,
   defaultEngineTimeControl,
+  FFQ_BANQI_SPEC_ID,
   type GameSpecId,
   isPublicGameSpec,
   RATED_TIME_CONTROLS,
@@ -14,7 +15,7 @@ import {
 } from '@mistboard/game';
 import { track } from './analytics.js';
 import { articleIsLive } from './articles/publish-time.js';
-import { findArticle } from './articles-data.js';
+import type { Article } from './articles/types.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type BotPlayRequest, bindBotPlayControl } from './bot-play.js';
 import {
@@ -23,7 +24,11 @@ import {
   isCorrespondenceSpecFor,
 } from './correspondence-model.js';
 import { correspondenceEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
-import { ffqBanqiEngineOptions, setFFQBanqiEngineOptions } from './ffq-banqi-access.js';
+import {
+  ffqBanqiEngineOptions,
+  ffqBanqiOffered,
+  setFFQBanqiEngineOptions,
+} from './ffq-banqi-access.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import {
@@ -356,6 +361,53 @@ export function personFamilyPaces(
   return [...seen.values()].sort((a, b) => order(a) - order(b));
 }
 
+// A variant name links to its rules page only once the article table says the
+// page is live. That table (articles-data with its translations) is most of the
+// homepage's script weight, so the homepage loads it after the board and hands
+// the lookup over here; until then a name is a plain span, upgraded in place to
+// the link when the lookup arrives. Same text and box, so nothing moves. The
+// prerendered page already says which names link, so until the lookup lands the
+// homepage passes those hrefs on as a hint and the links never drop out.
+type ArticleLookup = (slug: string) => Article | undefined;
+let articleLookup: ArticleLookup | null = null;
+let liveRulesHint: ReadonlySet<string> = new Set();
+const namesAwaitingArticles = new Map<HTMLElement, { gameSpecId: string; locale: Locale }>();
+
+function liveRulesHref(gameSpecId: string): string | null {
+  const href = rulesHrefForGameSpec(gameSpecId);
+  if (!href) return null;
+  if (!articleLookup) return liveRulesHint.has(href) ? href : null;
+  const article = articleLookup(href.slice('/rules/'.length));
+  // Playtest flags and local draft previews never publish a homepage link.
+  return article?.kind === 'rules' && articleIsLive(article) ? href : null;
+}
+
+function linkGameName(name: HTMLElement, href: string, locale: Locale): HTMLAnchorElement {
+  const link = document.createElement('a');
+  for (const attr of [...name.attributes]) link.setAttribute(attr.name, attr.value);
+  link.href = localizedHref(href, locale);
+  link.classList.add('pp-rules-link');
+  link.append(...name.childNodes);
+  name.replaceWith(link);
+  return link;
+}
+
+/** The rules hrefs (unlocalized, `/rules/<slug>`) the prerendered panel linked. */
+export function setPlayPanelRulesHint(hrefs: Iterable<string>): void {
+  liveRulesHint = new Set(hrefs);
+}
+
+/** Hands the panel the article lookup; names already drawn become rules links. */
+export function setPlayPanelArticleLookup(lookup: ArticleLookup): void {
+  articleLookup = lookup;
+  const waiting = [...namesAwaitingArticles];
+  namesAwaitingArticles.clear();
+  for (const [name, { gameSpecId, locale }] of waiting) {
+    const href = liveRulesHref(gameSpecId);
+    if (href) linkGameName(name, href, locale);
+  }
+}
+
 export function buildPlayPanel(
   locale: Locale = currentLocale(),
   options: {
@@ -414,13 +466,8 @@ export function buildPlayPanel(
     variants.find((v) => v.gameSpecId === id)?.label ??
     variantLabelForGameSpec(id as LandingGameSpecId, locale);
   const gameName = (gameSpecId: string, label: string): HTMLElement => {
-    const href = rulesHrefForGameSpec(gameSpecId);
-    const article = href ? findArticle(href.slice('/rules/'.length)) : undefined;
-    // Playtest flags and local draft previews never publish a homepage link.
-    const name =
-      href && article?.kind === 'rules' && articleIsLive(article)
-        ? document.createElement('a')
-        : document.createElement('span');
+    const href = liveRulesHref(gameSpecId);
+    const name = href ? document.createElement('a') : document.createElement('span');
     name.className = 'pp-name';
     if (name instanceof HTMLAnchorElement && href) {
       name.href = localizedHref(href, locale);
@@ -430,6 +477,9 @@ export function buildPlayPanel(
     labelText.className = 'pp-name-label';
     labelText.textContent = label;
     name.append(labelText);
+    if (!href && !articleLookup && rulesHrefForGameSpec(gameSpecId)) {
+      namesAwaitingArticles.set(name, { gameSpecId, locale });
+    }
     return name;
   };
   const ordered = (): LandingGameSpecId[] =>
@@ -583,16 +633,26 @@ export function buildPlayPanel(
         ? Array.from({ length: 7 }, (_, i) => `misty-three-kingdoms-banqi-level-${i + 1}`)
         : []),
   );
+  // Fanfanqi's tiers come only from the runtime roster, which answers after the
+  // first paint (a minute late on a slow line). Until it does, its row paints
+  // at full size with Play disabled, so the panel never grows a row under the
+  // reader; the roster then enables Play, or drops the row when it lists no
+  // tier or fails. The prerender bakes the same pending row.
+  let ffqRosterPending = ffqBanqiOffered() && ffqBanqiEngineOptions() === undefined;
+  let ffqPendingPlay: HTMLButtonElement | null = null;
+  const ffqRowPending = (): boolean => ffqRosterPending && ffqBanqiEngineOptions() === undefined;
   const ladderFor = (gameSpecId: string): readonly LandingBotRung[] =>
     landingBotLadder(
       gameSpecId,
       playableBots.get(gameSpecId),
       gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
         ? threeKingdomsBanqiEngineIds
-        : new Set([
-            ...playableEngines,
-            ...(ffqBanqiEngineOptions() ?? []).map((engine) => engine.id),
-          ]),
+        : gameSpecId === FFQ_BANQI_SPEC_ID && ffqRowPending()
+          ? new Set(Array.from({ length: 8 }, (_, i) => `misty-ffq-banqi-level-${i + 1}`))
+          : new Set([
+              ...playableEngines,
+              ...(ffqBanqiEngineOptions() ?? []).map((engine) => engine.id),
+            ]),
     );
   const sameLadder = (a: readonly LandingBotRung[], b: readonly LandingBotRung[]): boolean =>
     a.length === b.length &&
@@ -614,7 +674,12 @@ export function buildPlayPanel(
     botRows.replaceChildren();
     playingEls.clear();
     for (const gameSpecId of orderedLastFirst()) {
-      if (gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID && !landingVariantSupportsPve(gameSpecId))
+      const rosterPending = gameSpecId === FFQ_BANQI_SPEC_ID && ffqRowPending();
+      if (
+        !rosterPending &&
+        gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID &&
+        !landingVariantSupportsPve(gameSpecId)
+      )
         continue;
       const ladder = ladderFor(gameSpecId);
       if (ladder.length === 0) continue;
@@ -722,6 +787,10 @@ export function buildPlayPanel(
         errorLabel: t('lobby.botStartFailed', {}, locale),
         source: 'panel-bot',
       });
+      if (rosterPending) {
+        play.disabled = true;
+        ffqPendingPlay = play;
+      }
       // Only Play starts the game (Brian, 2026-10-02): a whole-row click turned
       // a near miss on a stepper into a game nobody asked for.
 
@@ -1442,11 +1511,22 @@ export function buildPlayPanel(
       renderBotRows();
       renderFeatures();
     };
+    // The Fanfanqi roster has answered (or failed): a ladder that changed
+    // re-renders (an empty one drops the row); an unchanged one keeps its row
+    // and only enables Play, so a Play pending on another row is left alone.
+    const settleFFQRoster = (): void => {
+      if (!ffqRosterPending) return;
+      ffqRosterPending = false;
+      refreshBotLadders();
+      if (ffqPendingPlay?.isConnected) ffqPendingPlay.disabled = false;
+      ffqPendingPlay = null;
+    };
     // Another page fetch (landing.ts, a rules page) may land a runtime roster
     // after this panel painted; re-read it rather than keep the stale rows.
     const stopRosterWatch = onRuntimeEngineRostersChanged(() => {
       const tkEngines = threeKingdomsBanqiEngineOptions();
       if (tkEngines) threeKingdomsBanqiEngineIds = new Set(tkEngines.map((engine) => engine.id));
+      if (ffqBanqiEngineOptions()) settleFFQRoster();
       refreshBotLadders();
     });
     // Misty's neural tiers share a bot id, so their availability must come
@@ -1464,7 +1544,10 @@ export function buildPlayPanel(
           : null,
       )
       .then((data) => {
-        if (!data) return;
+        if (!data) {
+          settleFFQRoster();
+          return;
+        }
         if (data.threeKingdomsBanqiEngines !== undefined) {
           threeKingdomsBanqiEngineIds = new Set(
             data.threeKingdomsBanqiEngines.map((engine) => engine.id),
@@ -1480,9 +1563,10 @@ export function buildPlayPanel(
             ...(data.jungleEngines ?? []),
           ].map((e) => e.id),
         );
+        settleFFQRoster();
         refreshBotLadders();
       })
-      .catch(() => {});
+      .catch(() => settleFFQRoster());
     // One-shot: which gated bots this server can seat (playOptions[].playable).
     // A failure leaves them off, which is the safe side.
     void fetch('/api/bots', { headers: { accept: 'application/json' } })

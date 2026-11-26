@@ -6,7 +6,7 @@ import {
   isPublicGameSpec,
   RATED_TIME_CONTROLS,
 } from '@mistboard/game';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knownEngineIds, loadEngine } from '../../server/src/engine-registry.js';
 import { FIRST_PARTY_BOT_PROFILES } from '../../server/src/first-party-bots.js';
 import { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } from '../../server/src/three-kingdoms-banqi-engine.js';
@@ -23,6 +23,7 @@ import {
   panelBotPaces,
   panelPersonPaces,
   playPanelEnabled,
+  setPlayPanelArticleLookup,
 } from './landing-play-panel.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
@@ -83,6 +84,8 @@ function rememberLivePace(): void {
 }
 
 // /api/live-stats reads are shared through a module cache; start each test cold.
+// The homepage hands the panel its article lookup after first paint.
+beforeAll(() => setPlayPanelArticleLookup(findArticle));
 beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('homepage play panel', () => {
@@ -99,7 +102,12 @@ describe('homepage play panel', () => {
         expect(board.querySelector('.pp-person-rows [data-game-spec="ffq-banqi"]') !== null).toBe(
           surface === 'casual',
         );
-        expect(board.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]')).toBeNull();
+        // Before the roster answers the row is already there at full size,
+        // but its Play cannot start a game the server has not confirmed.
+        const pending = board.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]');
+        expect(pending !== null).toBe(surface === 'casual');
+        if (pending)
+          expect(pending.querySelector<HTMLButtonElement>('.pp-act')?.disabled).toBe(true);
         setFFQBanqiEngineOptions(
           [1, 4].map((level) => ({
             id: `misty-ffq-banqi-level-${level}`,
@@ -328,8 +336,9 @@ describe('homepage play panel', () => {
       vi.stubEnv(`VITE_${flag}_ENABLED`, 'true');
     }
     // Intentional homepage omissions: Fog games remain in the setup dialog.
-    // Fanfanqi waits for its runtime-only engine roster, absent from this fixture.
-    const excluded = ['dark-xiangqi', 'dark-chess', 'ffq-banqi'];
+    // Fanfanqi's runtime-only roster is in the fixture: its row paints pending
+    // before the roster and must still be there, in place, after it.
+    const excluded = ['dark-xiangqi', 'dark-chess'];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) =>
@@ -339,6 +348,9 @@ describe('homepage play panel', () => {
                 banqiEngines: knownEngineIds().map((id) => ({ id })),
                 jungleFlipEngines: knownEngineIds().map((id) => ({ id })),
                 threeKingdomsBanqiEngines: THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES,
+                ffqBanqiEngines: knownEngineIds()
+                  .filter((id) => loadEngine(id).gameSpecId === 'ffq-banqi')
+                  .map((id) => ({ id, name: id, familyName: 'Misty', kind: 'builtin' })),
               }
             : url === '/api/bots'
               ? {
@@ -384,9 +396,10 @@ describe('homepage play panel', () => {
         spec,
       );
     }
-    expect(firstPaintBots.indexOf('three-kingdoms-banqi')).toBe(
-      firstPaintBots.indexOf('banqi') + 1,
-    );
+    // No row is added, dropped or moved once the rosters answer.
+    expect(firstPaintBots).toEqual(bots);
+    const banqiFamily = firstPaintBots.filter((spec) => spec !== 'ffq-banqi');
+    expect(banqiFamily.indexOf('three-kingdoms-banqi')).toBe(banqiFamily.indexOf('banqi') + 1);
     // A generic fallback row is not coverage if its bot does not play this
     // spec. In particular, TK cannot send Misty's public-profile botId.
     for (const spec of expected) {
@@ -417,14 +430,14 @@ describe('homepage play panel', () => {
       ),
     );
     for (const spec of [
-      ...excluded.filter((id) => id !== 'ffq-banqi'),
+      ...excluded,
       ...GAME_SPECS.filter((spec) => !isPublicGameSpec(spec.id)).map((spec) => spec.id),
     ]) {
       expect(board.querySelector(`[data-game-spec="${spec}"]`)).toBeNull();
     }
     expect(bots.at(-1)).toBe('gomoku');
     expect(people.at(-1)).toBe('gomoku');
-    expect(bots.indexOf('three-kingdoms-banqi')).toBe(bots.indexOf('banqi') + 1);
+    expect(banqiFamily.indexOf('three-kingdoms-banqi')).toBe(banqiFamily.indexOf('banqi') + 1);
   });
 
   it('omits flag-off variants and hidden playtests from both tabs', () => {
@@ -599,6 +612,63 @@ describe('homepage play panel', () => {
         clickNext(tk, 'level', 10);
         expect(stepValue(tk, 'level')).toBe(availability === 'no-binary' ? 'Level 1' : 'Level 7');
         expect(tk.querySelector('.pp-step-tag')).toBeNull();
+      }
+    },
+  );
+
+  // The Fanfanqi row used to be inserted when /api/engines/playable answered,
+  // pushing every row below it on a slow connection. It now paints from the
+  // start with Play disabled; the roster enables it, or drops the row when the
+  // server lists no tier or cannot be reached.
+  it.each(['listed', 'empty', 'failed'])(
+    'paints the Fanfanqi bot row before the roster answers (%s)',
+    async (availability) => {
+      vi.useFakeTimers();
+      vi.stubEnv('VITE_FFQ_BANQI_ENABLED', 'true');
+      setFFQBanqiEngineOptions([]);
+      let answer: (() => void) | undefined;
+      const answered = new Promise<void>((resolve) => {
+        answer = resolve;
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (url !== '/api/engines/playable') return Response.json({});
+          await answered;
+          if (availability === 'failed') throw new Error('offline');
+          return Response.json({
+            ffqBanqiEngines:
+              availability === 'listed'
+                ? Array.from({ length: 8 }, (_, i) => ({
+                    id: `misty-ffq-banqi-level-${i + 1}`,
+                    name: `Misty Level ${i + 1}`,
+                    familyName: 'Misty',
+                    kind: 'builtin',
+                  }))
+                : [],
+          });
+        }),
+      );
+      try {
+        const board = buildPlayPanel('en');
+        document.body.append(board);
+        await vi.advanceTimersByTimeAsync(0);
+        const rowsBefore = board.querySelectorAll('.pp-row-bot').length;
+        const pendingPlay = row(board, FFQ_BANQI_SPEC_ID).querySelector<HTMLButtonElement>(
+          '.pp-act',
+        );
+        expect(pendingPlay?.disabled).toBe(true);
+        answer?.();
+        await vi.advanceTimersByTimeAsync(0);
+        const ffq = board.querySelector('.pp-row-bot[data-game-spec="ffq-banqi"]');
+        if (availability === 'listed') {
+          expect(board.querySelectorAll('.pp-row-bot').length).toBe(rowsBefore);
+          expect(ffq?.querySelector<HTMLButtonElement>('.pp-act')?.disabled).toBe(false);
+        } else {
+          expect(ffq).toBeNull();
+        }
+      } finally {
+        setFFQBanqiEngineOptions([]);
       }
     },
   );

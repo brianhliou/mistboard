@@ -181,6 +181,24 @@ test('the homepage board asks for seat scores beside the names', async () => {
   tv.destroy();
 });
 
+test('firstBoard waits for a game on the board, not for the boot step', async () => {
+  // An empty pool and no live game leave the skeleton up: not settled.
+  const tv = await mountController([]);
+  let settled = false;
+  void tv.firstBoard.then(() => {
+    settled = true;
+  });
+  await flush();
+  expect(mounts).toHaveLength(0);
+  expect(settled).toBe(false);
+
+  tv.updateCompletedPool([entryA], { jumpNow: true });
+  await flush();
+  expect(mounts).toHaveLength(1);
+  expect(settled).toBe(true);
+  tv.destroy();
+});
+
 test('a jumpNow baseline refresh freezes on the new head instead of airing it', async () => {
   const tv = await mountController([entryA]);
   await flush();

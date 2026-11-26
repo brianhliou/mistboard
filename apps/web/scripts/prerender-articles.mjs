@@ -191,7 +191,13 @@ function routeAssetLinks(manifest, entryId, shellHtml) {
 // into its grid once that chunk injected its CSS. The CSS order is Vite's own
 // preload order (a chunk's imports before its own CSS), so the cascade matches
 // a client-side visit.
-function dynamicChunkAssetLinks(manifest, ownerId, chunkName, alreadyLinked) {
+function dynamicChunkAssetLinks(
+  manifest,
+  ownerId,
+  chunkName,
+  alreadyLinked,
+  { preloadJs = true } = {},
+) {
   const key = (manifest[ownerId]?.dynamicImports ?? []).find(
     (id) => manifest[id]?.name === chunkName,
   );
@@ -219,7 +225,7 @@ function dynamicChunkAssetLinks(manifest, ownerId, chunkName, alreadyLinked) {
       links.push(`<link rel="stylesheet" crossorigin href="/${file}">`);
     }
   }
-  for (const file of js) {
+  for (const file of preloadJs ? js : []) {
     if (!alreadyLinked.includes(file)) {
       links.push(`<link rel="modulepreload" crossorigin href="/${file}">`);
     }
@@ -367,7 +373,20 @@ try {
   const articleAssetLinks =
     pagesStaticLinks +
     dynamicChunkAssetLinks(manifest, 'src/pages-static.ts', 'articles', shell + pagesStaticLinks);
-  const landingAssetLinks = routeAssetLinks(manifest, 'src/landing.ts', shell);
+  // The homepage's article rows and News come from lazy chunks (landing.ts
+  // loadLandingContent) so the board does not wait on the article table. Their
+  // markup is baked, so their stylesheets are linked; their scripts are not
+  // preloaded, which would put the same bytes back ahead of the board.
+  let landingAssetLinks = routeAssetLinks(manifest, 'src/landing.ts', shell);
+  for (const chunk of ['articles', 'articles-data', 'landing-announcements']) {
+    landingAssetLinks += dynamicChunkAssetLinks(
+      manifest,
+      'src/landing.ts',
+      chunk,
+      shell + landingAssetLinks,
+      { preloadJs: false },
+    );
+  }
 
   await writeRoutePreloadManifest(manifest, shell);
 
@@ -738,7 +757,10 @@ try {
   // Chinese page silently. /zh-hans and /zh-hant are the Chinese home pages:
   // before this the path served a directory listing of dist/, and the site had
   // no Chinese URL for the page that matters most to a Chinese search.
-  const { renderLandingPageForPrerender } = await server.ssrLoadModule('/src/landing.ts');
+  const { loadLandingContent, renderLandingPageForPrerender } =
+    await server.ssrLoadModule('/src/landing.ts');
+  // The article rows and News load lazily on the client; the bake needs them now.
+  await loadLandingContent();
   const { homeStructuredDataScripts } = await server.ssrLoadModule('/src/home-structured-data.ts');
   // The English home keeps the description index.html already carries; the
   // JSON-LD repeats each page's own description rather than a second copy.
