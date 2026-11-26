@@ -2,30 +2,35 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { TIME_CONTROLS } from '@mistboard/game';
 import {
+  KATAGO_JUNGLE_COLD_MIN_MOVE_MS,
   KATAGO_JUNGLE_MIN_MOVE_MS,
   KATAGO_JUNGLE_STARTUP_MS,
-  katagoMovetimeCapForBudget,
-  katagoPredictedWallMs,
+  KATAGO_JUNGLE_WARM_OVERHEAD_MS,
+  katagoStageSeconds,
+  katagoStageSecondsForMove,
 } from './jungle-katago-engine.js';
-import {
-  clockCoverageViolations,
-  KATAGO_JUNGLE_MODE_FLOORS,
-  katagoJungleMoveMode,
-  MISTY_LIGHT_MIN_MOVE_MS,
-  mistyLightMovetimeMs,
-} from './jungle-katago-time.js';
+import { clockCoverageViolations, KATAGO_JUNGLE_MODE_FLOORS } from './jungle-katago-time.js';
 
-test('every offered time control is covered by the seat cheapest mode', () => {
+test('every offered time control is covered by the seat on its loaded process', () => {
   assert.deepEqual(clockCoverageViolations(KATAGO_JUNGLE_MODE_FLOORS, TIME_CONTROLS), []);
-  // Prod may run up to 2x slower than the measured floors; still covered.
-  const doubled = KATAGO_JUNGLE_MODE_FLOORS.map((mode) => ({ ...mode, floorMs: mode.floorMs * 2 }));
+  // The stages are wall-time bounds the engine keeps itself; what prod can stretch
+  // is the overhead around them. Doubled, every pace is still covered.
+  const doubled = KATAGO_JUNGLE_MODE_FLOORS.map((mode) => ({
+    ...mode,
+    floorMs: mode.floorMs + KATAGO_JUNGLE_WARM_OVERHEAD_MS,
+  }));
   assert.deepEqual(clockCoverageViolations(doubled, TIME_CONTROLS), []);
+  // No mode cheaper than KataGo itself: the seat has no fallback engine.
+  assert.deepEqual(
+    KATAGO_JUNGLE_MODE_FLOORS.map((mode) => mode.id),
+    ['katago-warm'],
+  );
 });
 
 test('the guard catches an engine whose cheapest move outruns the increment', () => {
-  // Planted failure: a seat whose only mode is KataGo (the 2026-11-12 seat).
-  const katagoOnly = [{ id: 'katago', floorMs: KATAGO_JUNGLE_MIN_MOVE_MS }];
-  const violations = clockCoverageViolations(katagoOnly, TIME_CONTROLS);
+  // Planted failure: the 2026-11-12 seat, which started a process for every move.
+  const coldEveryMove = [{ id: 'katago-cold', floorMs: KATAGO_JUNGLE_COLD_MIN_MOVE_MS }];
+  const violations = clockCoverageViolations(coldEveryMove, TIME_CONTROLS);
   // 3+2 is 250 ms short a move at the floor, which its 180 s bank covers.
   assert.deepEqual(
     violations.map((v) => v.id),
@@ -46,26 +51,29 @@ test('the guard catches an engine whose cheapest move outruns the increment', ()
   );
 });
 
-test('KataGo plays only when the budget covers its floor', () => {
-  assert.equal(KATAGO_JUNGLE_MIN_MOVE_MS, 2_250);
-  assert.equal(katagoJungleMoveMode(KATAGO_JUNGLE_MIN_MOVE_MS, 'misty'), 'katago');
-  assert.equal(katagoJungleMoveMode(KATAGO_JUNGLE_MIN_MOVE_MS - 1, 'misty'), 'misty');
-  assert.equal(katagoJungleMoveMode(800, 'misty-ts'), 'misty-ts');
-  assert.ok(MISTY_LIGHT_MIN_MOVE_MS < 1_000);
-  assert.equal(mistyLightMovetimeMs(10), 50);
-  assert.equal(mistyLightMovetimeMs(830), 800);
+test('the floors are the measured ones', () => {
+  assert.equal(KATAGO_JUNGLE_MIN_MOVE_MS, 850);
+  assert.ok(KATAGO_JUNGLE_MIN_MOVE_MS < 1_000, 'under the 1+1 increment');
+  assert.equal(KATAGO_JUNGLE_COLD_MIN_MOVE_MS, 2_250);
+  assert.ok(KATAGO_JUNGLE_STARTUP_MS > 1_000);
 });
 
-test('a KataGo move below the ceiling is predicted to fit its budget', () => {
-  assert.equal(katagoMovetimeCapForBudget(6_000, 6_000), 6_000);
-  assert.equal(katagoMovetimeCapForBudget(9_000, 6_000), 6_000);
-  for (const budget of [2_250, 2_600, 3_400, 4_800, 5_999]) {
-    const cap = katagoMovetimeCapForBudget(budget, 6_000);
-    assert.ok(cap <= budget, `cap ${cap} within ${budget}`);
-    assert.ok(
-      katagoPredictedWallMs(cap) <= budget + 1,
-      `${katagoPredictedWallMs(cap)} ms predicted against ${budget}`,
-    );
+test('a move sizes its stages to the budget left when it reaches the process', () => {
+  // With time to spare it is the ceiling split it always was.
+  assert.equal(katagoStageSecondsForMove(6_000, 0), katagoStageSeconds(6_000));
+  assert.equal(katagoStageSecondsForMove(6_000, 0), 2.5);
+  assert.equal(katagoStageSecondsForMove(4_000, 0), katagoStageSeconds(4_000));
+  // Never under the minimum stage, however late it arrives.
+  assert.equal(katagoStageSecondsForMove(800, 5_000), 0.3);
+  for (const budget of [850, 1_000, 1_500, 2_600, 4_800, 6_000]) {
+    for (const waited of [0, 200, KATAGO_JUNGLE_STARTUP_MS]) {
+      const stageMs = Math.round(katagoStageSecondsForMove(budget, waited) * 1000);
+      const wallMs = waited + 2 * stageMs + KATAGO_JUNGLE_WARM_OVERHEAD_MS;
+      if (budget - waited >= KATAGO_JUNGLE_MIN_MOVE_MS) {
+        assert.ok(wallMs <= budget + 1, `${wallMs} ms against ${budget} after ${waited}`);
+      } else {
+        assert.equal(stageMs, 300, `${budget} after ${waited} plays the minimum`);
+      }
+    }
   }
-  assert.ok(KATAGO_JUNGLE_STARTUP_MS > 1_000);
 });

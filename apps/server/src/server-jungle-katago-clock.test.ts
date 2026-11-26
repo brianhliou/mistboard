@@ -1,8 +1,9 @@
 /**
  * The KataGo jungle seat against a real clock (jgl_29484585, 2026-11-12: it lost
  * a won 1+1 game on time). Each test replays a timed game through the live loop:
- * the opponent moves instantly, and every bot move is charged the wall time the
- * engine it went to measurably needs on prod, not what the stub took here.
+ * the opponent moves instantly, and every bot move is charged the wall time
+ * KataGo measurably needs on prod on the shared process (cold on the first move,
+ * warm after), not what the stub took here.
  */
 
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ import { jungleMoveToEngineUci, jungleStateToEngineFen } from './jungle-fen.js';
 import {
   KATAGO_JUNGLE_ENGINE_ID,
   katagoMoveCommands,
-  katagoStageSeconds,
+  katagoStageSecondsForMove,
 } from './jungle-katago-engine.js';
 import {
   type JungleEngineMoveProvider,
@@ -37,16 +38,21 @@ for (const file of ['katago-jungle', 'katago-jungle-net.bin.gz', 'jungle-engine'
 }
 
 // Prod wall time per move, from measurements (2026-11-25; the figures behind them
-// are in jungle-katago-engine.ts and jungle-katago-time.ts). Kept here rather
-// than imported so the replay judges the seat, not the seat's own model of itself.
+// are in jungle-katago-engine.ts). Kept here rather than imported so the replay
+// judges the seat, not the seat's own model of itself.
 const KATAGO_PROD_STARTUP_MS = 1_650;
+// The setup replies and two genmove round trips on the loaded process: 55 ms on
+// this Mac, ~3.3x on prod.
+const KATAGO_PROD_WARM_OVERHEAD_MS = 180;
 // 150 visits fill a stage in ~1.2 s on this Mac; prod runs ~1.45x slower.
 const KATAGO_PROD_VISITS_STAGE_MS = 1_750;
-const MISTY_PROD_OVERHEAD_MS = 30;
 
-function katagoProdWallMs(movetimeCapMs: number): number {
-  const stageMs = Math.round(katagoStageSeconds(movetimeCapMs) * 1000);
-  return KATAGO_PROD_STARTUP_MS + 2 * Math.min(stageMs, KATAGO_PROD_VISITS_STAGE_MS);
+function katagoProdWallMs(movetimeCapMs: number, cold: boolean): number {
+  const waitedMs = cold ? KATAGO_PROD_STARTUP_MS : 0;
+  const stageMs = Math.round(katagoStageSecondsForMove(movetimeCapMs, waitedMs) * 1000);
+  return (
+    waitedMs + KATAGO_PROD_WARM_OVERHEAD_MS + 2 * Math.min(stageMs, KATAGO_PROD_VISITS_STAGE_MS)
+  );
 }
 
 const ENV = {
@@ -75,22 +81,71 @@ async function withEnv<T>(overrides: Record<string, string | undefined>, fn: () 
 
 type BotMove = {
   remainingBeforeMs: number;
-  engine: 'katago' | 'misty';
+  process: 'warm' | 'cold';
   movetimeCapMs: number;
-  visits: number | null;
+  visits: number;
   wallMs: number;
   payload: Record<string, unknown>;
 };
 
-/** Play `botMoves` bot moves at `tc`; stops early only if the bot's clock runs out. */
+function liveRoom(
+  state: JungleGameState,
+  tc: { initialMs: number; incrementMs: number },
+  remaining: number,
+) {
+  return {
+    id: ROOM_ID,
+    events: [],
+    projection: {
+      state,
+      seats: { red: KATAGO_JUNGLE_ENGINE_ID, black: 'human-client' },
+      clock: {
+        activeColor: 'red',
+        incrementMs: tc.incrementMs,
+        initialMs: tc.initialMs,
+        remainingMs: { red: remaining, black: tc.initialMs },
+        runningSince: 1_000_000,
+      },
+    },
+  };
+}
+
+function recordingCtx() {
+  const appended: Array<{ type: string; move?: unknown }> = [];
+  const ctx = {
+    now: () => 1_000_000,
+    appendEvent: async (_room: unknown, event: { type: string }) => {
+      appended.push(event);
+      return appended.length;
+    },
+    broadcastEventAppended: () => {},
+  };
+  return { ctx, appended };
+}
+
+/** A MistyJungle provider that must never be asked: the seat has no fallback. */
+function forbiddenMisty() {
+  const calls = { count: 0 };
+  const provider: JungleEngineMoveProvider = async () => {
+    calls.count += 1;
+    throw new Error('MistyJungle was asked to move for the KataGo seat');
+  };
+  return { calls, provider };
+}
+
+/**
+ * Play `botMoves` bot moves at `tc`; stops early only if the bot's clock runs out.
+ * The first move starts the process (no prewarm: the worst case); the rest reuse it.
+ */
 async function replay(
   tc: { initialMs: number; incrementMs: number },
   botMoves: number,
-): Promise<{ moves: BotMove[]; flaggedAt: number | null }> {
-  const now = 1_000_000;
+): Promise<{ moves: BotMove[]; flaggedAt: number | null; mistyCalls: number }> {
   let state: JungleGameState = createInitialJungleState(ROOM_ID);
   let remaining = tc.initialMs;
+  let loaded = false;
   const moves: BotMove[] = [];
+  const misty = forbiddenMisty();
   const pick = (s: JungleGameState, salt: number) => {
     const legal = getJungleLegalMoves(s);
     return legal[(salt * 7 + 3) % legal.length]!;
@@ -100,58 +155,35 @@ async function replay(
     const reply = jungleMoveToEngineUci(pick(before, i));
     let charged: Omit<BotMove, 'remainingBeforeMs' | 'payload'> | null = null;
     const katago: KatagoJungleMoveProvider = async (_fen, _mover, opts) => {
+      const cold = !loaded;
+      loaded = true;
       charged = {
-        engine: 'katago',
+        process: cold ? 'cold' : 'warm',
         movetimeCapMs: opts.movetimeCapMs,
         visits: opts.visits,
-        wallMs: katagoProdWallMs(opts.movetimeCapMs),
+        wallMs: katagoProdWallMs(opts.movetimeCapMs, cold),
       };
-      return { best: reply, cp: null, mate: null, depth: 0, timeMs: 0 };
-    };
-    const misty: JungleEngineMoveProvider = async (_engineId, _fen, opts) => {
-      const cap = opts.movetimeCapMs ?? 0;
-      charged = {
-        engine: 'misty',
-        movetimeCapMs: cap,
-        visits: null,
-        wallMs: cap + MISTY_PROD_OVERHEAD_MS,
+      return {
+        best: reply,
+        cp: null,
+        mate: null,
+        depth: 0,
+        timeMs: 0,
+        process: cold ? 'cold' : 'warm',
       };
-      return { best: reply, cp: null, mate: null, depth: 0, timeMs: 0 };
     };
-    const room = {
-      id: ROOM_ID,
-      events: [],
-      projection: {
-        state: before,
-        seats: { red: KATAGO_JUNGLE_ENGINE_ID, black: 'human-client' },
-        clock: {
-          activeColor: 'red',
-          incrementMs: tc.incrementMs,
-          initialMs: tc.initialMs,
-          remainingMs: { red: remaining, black: tc.initialMs },
-          runningSince: now,
-        },
-      },
-    };
-    const appended: Array<{ type: string; move?: unknown }> = [];
-    const ctx = {
-      now: () => now,
-      appendEvent: async (_room: unknown, event: { type: string }) => {
-        appended.push(event);
-        return appended.length;
-      },
-      broadcastEventAppended: () => {},
-    };
-    await playJungleEngineMoveIfReady(ctx as never, room as never, misty, katago);
+    const room = liveRoom(before, tc, remaining);
+    const { ctx, appended } = recordingCtx();
+    await playJungleEngineMoveIfReady(ctx as never, room as never, misty.provider, katago);
     assert.equal(appended[0]?.type, 'move-played', `bot move ${i + 1} was played`);
-    assert.ok(charged, `bot move ${i + 1} asked an engine`);
+    assert.ok(charged, `bot move ${i + 1} asked KataGo`);
     const spent = charged as Omit<BotMove, 'remainingBeforeMs' | 'payload'>;
     const payload =
       (room as { pendingDebugArtifacts?: Array<{ payload: Record<string, unknown> }> })
         .pendingDebugArtifacts?.[0]?.payload ?? {};
     moves.push({ ...spent, remainingBeforeMs: remaining, payload });
     remaining -= spent.wallMs;
-    if (remaining <= 0) return { moves, flaggedAt: i + 1 };
+    if (remaining <= 0) return { moves, flaggedAt: i + 1, mistyCalls: misty.calls.count };
     remaining += tc.incrementMs;
 
     state = applyJungleMove(before, pick(before, i));
@@ -159,15 +191,16 @@ async function replay(
     // A long game, not a won one: when the walk ends a game, the clock plays on.
     if (state.status.type !== 'playing') state = createInitialJungleState(ROOM_ID);
   }
-  return { moves, flaggedAt: null };
+  return { moves, flaggedAt: null, mistyCalls: misty.calls.count };
 }
 
 const tcById = (id: string) => TIME_CONTROLS.find((tc) => tc.id === id)!;
 
-test('at 1+1 the seat never runs its clock out, with KataGo slower than the increment', async () => {
-  const { moves, flaggedAt } = await withEnv(ENV, () => replay(tcById('1m1'), 80));
+test('at 1+1 KataGo makes every move and never runs its clock out', async () => {
+  const { moves, flaggedAt, mistyCalls } = await withEnv(ENV, () => replay(tcById('1m1'), 200));
   assert.equal(flaggedAt, null, `flagged at bot move ${flaggedAt}`);
-  assert.equal(moves.length, 80);
+  assert.equal(moves.length, 200);
+  assert.equal(mistyCalls, 0, 'no other engine stands in');
   for (const [index, move] of moves.entries()) {
     // No move spends more than the increment plus a fair share of the bank.
     const allowance = 1_000 + move.remainingBeforeMs / 30;
@@ -176,14 +209,19 @@ test('at 1+1 the seat never runs its clock out, with KataGo slower than the incr
       `move ${index + 1}: ${move.wallMs} ms against ${Math.round(allowance)} ms allowed`,
     );
   }
-  // KataGo opens while the bank pays for it; MistyJungle carries the rest.
-  assert.equal(moves[0]!.engine, 'katago');
-  assert.ok(moves.some((move) => move.engine === 'misty'));
+  // The clock settles rather than draining: the last 50 moves hold the bank.
+  const tail = moves.slice(-50);
+  assert.ok(
+    tail.at(-1)!.remainingBeforeMs >= tail[0]!.remainingBeforeMs - 1_000,
+    `bank ${tail[0]!.remainingBeforeMs} -> ${tail.at(-1)!.remainingBeforeMs}`,
+  );
 });
 
-test('the decision artifact says which engine made each move', async () => {
+test('the decision artifact says whether the move reused the process', async () => {
   const { moves } = await withEnv(ENV, () => replay(tcById('1m1'), 30));
-  for (const move of moves) assert.equal(move.payload.mode, move.engine);
+  assert.equal(moves[0]!.process, 'cold');
+  for (const move of moves) assert.equal(move.payload.mode, move.process);
+  assert.ok(moves.slice(1).every((move) => move.payload.mode === 'warm'));
 });
 
 test('at 10+5 every move is the KataGo move it always was', async () => {
@@ -191,7 +229,7 @@ test('at 10+5 every move is the KataGo move it always was', async () => {
   const { moves, flaggedAt } = await withEnv(ENV, () => replay(tc, 60));
   assert.equal(flaggedAt, null);
   for (const move of moves) {
-    // The allocator as it was called before the modes existed.
+    // The allocator as it is called on main.
     const before = liveBotMoveTime({
       variant: 'jungle',
       initialMs: tc.initialMs,
@@ -208,21 +246,19 @@ test('at 10+5 every move is the KataGo move it always was', async () => {
       floorMs: 50,
       pacingEnabled: false,
     }).movetimeMs;
-    assert.equal(move.engine, 'katago');
-    assert.equal(move.payload.mode, 'katago');
     assert.equal(move.visits, 150);
     assert.equal(move.movetimeCapMs, before);
     assert.equal(move.movetimeCapMs, 6_000);
     assert.equal(move.payload.movetime_ms, 6_000);
   }
-  // And the GTP script at that cap is byte for byte the one it always sent.
-  assert.deepEqual(
-    katagoMoveCommands(jungleStateToEngineFen(createInitialJungleState(ROOM_ID)), 'red', {
-      visits: 150,
-      movetimeCapMs: 6_000,
-    }).slice(0, 2),
-    ['kata-set-param maxVisits 150', 'kata-set-param maxTime 2.500'],
+  // And the budget lines at that cap are the ones it always sent.
+  const commands = katagoMoveCommands(
+    jungleStateToEngineFen(createInitialJungleState(ROOM_ID)),
+    'red',
+    { visits: 150, movetimeCapMs: 6_000 },
   );
+  assert.ok(commands.includes('kata-set-param maxVisits 150'));
+  assert.ok(commands.includes('kata-set-param maxTime 2.500'));
 });
 
 test('3+2 and 5+5 hold their clocks too', async () => {
@@ -232,41 +268,25 @@ test('3+2 and 5+5 hold their clocks too', async () => {
   }
 });
 
-test('without the Rust engine the light move is the in-process search', async () => {
-  const state = createInitialJungleState(ROOM_ID);
-  const room = {
-    id: ROOM_ID,
-    events: [],
-    projection: {
-      state,
-      seats: { red: KATAGO_JUNGLE_ENGINE_ID, black: 'human-client' },
-      // 20 s at 1+1 buys ~1.5 s, under KataGo's floor.
-      clock: {
-        activeColor: 'red',
-        incrementMs: 1_000,
-        initialMs: 60_000,
-        remainingMs: { red: 20_000, black: 60_000 },
-        runningSince: 1_000_000,
-      },
-    },
+test('a KataGo that cannot answer in time resigns the seat, never a MistyJungle move', async () => {
+  const tc = tcById('1m1');
+  const room = liveRoom(createInitialJungleState(ROOM_ID), tc, 20_000);
+  const { ctx, appended } = recordingCtx();
+  const misty = forbiddenMisty();
+  let asked = 0;
+  // What the shared session does when a move outruns its deadline: it kills the
+  // process and the request rejects.
+  const slow: KatagoJungleMoveProvider = async () => {
+    asked += 1;
+    throw new Error('KataGo jungle move timed out');
   };
-  const appended: Array<{ type: string; move?: unknown }> = [];
-  const ctx = {
-    now: () => 1_000_000,
-    appendEvent: async (_room: unknown, event: { type: string }) => {
-      appended.push(event);
-      return appended.length;
-    },
-    broadcastEventAppended: () => {},
-  };
-  const refuse = async (): Promise<never> => {
-    throw new Error('no external engine on this path');
-  };
-  await withEnv({ ...ENV, MISTBOARD_JUNGLE_RUST_ENGINE: undefined }, () =>
-    playJungleEngineMoveIfReady(ctx as never, room as never, refuse, refuse),
+  await withEnv(ENV, () =>
+    playJungleEngineMoveIfReady(ctx as never, room as never, misty.provider, slow),
   );
-  assert.equal(appended[0]?.type, 'move-played');
-  const payload = (room as { pendingDebugArtifacts?: Array<{ payload: Record<string, unknown> }> })
-    .pendingDebugArtifacts?.[0]?.payload;
-  assert.equal(payload?.mode, 'misty-ts');
+  assert.equal(asked, 2, 'one retry, as for every jungle engine');
+  assert.equal(misty.calls.count, 0);
+  assert.deepEqual(
+    appended.map((event) => event.type),
+    ['seat-resigned'],
+  );
 });

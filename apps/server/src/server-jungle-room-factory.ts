@@ -5,6 +5,7 @@
  */
 
 import type { JungleColor, RoomTimeControl } from '@mistboard/game';
+import { KATAGO_JUNGLE_ENGINE_ID, prewarmKatagoJungle } from './jungle-katago-engine.js';
 import type { JungleCreatorPreference, JungleEvent, JungleRuntimeRoom } from './jungle-runtime.js';
 import { jungleTenant } from './jungle-tenant.js';
 import type { JungleLiveRoom } from './server-ws-jungle.js';
@@ -29,6 +30,8 @@ export type JungleLiveRoomFactoryContext = {
   createRoomId?: () => string;
   isPersistenceEnabled(): boolean;
   recordPersistenceError(roomId: string, seq: number, eventType: string, err: Error): void;
+  /** Load the shared KataGo process for a room seated against it; tests inject one. */
+  prewarmKatago?: () => void;
 };
 
 export async function createJungleLiveRoom(
@@ -55,5 +58,8 @@ export async function createJungleLiveRoom(
       ? { ok: false, error: 'jungle_disabled' }
       : { ok: false, error: created.error };
   }
+  // The KataGo seat shares one loaded process; start it now so the game's first
+  // bot move does not pay the net load on its clock.
+  if (engine?.engineId === KATAGO_JUNGLE_ENGINE_ID) (ctx.prewarmKatago ?? prewarmKatagoJungle)();
   return { ok: true, room: created.room as JungleLiveRoom };
 }

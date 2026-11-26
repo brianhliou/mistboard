@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, mock, type TestContext } from 'node:test';
@@ -28,8 +28,14 @@ const {
   UciWarmSessionCache,
   withEngineProcess,
 } = await import('./uci-engine-harness.js');
-const { katagoJungleMove, katagoJunglePool, katagoMoveDeadlineMs, KATAGO_JUNGLE_QUEUE_TIMEOUT_MS } =
-  await import('./jungle-katago-engine.js');
+const {
+  closeKatagoJungleSession,
+  katagoJungleMove,
+  katagoJungleSession,
+  katagoMoveDeadlineMs,
+  KATAGO_JUNGLE_QUEUE_TIMEOUT_MS,
+} = await import('./jungle-katago-engine.js');
+const { KATAGO_SESSION_START_TIMEOUT_MS } = await import('./jungle-katago-session.js');
 const { deliverEnginePoolWaitDigestOn, sendEnginePoolWaitDigest } = await import(
   './persistence-engine-capacity.js'
 );
@@ -176,6 +182,44 @@ process.stdin.on('end', () => setTimeout(() => {
 );
 
 const spec = { bin, initCommands: ['uci', 'isready'] };
+
+// A GTP engine in KataGo's reply format: one "= ..." block per command.
+const gtpBin = join(fixture, 'katago.mjs');
+writeFileSync(
+  gtpBin,
+  `#!/usr/bin/env node
+import { appendFileSync } from 'node:fs';
+appendFileSync(${JSON.stringify(events)}, 'gtp-start\\n');
+let buffer = '';
+let stage = 0;
+process.stdin.on('data', (data) => {
+  buffer += data;
+  let nl;
+  while ((nl = buffer.indexOf('\\n')) >= 0) {
+    const line = buffer.slice(0, nl).trim();
+    buffer = buffer.slice(nl + 1);
+    if (!line) continue;
+    if (line.startsWith('setfen')) stage = 0;
+    if (line.startsWith('genmove')) stage += 1;
+    const text = !line.startsWith('genmove') ? '' : stage === 1 ? 'G1' : 'G2';
+    process.stdout.write('= ' + text + '\\n\\n');
+  }
+});
+`,
+  { mode: 0o755 },
+);
+const gtpStarts = () =>
+  readFileSync(events, 'utf8')
+    .split('\n')
+    .filter((e) => e === 'gtp-start').length;
+
+function useFakeKatago(t: TestContext) {
+  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_ENGINE_PATH', gtpBin);
+  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_NET_PATH', gtpBin);
+  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_CONFIG_PATH', gtpBin);
+  closeKatagoJungleSession();
+  t.after(() => closeKatagoJungleSession());
+}
 const started = () =>
   readFileSync(events, 'utf8')
     .split('\n')
@@ -320,41 +364,52 @@ test('a failed spawn releases its physical slot for a subsequent engine', async 
   }
 });
 
-test('KataGo never exceeds its configured cap and shares the total guard', async (t) => {
-  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES', '1');
+test('KataGo runs one shared process for a burst of moves, inside the total guard', async (t) => {
   setEnv(t, 'MISTBOARD_ENGINE_MAX_PROCESSES', '1');
-  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_ENGINE_PATH', bin);
-  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_NET_PATH', bin);
-  setEnv(t, 'MISTBOARD_KATAGO_JUNGLE_CONFIG_PATH', bin);
-  appendFileSync(events, 'batch\n');
+  useFakeKatago(t);
   const session = new UciEngineSession(spec);
   await session.ready();
   const fen = 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1';
-  const before = started();
+  const before = gtpStarts();
   const moves = Promise.all(Array.from({ length: 3 }, () => katagoJungleMove(fen, 'red')));
   try {
     await delay(250);
-    assert.equal(started(), before, 'KataGo queues behind the UCI session');
+    assert.equal(gtpStarts(), before, 'KataGo waits for the UCI session to free the slot');
   } finally {
     session.close();
-    // With total capacity available, only KataGo's own cap should serialize this burst.
-    process.env.MISTBOARD_ENGINE_MAX_PROCESSES = '8';
-    await moves;
   }
-  const batch = readFileSync(events, 'utf8').split('batch\n').at(-1)!;
-  let active = 0;
-  let peak = 0;
-  // Exclude the held UCI session's start; KataGo logs normal process completion.
-  for (const event of batch.trim().split('\n').slice(1)) {
-    active += event === 'start' ? 1 : -1;
-    peak = Math.max(peak, active);
-  }
-  assert.equal(peak, 1);
-  assert.equal(active, 0);
-  assert.equal(
-    aggregateEnginePoolStats().pools.find((p) => p.name === 'katago-jungle')?.maxProcesses,
-    1,
+  const results = await moves;
+  assert.deepEqual(
+    results.map((result) => result.best),
+    ['a1a2', 'a1a2', 'a1a2'],
   );
+  assert.deepEqual(
+    results.map((result) => result.process),
+    ['cold', 'warm', 'warm'],
+  );
+  assert.equal(gtpStarts() - before, 1, 'three moves, one process');
+  assert.equal(katagoJungleSession().stats().spawns, 1);
+});
+
+test('an idle KataGo process gives its slot to an engine that needs it', async (t) => {
+  setEnv(t, 'MISTBOARD_ENGINE_MAX_PROCESSES', '1');
+  useFakeKatago(t);
+  const fen = 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1';
+  assert.equal((await katagoJungleMove(fen, 'red')).best, 'a1a2');
+  await delay(20);
+  assert.equal(katagoJungleSession().stats().running, true, 'loaded and idle');
+  // The only slot is KataGo's; a UCI engine asking for it evicts the idle process.
+  const next = new UciEngineSession(spec);
+  try {
+    await next.ready();
+  } finally {
+    next.close();
+  }
+  assert.equal(katagoJungleSession().stats().running, false);
+  // And KataGo comes back on its next move.
+  const again = await katagoJungleMove(fen, 'red');
+  assert.equal(again.process, 'cold');
+  assert.equal(katagoJungleSession().stats().spawns, 2);
 });
 
 test('closing a session still waiting for a total slot leaves the queue and never pages a drop', async (t) => {
@@ -381,21 +436,14 @@ test('closing a session still waiting for a total slot leaves the queue and neve
   }
 });
 
-test('a second KataGo move waits out two worst-case moves instead of being shed', async (t) => {
-  assert.ok(KATAGO_JUNGLE_QUEUE_TIMEOUT_MS >= 2 * katagoMoveDeadlineMs(6_000));
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  const held = await katagoJunglePool.acquire();
-  let settled = false;
-  const queued = katagoJunglePool.acquire().finally(() => {
-    settled = true;
-  });
-  // The running move may hold its slot for its whole deadline, and the queued
-  // one may sit behind another queued move: two deadlines, less a millisecond.
-  t.mock.timers.tick(2 * katagoMoveDeadlineMs(6_000) - 1);
-  await delay(0);
-  assert.equal(settled, false, 'the queued move must not be shed');
-  held();
-  (await queued)();
+test('a queued KataGo move waits out a cold start and two worst-case moves instead of being shed', () => {
+  // The running move may hold the process for its whole deadline, and the queued
+  // one may sit behind another queued move, after a cold start.
+  assert.ok(
+    KATAGO_JUNGLE_QUEUE_TIMEOUT_MS >=
+      KATAGO_SESSION_START_TIMEOUT_MS + 2 * katagoMoveDeadlineMs(6_000),
+  );
+  assert.ok(KATAGO_JUNGLE_QUEUE_TIMEOUT_MS <= 30_000, 'inside the env clamp');
 });
 
 test('digest retries through the alert throttle are not reported as suppressed alerts', async (t) => {

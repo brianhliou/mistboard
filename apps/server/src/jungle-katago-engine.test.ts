@@ -69,24 +69,41 @@ test('the move budget is split across the two stages after the startup reserve',
   assert.equal(katagoStageSeconds(1_200), 0.3);
 });
 
-test('one move is budget, position, two genmoves and quit, in KataGo terms', () => {
+test('one move wipes the last, then budget, position and two genmoves, in KataGo terms', () => {
   // Our start position, red to move: the mirrored board, side 'w' for setfen and
-  // 'b' for genmove (jungle-katago-gtp.ts explains the asymmetry).
+  // 'b' for genmove (jungle-katago-gtp.ts explains the asymmetry). The process is
+  // shared, so every move first clears the board, its history and the search
+  // tree, and sets the whole position; nothing carries over from another game.
   const start = 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1';
   assert.deepEqual(katagoMoveCommands(start, 'red', { visits: 150, movetimeCapMs: 6_000 }), [
+    'clear_board',
+    'clear_cache',
     'kata-set-param maxVisits 150',
     'kata-set-param maxTime 2.500',
     'setfen l5t/1d3c1/r1j1w1e/7/7/7/E1W1J1R/1C3D1/T5L w',
     'genmove b',
     'genmove b',
-    'quit',
   ]);
   assert.equal(
     katagoMoveCommands(start.replace(' r ', ' b '), 'black', {
       visits: 150,
       movetimeCapMs: 6_000,
-    })[3],
+    })[5],
     'genmove w',
+  );
+  // A move that waited for the process (here a cold start) gets stages fitted
+  // to what is left, never more than the ceiling split nor less than 300 ms.
+  assert.equal(
+    katagoMoveCommands(start, 'red', { visits: 150, movetimeCapMs: 2_450, waitedMs: 1_200 })[3],
+    'kata-set-param maxTime 0.500',
+  );
+  assert.equal(
+    katagoMoveCommands(start, 'red', { visits: 150, movetimeCapMs: 2_450, waitedMs: 0 })[3],
+    'kata-set-param maxTime 0.725',
+  );
+  assert.equal(
+    katagoMoveCommands(start, 'red', { visits: 150, movetimeCapMs: 1_000, waitedMs: 900 })[3],
+    'kata-set-param maxTime 0.300',
   );
 });
 
@@ -103,7 +120,7 @@ test('the seat config keeps the rules and search the challenge was played under'
   assert.equal(value('allowResignation'), 'false');
   assert.equal(value('ponderingEnabled'), 'false');
   assert.equal(value('maxVisits'), String(katagoJungleTierFor(KATAGO_JUNGLE_ENGINE_ID)?.visits));
-  // One process per move: a log directory would collect one file per move.
+  // No log directory: the shared process would grow one file without bound.
   assert.equal(value('logDir'), undefined);
   assert.equal(value('logFile'), undefined);
 });
