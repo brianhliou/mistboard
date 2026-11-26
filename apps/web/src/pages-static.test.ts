@@ -298,6 +298,32 @@ describe('static pages', () => {
     }
   });
 
+  it('names the bot each jieqi engine plays, with its source link, and ranks none of them', () => {
+    vi.stubEnv('VITE_JQE_ENABLED', 'true');
+    window.history.replaceState(null, '', '/source');
+    const root = document.createElement('main');
+    mountSource(root);
+    const line = (href: string) => root.querySelector(`a[href="${href}"]`)?.textContent ?? '';
+
+    const jqe = line('https://github.com/devinokeefe/jieqi');
+    expect(jqe).toContain("jqe by Devin O'Keefe");
+    expect(jqe).toContain('MIT');
+    expect(jqe).toContain('the jqe bot');
+    const abj = line('https://github.com/lxsgx23/AB-JChess');
+    expect(abj).toContain('GPL-3.0');
+    expect(abj).toContain('the AB-JChess bot');
+    expect(abj).toContain('grade jieqi reviews');
+    const pikaJieqi = [...root.querySelectorAll('a')].find((a) =>
+      a.textContent?.startsWith("Pikafish's jieqi NNUE branch"),
+    );
+    expect(pikaJieqi?.textContent).toContain('Levels 1 to 8');
+    expect(pikaJieqi?.textContent).toContain('MIT licensed');
+    for (const text of [jqe, abj, pikaJieqi?.textContent ?? '']) {
+      expect(text).not.toMatch(/\btop\b|strongest|\bbest\b/i);
+      expect(text).not.toContain('—');
+    }
+  });
+
   it('credits the five third-party xiangqi piece sets, with the CC BY licence on Wood', () => {
     const cases = [
       ['/source', 'by Kadagaden, CC BY 4.0'],

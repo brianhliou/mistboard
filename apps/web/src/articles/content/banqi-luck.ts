@@ -1,7 +1,7 @@
 import type { Article, ArticleBlock } from '../types.js';
 import { BANQI_LUCK_FLIP_AFTER, BANQI_LUCK_FLIP_BEFORE } from '../banqi-luck-diagrams.js';
 import { BANQI_LUCK_CHART_SVG, BANQI_LUCK_THUMBNAIL_SVG } from './banqi-luck-chart.js';
-import { BANQI_LUCK_FLIP_POOL, BANQI_LUCK_GAME } from './banqi-luck-game.js';
+import { BANQI_LUCK_FLIP_POOL } from './banqi-luck-game.js';
 
 // The decision-vs-luck methodology essay. Every measured number in the prose
 // comes from the offline mining run recorded in docs-private/luck-article/
@@ -222,20 +222,15 @@ export const banqiLuckArticle: Article = {
           text:
             'In total: my flips **plus 76**, the bot’s minus 12, and my flip decisions gave away 74 points against the bot’s zero. The dashed line has me losing most of the game. The solid line has me winning. The bag overruled the play. The whole game is [open on Mistboard](/banqi/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9), replay below.',
         },
+        // The site's own game embed (the card every recent article frames), so the
+        // seats, result and move sheet come from the stored game, and the review's
+        // move grades and flip luck show once that game's analysis is cached.
         {
-          kind: 'banqi-replay',
-          spec: {
-            red: 'MistyBanqi',
-            black: 'brianhliou',
-            event: 'The game from the intro, live on Mistboard',
-            outcome: 'Black wins · 156 plies · net luck +88 to Black',
-            resultText:
-              'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.',
-            deal: BANQI_LUCK_GAME.deal,
-            moves: BANQI_LUCK_GAME.moves,
-          },
+          kind: 'embed',
+          path: '/embed/game/bq_7e8ce2e7-8e64-4453-b9fd-9dcc4bd52fa9',
+          title: 'The game from the intro, live on Mistboard',
           caption: 'Step to ply 6: the flip worth 45% on average that came up worth 82%.',
-        } as ArticleBlock,
+        },
         {
           kind: 'paragraph',
           text:

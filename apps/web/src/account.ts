@@ -1848,14 +1848,19 @@ function accountSettingsErrorMessage(
   return t('account.saveFailed', {}, locale);
 }
 
-function handleHelpText(user: AuthUser, locale: Locale = currentLocale()): string {
+export function handleHelpText(
+  user: Pick<AuthUser, 'handleChangedAt'>,
+  locale: Locale = currentLocale(),
+  nowMs: number = Date.now(),
+): string {
   if (!user.handleChangedAt) {
     return t('account.handleHelpFirst', {}, locale);
   }
   const nextChangeAt = new Date(
     new Date(user.handleChangedAt).getTime() + 30 * 24 * 60 * 60 * 1000,
   );
-  if (!Number.isFinite(nextChangeAt.getTime())) {
+  // A date already passed means the change is open now: no date to wait for.
+  if (!Number.isFinite(nextChangeAt.getTime()) || nextChangeAt.getTime() <= nowMs) {
     return t('account.handleHelpLater', {}, locale);
   }
   return t('account.handleHelpNext', { date: formatAccountDate(nextChangeAt, locale) }, locale);

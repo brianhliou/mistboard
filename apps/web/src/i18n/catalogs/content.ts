@@ -316,9 +316,9 @@ export const EN_CONTENT = {
   'source.stockfish':
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
   'source.fairyStockfish':
-    'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
+    'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi and Crazyhouse Xiangqi bots, GPL-3.0.',
   'source.pikafishJieqi':
-    "Pikafish's jieqi NNUE branch: the jieqi levels and browser analysis, GPL-3.0. Its net was trained on jqe labels and is MIT licensed. AB-JChess grades reviews.",
+    "Pikafish's jieqi NNUE branch: jieqi Levels 1 to 8 (Level 8 is the Pikafish bot) and the in-browser jieqi analysis, GPL-3.0. Its net was trained on jqe labels and is MIT licensed.",
   'source.chessPieceSets':
     'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
   'source.sounds':
@@ -326,19 +326,19 @@ export const EN_CONTENT = {
   'source.fonts':
     'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
-    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0; its neural network is used with the authors' permission.",
+    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0, played here as the AB-JChess bot and used to grade jieqi reviews; its neural network is used with the authors' permission.",
   'source.jqe':
-    "jqe by Devin O'Keefe: the top jieqi bot, with its own neural network, MIT; played here with the author's permission.",
+    "jqe by Devin O'Keefe: a jieqi engine with its own neural network, MIT, played here as the jqe bot with the author's permission. The current AB-JChess release is built on its code.",
   'source.katagomo':
-    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
+    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
   'source.rapfi':
-    'Rapfi by dhbloo and contributors: the top Gomoku opponent and eight bot levels, GPL-3.0.',
+    'Rapfi by dhbloo and contributors: the Gomoku opponent and eight bot levels, GPL-3.0.',
   'source.rapfiNetworks': 'Rapfi neural networks by the Rapfi project, CC0 1.0.',
   'source.rapfiBuild':
     'rapfi-wasm by Brian H. Liou: the reproducible Rapfi browser build behind the Gomoku review analysis, GPL-3.0.',
   'source.dandelion':
-    "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
+    "Dandelion 4 by Kouza (lxsgx23): the source of the jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.chessdb':
     'chessdb.cn, the Chinese Chess Cloud Database: exact endgame results in the xiangqi analysis board and practice.',
   'source.pieceSetLacquer':
@@ -530,18 +530,18 @@ export const EN_CONTENT = {
     'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
   'thanks.abJchessAuthors': 'Huorongrong and Laoxu',
   'thanks.abJchessBody':
-    "The top jieqi bot. Its current release is built on jqe's open-source code by Devin O'Keefe. Its authors let us use its neural network.",
+    "The jieqi bot. Its current release is built on jqe's open-source code by Devin O'Keefe. Its authors let us use its neural network.",
   'thanks.katagomoAuthor': 'KataGomo by hzyhhzy',
   'thanks.katagoAuthor': 'KataGo by lightvector',
   'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',
   'thanks.katagoBody':
-    "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
+    "The Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
   'thanks.rapfiAuthors': 'dhbloo and the Rapfi contributors',
   'thanks.rapfiBuildAuthor': 'Browser build by Brian H. Liou',
   'thanks.rapfiBotBio':
     'Our strongest Gomoku opponent, above Level 8. Rapfi by dhbloo and contributors, with neural networks from the Rapfi project. Thinks for about 4-5 seconds per move.',
   'thanks.rapfiBody':
-    'Plays the top Gomoku opponent and all eight bot levels, with neural networks from the Rapfi project; the rapfi-wasm build runs the analysis on the Gomoku review page.',
+    'Plays the Gomoku opponent and all eight bot levels, with neural networks from the Rapfi project; the rapfi-wasm build runs the analysis on the Gomoku review page.',
   'thanks.communityBotBy': 'A bot from a community developer.',
   'thanks.statGames': 'games on Mistboard',
   'thanks.statRating': '{variant} rating',

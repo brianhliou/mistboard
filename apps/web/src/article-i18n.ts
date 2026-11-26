@@ -1536,12 +1536,6 @@ const ZH_HANS: Record<string, string> = {
   'Why not a move count': '为什么不用步数上限',
   'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
     '像象棋那样判捉的一方输，得有人判断什么算捉，而且没有一份暗棋资料采用。重复规则不需要数字，也不需要裁判。重复的长捉在重复时就被挡下，有进展的长捉则不受影响。',
-  advisor: '士',
-  soldier: '卒',
-  elephant: '象',
-  chariot: '车',
-  cannon: '炮',
-  general: '将',
   'Banqi rules': '暗棋规则',
   'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
   'THE OTHER ADVISOR TAKES IT': '另一个士吃掉它',
@@ -4188,9 +4182,6 @@ const ZH_HANS: Record<string, string> = {
   'net luck toward the human, in the losses': '负局中偏向人类的净运气',
   '−9 points on average': '平均 −9 个百分点',
   'The game from the intro, live on Mistboard': '开头那盘棋，在 Mistboard 上公开',
-  'Black wins · 156 plies · net luck +88 to Black': '黑胜 · 156 个半回合 · 净运气 +88 偏向黑方',
-  'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.':
-    '红方无棋可走，黑方获胜。决策数字说红方下出的棋更好；棋子们说了反话，从第 6 个半回合的那次翻子开始。',
   'Separating Skill from Luck in Flip Games': '把翻子棋的实力和运气分开',
   // The seoTitle, which names the three variants where the on-page title does not.
   'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
@@ -9120,12 +9111,6 @@ const ZH_HANT: Record<string, string> = {
   'Why not a move count': '為什麼不用步數上限',
   'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
     '像象棋那樣判捉的一方輸，得有人判斷什麼算捉，而且沒有一份暗棋資料採用。重複規則不需要數字，也不需要裁判。重複的長捉在重複時就被擋下，有進展的長捉則不受影響。',
-  advisor: '士',
-  soldier: '卒',
-  elephant: '象',
-  chariot: '車',
-  cannon: '砲',
-  general: '將',
   'Banqi rules': '暗棋規則',
   'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
   'THE OTHER ADVISOR TAKES IT': '另一個士吃掉它',
@@ -11881,9 +11866,6 @@ const ZH_HANT: Record<string, string> = {
   'net luck toward the human, in the losses': '負局中偏向人類的淨運氣',
   '−9 points on average': '平均 −9 個百分點',
   'The game from the intro, live on Mistboard': '開頭那盤棋，在 Mistboard 上公開',
-  'Black wins · 156 plies · net luck +88 to Black': '黑勝 · 156 個半回合 · 淨運氣 +88 偏向黑方',
-  'Black wins when Red runs out of moves. The decision numbers say Red earned the better game; the tiles said otherwise, starting with the flip at ply 6.':
-    '紅方無棋可走，黑方獲勝。決策數字說紅方下出的棋更好；棋子們說了反話，從第 6 個半回合的那次翻子開始。',
   'Separating Skill from Luck in Flip Games': '把翻子棋的實力和運氣分開',
   // The seoTitle, which names the three variants where the on-page title does not.
   'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':

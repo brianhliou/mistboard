@@ -684,8 +684,9 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     // its home page and the CC0 Fairy-Stockfish net it runs on here (not
     // Pikafish's own weights, which are not licensed for commercial use).
     pikafishCreditLine(locale),
-    // The xiangqi ladder below Pikafish and the Duck Xiangqi bot run upstream
-    // Fairy-Stockfish builds (fairy-stockfish-*.ref); uncredited until 2026-10-17.
+    // The xiangqi ladder below Pikafish and the Duck Xiangqi and Crazyhouse Xiangqi
+    // bots run upstream Fairy-Stockfish builds (fairy-stockfish-*.ref); uncredited
+    // until 2026-10-17.
     linkLine(
       t('source.fairyStockfish', {}, locale),
       'https://github.com/fairy-stockfish/Fairy-Stockfish',
@@ -697,7 +698,9 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ...(jqeEnabled()
       ? [linkLine(t('source.jqe', {}, locale), 'https://github.com/devinokeefe/jieqi')]
       : []),
-    // Pinned jieqi NNUE fork and its independently trained MIT net.
+    // Pinned jieqi NNUE fork (pikafish-jieqi.ref): jieqi Levels 1-8 and the browser
+    // ceval, on its independently trained MIT net. Each jieqi line names the bot
+    // it plays, never a rank: rankings move with each engine release (2026-11-25).
     linkLine(t('source.pikafishJieqi', {}, locale), PIKAFISH_JIEQI_BUILD_URL),
     // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
     ...(gomokuEnabled()
