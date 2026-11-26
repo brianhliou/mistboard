@@ -13,6 +13,7 @@ import { darkXiangqiRooms } from './dark-xiangqi-registration.js';
 import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
 import { prewarmJieqiEngine } from './jieqi-engine.js';
 import { jieqiTenant } from './jieqi-tenant.js';
+import { closeKatagoJungleSession } from './jungle-katago-engine.js';
 import { runMigrations } from './migrate.js';
 import { logger, observeHttpHandler } from './obs.js';
 import { type PatronExpirySweeper, startPatronExpirySweeper } from './patron-expiry-sweeper.js';
@@ -424,6 +425,7 @@ export async function stopServer(): Promise<void> {
     }
   }
   closeBanqiAnalysisQueries();
+  closeKatagoJungleSession();
   await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
@@ -660,6 +662,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
     }
   }
   closeBanqiAnalysisQueries();
+  closeKatagoJungleSession();
   await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();

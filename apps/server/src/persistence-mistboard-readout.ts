@@ -5,12 +5,15 @@ import { collectStaleBotRatings } from './bot-rating-provenance.js';
 import { refreshCalibrationBotRatings } from './bot-rating-refresh.js';
 import { type ContentReadout, collectContentReadout } from './content-readout.js';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
+import { KATAGO_JUNGLE_ENGINE_ID } from './jungle-katago-engine.js';
+import { KATAGO_SLOW_QUEUE_WAIT_MS } from './jungle-katago-monitor.js';
 import {
   BOT_TIME_LOSS_ROOM_ID_CAP,
   buildMistboardReadout,
   deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
   isDisruptiveDrain,
+  type MistboardReadoutBotEngineFailures,
   type MistboardReadoutBotTiming,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
@@ -19,6 +22,7 @@ import {
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
   type MistboardReadoutFeedback,
+  type MistboardReadoutKatagoJungle,
   type MistboardReadoutMining,
   type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
@@ -37,6 +41,7 @@ import {
   countedHumanGame,
   countedPlayerSeat,
   liveClockGame,
+  pveBotGameEnded,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { getLoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
@@ -851,7 +856,158 @@ export async function collectBotTiming(
   }
   return {
     variants: [...byVariant.values()].sort((a, b) => a.variant.localeCompare(b.variant)),
+    katagoJungle: await collectKatagoJungle(db, periodStart, periodEnd),
+    engineFailures: await collectBotEngineFailures(db, periodStart, periodEnd),
   };
+}
+
+// The shared KataGo jungle process over the window (jungle-katago-monitor.ts).
+// A KataGo game is a counted PvE jungle game with a decision from the KataGo
+// engine, or with the KataGo bot seated (a game it flagged on its first move
+// has no decision). The move figures read the `katago` block, live clocks only;
+// failures count on any clock.
+async function collectKatagoJungle(
+  db: Queryable,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<MistboardReadoutKatagoJungle> {
+  const katagoDecision = (g: string, a: string) =>
+    `${a}.game_id = ${g}.room_id AND ${a}.artifact_type = $3
+       AND ${a}.payload->>'engine_id' = $4`;
+  const window = `${COUNTED_GAME} AND g.mode = 'pve' AND g.variant = 'jungle'
+         AND g.ended_at >= $1 AND g.ended_at < $2`;
+  const params = [
+    periodStart,
+    periodEnd,
+    LIVE_ENGINE_DECISION_ARTIFACT_TYPE,
+    KATAGO_JUNGLE_ENGINE_ID,
+  ];
+  const [moves, rooms] = await Promise.all([
+    db.query<{
+      moves: number;
+      slow: number;
+      p95_ms: number | null;
+      max_ms: number | null;
+      cold: number;
+      restarts: number;
+      retried: number;
+    }>(
+      `SELECT count(*)::int AS moves,
+              count(*) FILTER (WHERE m.wait_ms > $5)::int AS slow,
+              round(percentile_disc(0.95) WITHIN GROUP (ORDER BY m.wait_ms))::int AS p95_ms,
+              round(max(m.wait_ms))::int AS max_ms,
+              count(*) FILTER (WHERE a.payload->'katago'->>'process' = 'cold')::int AS cold,
+              count(*) FILTER (WHERE a.payload->'katago'->>'restart' = 'true')::int AS restarts,
+              count(*) FILTER (WHERE a.payload->'katago'->>'retried' = 'true')::int AS retried
+       FROM games g
+       JOIN game_debug_artifacts a ON ${katagoDecision('g', 'a')}
+       CROSS JOIN LATERAL (
+         SELECT (a.payload->'katago'->>'queue_wait_ms')::numeric AS wait_ms
+       ) m
+       WHERE ${window}
+         AND ${liveClockGame('g')}
+         AND jsonb_typeof(a.payload->'katago'->'queue_wait_ms') = 'number'`,
+      [...params, KATAGO_SLOW_QUEUE_WAIT_MS],
+    ),
+    db.query<{ room_id: string; queue_timeout: boolean; engine_resign: boolean; flagged: boolean }>(
+      `SELECT g.room_id,
+              EXISTS (
+                SELECT 1 FROM game_debug_artifacts q
+                WHERE ${katagoDecision('g', 'q')}
+                  AND (q.payload->'katago'->>'queue_timeouts')::numeric > 0
+              ) AS queue_timeout,
+              EXISTS (
+                SELECT 1 FROM game_debug_artifacts f
+                WHERE ${katagoDecision('g', 'f')}
+                  AND f.payload->>'failed_closed' = 'true'
+              ) AS engine_resign,
+              ${botLostOnTime('g')} AS flagged
+       FROM games g
+       WHERE ${window}
+         AND (
+           EXISTS (SELECT 1 FROM game_debug_artifacts k WHERE ${katagoDecision('g', 'k')})
+           OR EXISTS (
+             SELECT 1 FROM game_participants kp
+             WHERE kp.game_id = g.room_id AND kp.subject_type = 'bot' AND kp.subject_id = 'katago'
+           )
+         )
+       ORDER BY g.ended_at DESC, g.room_id DESC`,
+      params,
+    ),
+  ]);
+  const row = moves.rows[0];
+  // Newest first from the query; keep the newest past the cap, oldest first,
+  // as collectBotTiming does, so a new failure is always listed.
+  const ids = (pick: (room: (typeof rooms.rows)[number]) => boolean) =>
+    rooms.rows
+      .filter(pick)
+      .map((room) => room.room_id)
+      .slice(0, BOT_TIME_LOSS_ROOM_ID_CAP)
+      .reverse();
+  return {
+    moves: row?.moves ?? 0,
+    slowWaitMoves: row?.slow ?? 0,
+    p95QueueWaitMs: row?.p95_ms ?? null,
+    maxQueueWaitMs: row?.max_ms ?? null,
+    coldStarts: row?.cold ?? 0,
+    restarts: row?.restarts ?? 0,
+    retriedMoves: row?.retried ?? 0,
+    queueTimeoutRoomIds: ids((room) => room.queue_timeout),
+    engineResignRoomIds: ids((room) => room.engine_resign),
+    timeLossRoomIds: ids((room) => room.flagged),
+  };
+}
+
+// Games a first-party bot ended because its engine gave no usable move, per
+// variant, over the window. Three durable marks, one per way the bots fail:
+// a `live-engine-decision` with failed_closed true (the resigning bots, queued
+// before the resignation and flushed at game end), termination
+// 'engine-failure' (the forfeiting bots that engineFailureAbort voids: Gomoku,
+// Fog Xiangqi, the chess-stack fog bots), and an abort whose reason is
+// 'engine-unavailable' (Duck Xiangqi's opening abort, on the row its game start
+// wrote). A game counts as aborted when its row says so, else resigned. The
+// population is pveBotGameEnded, not COUNTED_GAME: an engine that fails on its
+// first move leaves a game neither side finished. Lists are the newest
+// BOT_TIME_LOSS_ROOM_ID_CAP per variant and outcome, oldest first.
+async function collectBotEngineFailures(
+  db: Queryable,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<MistboardReadoutBotEngineFailures[]> {
+  const { rows } = await db.query<{ variant: string; room_id: string; aborted: boolean }>(
+    `SELECT g.variant, g.room_id, g.status = 'aborted' AS aborted
+     FROM games g
+     WHERE ${pveBotGameEnded('g')}
+       AND g.ended_at >= $1 AND g.ended_at < $2
+       AND (
+         g.termination = 'engine-failure'
+         OR (g.status = 'aborted' AND g.aborted_reason = 'engine-unavailable')
+         OR EXISTS (
+           SELECT 1 FROM game_debug_artifacts f
+           WHERE f.game_id = g.room_id AND f.artifact_type = $3
+             AND f.payload->>'failed_closed' = 'true'
+         )
+       )
+     ORDER BY g.ended_at DESC, g.room_id DESC`,
+    [periodStart, periodEnd, LIVE_ENGINE_DECISION_ARTIFACT_TYPE],
+  );
+  const byVariant = new Map<string, MistboardReadoutBotEngineFailures>();
+  for (const row of rows) {
+    let entry = byVariant.get(row.variant);
+    if (!entry) {
+      entry = { variant: row.variant, resignedRoomIds: [], abortedRoomIds: [] };
+      byVariant.set(row.variant, entry);
+    }
+    const list = row.aborted ? entry.abortedRoomIds : entry.resignedRoomIds;
+    if (list.length < BOT_TIME_LOSS_ROOM_ID_CAP) list.push(row.room_id);
+  }
+  return [...byVariant.values()]
+    .map((entry) => ({
+      variant: entry.variant,
+      resignedRoomIds: entry.resignedRoomIds.reverse(),
+      abortedRoomIds: entry.abortedRoomIds.reverse(),
+    }))
+    .sort((a, b) => a.variant.localeCompare(b.variant));
 }
 
 async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadoutEngines> {

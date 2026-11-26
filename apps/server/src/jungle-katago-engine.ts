@@ -18,13 +18,16 @@
 //      match harness that rated this engine has to use the identical one; if
 //      they drifted, the engine we rated would not be the engine we serve.
 //
-// One process per move, like the MistyJungle driver: `setfen` restores the whole
-// position, so nothing is carried between moves and a crashed engine costs one
-// move rather than a game. It is also the RAM choice, and RAM is what the web
-// box pays for: each Eigen thread holds its own transformed copy of the net, so
-// the process peaks near 1 GB on four threads (katago-jungle-gtp.cfg has the
-// measurements) and a warm session would hold that all day for a seat that
-// moves a few hundred times. Loading the net costs ~1 s against ~1.7 s of search.
+// One warm process, shared by every jungle game and the EvE runner
+// (jungle-katago-session.ts). Loading the net is ~0.5 s on this Mac and ~1.65 s
+// on prod, which a process per move paid on every move: at 1+1 that is more
+// than the increment, and the seat lost a won game on time (jgl_29484585,
+// 2026-11-12). The process holds ~1 GB while it lives (katago-jungle-gtp.cfg
+// has the measurements), so it exits after 10 idle minutes and is parked with
+// the total engine-process cap meanwhile. Nothing is carried between moves:
+// every move clears the board and the search cache and sets the full position.
+// Decided 2026-11-25: no weaker engine stands in when the clock is short; the
+// shared process is the fix, and 1+1 stays on offer.
 //
 // Strength is a VISIT budget, not a clock: visits are CPU-independent, so the
 // bot plays the same strength on a loaded box as on an idle one, and the
@@ -39,7 +42,6 @@
 // from our engines release and the net from Kouza's Dandelion release, so prod
 // has both and a dev box without them never seats a bot that cannot move.
 
-import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -48,13 +50,13 @@ import {
   katagoGenmoveColor,
   toKatagoFen,
 } from '@mistboard/game';
-import { logger } from './obs.js';
 import {
-  resolveFsfVariantIniPath,
-  UciEnginePool,
-  type UciEval,
-  withEngineProcess,
-} from './uci-engine-harness.js';
+  gtpProcessSpawner,
+  KATAGO_SESSION_START_TIMEOUT_MS,
+  KatagoJungleSession,
+} from './jungle-katago-session.js';
+import { logger } from './obs.js';
+import { boundedEnvInt, resolveFsfVariantIniPath, type UciEval } from './uci-engine-harness.js';
 
 /** The engine id the top jungle seat carries. Named for its engine, not a level,
  *  like AB-JChess: a stronger engine can replace it without redefining a rung. */
@@ -164,9 +166,9 @@ export function katagoJungleAvailable(): boolean {
   }
 }
 
-// What a move pays before either search starts: spawning the process and
-// loading the net (~1 s measured). The rest of the ceiling is split between the
-// two stages.
+// The ceiling's stage split reserves this much for everything that is not a
+// search, as it always has, so a move at the tier ceiling (10+5, untimed) is the
+// same two 2.5 s stages it always was.
 const STARTUP_RESERVE_MS = 1_000;
 // Each stage searches at least this long, whatever the clock says. With only a
 // handful of visits the second stage can answer "pass", which in this engine is
@@ -174,74 +176,196 @@ const STARTUP_RESERVE_MS = 1_000;
 // linux/amd64 smoke runs); 300 ms is ~50 visits on the reference box.
 const MIN_STAGE_MS = 300;
 
-/** The hard deadline on one move's process: its budget, both minimum stages, and
- *  8 s of slack for startup and net load. */
-export function katagoMoveDeadlineMs(movetimeCapMs: number): number {
-  return movetimeCapMs + MIN_STAGE_MS * 2 + 8_000;
-}
+// A cold start: spawn and net load until the engine answers. Measured
+// 2026-11-25: 437-518 ms on this Mac (12 runs); on prod the 1+1 game
+// jgl_29484585 spent 2,230 ms on a move whose stages were both at the minimum,
+// so the start there is ~1.63 s, about 3.3x this Mac. Only the first move after
+// an idle close (or a crash) pays it; a prewarm at room creation hides it.
+export const KATAGO_JUNGLE_STARTUP_MS = 1_650;
+// What a move on the loaded process pays beyond its two stages: the setup
+// replies and the two genmove round trips. A move at two 300 ms stages took
+// 655 ms on this Mac (55 ms over, 2026-11-25); 3.3x for prod and rounded up.
+export const KATAGO_JUNGLE_WARM_OVERHEAD_MS = 250;
+/** The cheapest move KataGo can make on prod with the process loaded. */
+export const KATAGO_JUNGLE_MIN_MOVE_MS = KATAGO_JUNGLE_WARM_OVERHEAD_MS + MIN_STAGE_MS * 2;
+/** The same after a cold start, which only an idle close or a crash costs. */
+export const KATAGO_JUNGLE_COLD_MIN_MOVE_MS = KATAGO_JUNGLE_STARTUP_MS + MIN_STAGE_MS * 2;
+// Past both stages' maxTime the engine has had every chance to answer; a process
+// still silent after this much more is stuck, and is killed.
+const REPLY_SLACK_MS = 3_000;
 
-/** Per-stage `maxTime` in seconds for a move whose whole budget is `movetimeCapMs`. */
+/** Per-stage `maxTime` in seconds at the ceiling split for a `movetimeCapMs` budget. */
 export function katagoStageSeconds(movetimeCapMs: number): number {
   const perStage = Math.max(MIN_STAGE_MS, (movetimeCapMs - STARTUP_RESERVE_MS) / 2);
   return Math.round(perStage) / 1000;
 }
 
-/** The GTP script for one move: budget, position, then the two stages. */
+/**
+ * Per-stage `maxTime` for a move whose whole wall budget is `movetimeCapMs`,
+ * once it reaches the process after `waitedMs` (its queue wait, plus the start
+ * when the process was cold). Never more than the ceiling split, so a move with
+ * time to spare plays as it did; never less than the minimum stage.
+ */
+export function katagoStageSecondsForMove(movetimeCapMs: number, waitedMs = 0): number {
+  const ceilingStage = Math.max(MIN_STAGE_MS, (movetimeCapMs - STARTUP_RESERVE_MS) / 2);
+  const fitted = (movetimeCapMs - waitedMs - KATAGO_JUNGLE_WARM_OVERHEAD_MS) / 2;
+  return Math.round(Math.max(MIN_STAGE_MS, Math.min(ceilingStage, fitted))) / 1000;
+}
+
+/** How long the loaded process may take to answer one move at a `movetimeCapMs` budget. */
+export function katagoMoveDeadlineMs(movetimeCapMs: number): number {
+  return Math.round(katagoStageSeconds(movetimeCapMs) * 1000) * 2 + REPLY_SLACK_MS;
+}
+
+/**
+ * The GTP exchange for one move on the shared process: wipe what the last move
+ * left (board, history, search tree), set the budget and the full position,
+ * then the two stages. No `quit`: the process stays for the next move.
+ */
 export function katagoMoveCommands(
   fen: string,
   mover: JungleColor,
-  opts: { visits: number; movetimeCapMs: number },
+  opts: { visits: number; movetimeCapMs: number; waitedMs?: number },
 ): string[] {
   const { board, side } = toKatagoFen(fen);
   const colour = katagoGenmoveColor(mover);
+  const stage = katagoStageSecondsForMove(opts.movetimeCapMs, opts.waitedMs ?? 0);
   // maxVisits is the strength dial; maxTime is the ceiling, per genmove. Both are
   // set per call rather than baked into the config, so a tier is one place.
   return [
+    'clear_board',
+    'clear_cache',
     `kata-set-param maxVisits ${opts.visits}`,
-    `kata-set-param maxTime ${katagoStageSeconds(opts.movetimeCapMs).toFixed(3)}`,
+    `kata-set-param maxTime ${stage.toFixed(3)}`,
     `setfen ${board} ${side}`,
     `genmove ${colour}`,
     `genmove ${colour}`,
-    'quit',
   ];
 }
 
+/** The setup commands before the two genmoves; a refusal of any is no move. */
+const SETUP_COMMANDS = 5;
+
 export type KatagoJungleResult = {
   /** The move in our coordinates ("a1b1"), or null when the engine passed,
-   *  resigned or answered with something that is not a square. */
+   *  resigned, refused the position or answered with something that is not a square. */
   best: string | null;
   /** What it was asked for and what it spent, for the decision artifact. */
   visits: number;
   elapsedMs: number;
+  /** Whether the move found the process loaded ('warm') or started it ('cold'). */
+  process: 'warm' | 'cold';
+  /** Queue wait plus any start, before the move's commands were sent. */
+  waitedMs: number;
   /** The raw GTP replies, kept for the artifact when something goes wrong. */
   replies: string[];
+} & KatagoMoveTiming;
+
+/** Where one move's wall time went, as the decision record stores it. */
+export type KatagoMoveTiming = {
+  /** Behind other games' moves on the shared process. */
+  queuedMs: number;
+  /** Spawn and net load paid by this move; 0 when warm. */
+  startMs: number;
+  /** The search itself: commands sent to last reply. */
+  searchMs: number;
+  /** The start replaced a process a failure had killed. */
+  restart: boolean;
 };
+
+// The queue waits out a cold start and two worst-case moves at the live 6 s
+// ceiling (the one running and the one ahead): 26 s, under the 30 s cap
+// MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS is clamped to.
+export const KATAGO_JUNGLE_QUEUE_TIMEOUT_MS =
+  KATAGO_SESSION_START_TIMEOUT_MS +
+  2 * katagoMoveDeadlineMs(KATAGO_JUNGLE_TIERS.get(KATAGO_JUNGLE_ENGINE_ID)!.movetimeCapMs);
+
+/** The GTP command line for the seat's binary, net and config. */
+export function katagoJungleCommand(): { bin: string; args: string[] } {
+  return {
+    bin: katagoJungleEnginePath(),
+    args: ['gtp', '-model', katagoJungleNetPath(), '-config', katagoJungleConfigPath()],
+  };
+}
+
+let sharedSession: KatagoJungleSession | null = null;
+
+/** The one process every jungle game shares; created on first use. */
+export function katagoJungleSession(): KatagoJungleSession {
+  sharedSession ??= new KatagoJungleSession({
+    spawner: gtpProcessSpawner(katagoJungleCommand),
+    queueTimeoutMs: () =>
+      boundedEnvInt(
+        'MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS',
+        KATAGO_JUNGLE_QUEUE_TIMEOUT_MS,
+        100,
+        30_000,
+      ),
+  });
+  return sharedSession;
+}
+
+/** Shutdown: kill the process and fail anything queued. The next use starts afresh. */
+export function closeKatagoJungleSession(): void {
+  sharedSession?.close('shut down');
+  sharedSession = null;
+}
+
+/**
+ * Load the net now, so a new game's first move does not pay it. Called when a
+ * room is created against the KataGo seat; a no-op where the assets do not
+ * resolve, and a failure is only logged (the move itself retries the start).
+ */
+export function prewarmKatagoJungle(session: KatagoJungleSession = katagoJungleSession()): void {
+  if (!katagoJungleAvailable()) return;
+  void session.prewarm().catch((err: Error) => {
+    logger.warn({ kind: 'katago_jungle_prewarm_failed', error: err.message });
+  });
+}
 
 /**
  * One move from a full-board FEN. The FEN is server-built and trusted; the
  * engine's reply is not, so a vertex it does not recognise comes back as null
  * and the caller's engine-move guard decides what to do (it validates every
  * engine move against the kernel before it is appended, as it does for every
- * other engine).
+ * other engine). A timeout or a dead process rejects; the session has already
+ * killed it, and the next move starts a fresh one.
  */
-export function katagoJungleMove(
+export async function katagoJungleMove(
   fen: string,
   mover: JungleColor,
-  opts: { visits?: number; movetimeCapMs?: number } = {},
+  opts: { visits?: number; movetimeCapMs?: number; session?: KatagoJungleSession } = {},
 ): Promise<KatagoJungleResult> {
   const visits = opts.visits ?? 150;
   const movetimeCapMs = opts.movetimeCapMs ?? 6_000;
-  const commands = katagoMoveCommands(fen, mover, { visits, movetimeCapMs });
-  // Timed around the whole call, process start included: what the seat's clock
-  // is charged is the wall time, not the search's own idea of it.
-  const started = Date.now();
-  return runKatagoGtp(commands, katagoMoveDeadlineMs(movetimeCapMs)).then((replies) => ({
-    best: katagoMoveFromReplies(replies),
-    visits,
-    elapsedMs: Date.now() - started,
-    replies,
+  const session = opts.session ?? katagoJungleSession();
+  // The stage time is set when the move reaches the process, from what is left
+  // of its budget: the seat's clock is charged the wall time, wait included.
+  const result = await session.request(({ waitedMs }) => ({
+    commands: katagoMoveCommands(fen, mover, { visits, movetimeCapMs, waitedMs }),
+    deadlineMs:
+      Math.round(katagoStageSecondsForMove(movetimeCapMs, waitedMs) * 1000) * 2 + REPLY_SLACK_MS,
   }));
+  const refused = result.replies.slice(0, SETUP_COMMANDS).some((reply) => reply.startsWith('?'));
+  return {
+    best: refused ? null : katagoMoveFromReplies(result.replies),
+    visits,
+    elapsedMs: result.totalMs,
+    process: result.warm ? 'warm' : 'cold',
+    waitedMs: result.waitedMs,
+    replies: result.replies,
+    queuedMs: result.queuedMs,
+    startMs: result.startMs,
+    searchMs: Math.max(0, result.totalMs - result.waitedMs),
+    restart: result.restart,
+  };
 }
+
+/** What the jungle seat and the EvE runner record for a KataGo move. */
+export type KatagoJungleEval = UciEval & {
+  process?: 'warm' | 'cold';
+  katago?: KatagoMoveTiming;
+};
 
 /**
  * The same move in the shape the jungle seat and the EvE runner record for every
@@ -251,8 +375,8 @@ export function katagoJungleMove(
 export async function katagoJungleLiveEngineMove(
   fen: string,
   mover: JungleColor,
-  opts: { visits?: number; movetimeCapMs?: number } = {},
-): Promise<UciEval> {
+  opts: { visits?: number; movetimeCapMs?: number; session?: KatagoJungleSession } = {},
+): Promise<KatagoJungleEval> {
   const result = await katagoJungleMove(fen, mover, opts);
   if (result.best === null) {
     logger.warn({
@@ -261,7 +385,20 @@ export async function katagoJungleLiveEngineMove(
       elapsed_ms: result.elapsedMs,
     });
   }
-  return { best: result.best, cp: null, mate: null, depth: 0, timeMs: result.elapsedMs };
+  return {
+    best: result.best,
+    cp: null,
+    mate: null,
+    depth: 0,
+    timeMs: result.elapsedMs,
+    process: result.process,
+    katago: {
+      queuedMs: result.queuedMs,
+      startMs: result.startMs,
+      searchMs: result.searchMs,
+      restart: result.restart,
+    },
+  };
 }
 
 /**
@@ -285,80 +422,4 @@ export function katagoMoveFromReplies(replies: readonly string[]): string | null
   const from = fromKatagoVertex(tail[0]);
   const to = fromKatagoVertex(tail[1]);
   return from && to ? `${from}${to}` : null;
-}
-
-// One slot by default: each process peaks near 1 GB. A move can hold that slot
-// for its whole hard deadline (14.6 s at the live 6 s budget), so the default
-// 5 s queue timeout would shed the second concurrent jungle game's move (a shed
-// move retries once, then resigns the bot). The queue waits out two worst-case
-// moves instead: the one running and the one ahead in the queue. 29.2 s sits
-// under the harness's 30 s clamp; MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS tunes it.
-export const KATAGO_JUNGLE_QUEUE_TIMEOUT_MS =
-  2 * katagoMoveDeadlineMs(KATAGO_JUNGLE_TIERS.get(KATAGO_JUNGLE_ENGINE_ID)!.movetimeCapMs);
-/** Exported for the capacity tests; moves go through `katagoJungleMove`. */
-export const katagoJunglePool = new UciEnginePool({
-  name: 'katago-jungle',
-  maxProcessesEnvVar: 'MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES',
-  queueTimeoutEnvVar: 'MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS',
-  defaultMaxProcesses: 1,
-  maxProcessesLimit: 2,
-  defaultQueueTimeoutMs: KATAGO_JUNGLE_QUEUE_TIMEOUT_MS,
-  queueTimeoutMessage: 'KataGo jungle queue timed out',
-});
-
-/** Drive one GTP process to completion, collecting its replies. */
-async function runKatagoGtp(commands: string[], timeoutMs: number): Promise<string[]> {
-  const release = await katagoJunglePool.acquire();
-  let spawned = false;
-  try {
-    return await withEngineProcess(
-      (track) =>
-        new Promise<string[]>((resolvePromise, reject) => {
-          const child = spawn(
-            katagoJungleEnginePath(),
-            ['gtp', '-model', katagoJungleNetPath(), '-config', katagoJungleConfigPath()],
-            { stdio: ['pipe', 'pipe', 'ignore'] },
-          );
-          track(child);
-          spawned = true;
-          child.once('close', release);
-          const replies: string[] = [];
-          let buffer = '';
-          let settled = false;
-          const done = (err: Error | null): void => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            child.kill('SIGKILL');
-            if (err) reject(err);
-            else resolvePromise(replies);
-          };
-          const timer = setTimeout(() => {
-            logger.warn({ kind: 'katago_jungle_timeout', timeoutMs, replies: replies.length });
-            done(new Error('katago-jungle move timed out'));
-          }, timeoutMs);
-          timer.unref();
-          child.stdout.setEncoding('utf8');
-          child.stdout.on('data', (chunk: string) => {
-            buffer += chunk;
-            let nl = buffer.indexOf('\n');
-            while (nl >= 0) {
-              const line = buffer.slice(0, nl).trim();
-              buffer = buffer.slice(nl + 1);
-              if (line.startsWith('=') || line.startsWith('?')) replies.push(line);
-              nl = buffer.indexOf('\n');
-            }
-          });
-          child.on('error', (err) => done(err as Error));
-          child.on('close', () => done(null));
-          child.stdin.on('error', () => {
-            // The process can die before it reads stdin (a missing net); 'close' reports it.
-          });
-          child.stdin.write(`${commands.join('\n')}\n`);
-          child.stdin.end();
-        }),
-    );
-  } finally {
-    if (!spawned) release();
-  }
 }

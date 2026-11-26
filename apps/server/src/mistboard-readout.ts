@@ -7,6 +7,12 @@ import {
 import { type HeldBotRating, heldBotRatingKey } from './bot-rating-refresh.js';
 import { CONTENT_CAVEATS, type ContentReadout, contentSummary } from './content-readout.js';
 import type { ElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
+import {
+  KATAGO_MIN_MOVES_FOR_RATE,
+  KATAGO_P95_QUEUE_WAIT_MS,
+  KATAGO_SLOW_QUEUE_WAIT_MS,
+  KATAGO_SLOW_QUEUE_WAIT_SHARE,
+} from './jungle-katago-monitor.js';
 import type { LoginEmailDeliveryMetrics } from './persistence-email-delivery.js';
 import type { GuestSignInWeek } from './persistence-sessions.js';
 import {
@@ -220,6 +226,50 @@ export type MistboardReadoutBotTimingVariant = {
 
 export type MistboardReadoutBotTiming = {
   variants: MistboardReadoutBotTimingVariant[];
+  // The KataGo jungle seat's shared process; absent on older snapshots.
+  katagoJungle?: MistboardReadoutKatagoJungle;
+  // Games any first-party bot ended because its engine gave no usable move,
+  // one entry per variant with any; absent on older snapshots.
+  engineFailures?: MistboardReadoutBotEngineFailures[];
+};
+
+// A variant's games over the window that its bot resigned or aborted because
+// the engine gave no usable move (persistence-mistboard-readout.ts,
+// collectBotEngineFailures). Room ids only: the newest
+// BOT_TIME_LOSS_ROOM_ID_CAP of each list, oldest first, as above.
+export type MistboardReadoutBotEngineFailures = {
+  variant: string;
+  // The game finished: the bot resigned (or forfeited) it.
+  resignedRoomIds: string[];
+  // The game was voided: the server aborted it (an opening the engine never
+  // answered, or a forfeit engineFailureAbort turns into an abort).
+  abortedRoomIds: string[];
+};
+
+// The one KataGo process every jungle game against the KataGo seat shares
+// (jungle-katago-monitor.ts), over the report window: counted PvE games only,
+// as above. The move figures read the `katago` block on its live-engine-decision
+// artifacts in games on a live clock; the room ids are failures in any of
+// those games, each list the newest BOT_TIME_LOSS_ROOM_ID_CAP, oldest first.
+export type MistboardReadoutKatagoJungle = {
+  // Recorded moves with a queue wait (decisions from before the record had none).
+  moves: number;
+  // Moves that waited more than KATAGO_SLOW_QUEUE_WAIT_MS behind other games.
+  slowWaitMoves: number;
+  // Nearest-rank 95th percentile and the longest queue wait, in ms.
+  p95QueueWaitMs: number | null;
+  maxQueueWaitMs: number | null;
+  // Moves that paid a process start, and those whose start followed a crash.
+  coldStarts: number;
+  restarts: number;
+  // Moves that needed a second attempt.
+  retriedMoves: number;
+  // Games where a move gave up waiting for the process.
+  queueTimeoutRoomIds: string[];
+  // Games the seat resigned because the engine gave no usable move.
+  engineResignRoomIds: string[];
+  // Games the KataGo seat lost on time.
+  timeLossRoomIds: string[];
 };
 
 export const BOT_TIME_LOSS_ROOM_ID_CAP = 20;
@@ -479,6 +529,8 @@ function buildActions(
     ...deployDisruptionActions(facts.deploys ?? null, previousReport),
     ...loginEmailDeliveryActions(facts.loginEmailDelivery ?? null, previousReport),
     ...botTimeLossActions(facts.botTiming ?? null, previousReport),
+    ...katagoJungleActions(facts.botTiming?.katagoJungle, previousReport),
+    ...botEngineFailureActions(facts.botTiming ?? null, previousReport),
     ...staleBotRatingActions(facts.engines?.staleRatings, previousReport),
     ...heldBotRatingActions(facts.engines?.heldRatings, previousReport),
   ];
@@ -975,9 +1027,14 @@ function botTimeLossActions(
       entry.timeLossRoomIds.map((roomId) => `${entry.variant}:${roomId}`),
     ),
   );
+  // The KataGo seat's losses on time are told by its own rule below, with the
+  // shared process named as the likely cause; one game is one line.
+  const katagoRooms = new Set(botTiming.katagoJungle?.timeLossRoomIds ?? []);
   return botTiming.variants.flatMap((entry) => {
     const fresh = entry.timeLossRoomIds.filter(
-      (roomId) => !reported.has(`${entry.variant}:${roomId}`),
+      (roomId) =>
+        !reported.has(`${entry.variant}:${roomId}`) &&
+        !(entry.variant === 'jungle' && katagoRooms.has(roomId)),
     );
     if (fresh.length === 0) return [];
     const plural = fresh.length === 1 ? '' : 's';
@@ -995,6 +1052,146 @@ function botTimeLossActions(
       },
     ];
   });
+}
+
+// Two rules for the shared KataGo jungle process.
+//
+// Busy queue (watch): a rate over the window, judged on its level, so it stays
+// up while the week stays busy and its alert key is the code. It reads the
+// queue wait alone, not the process start: a start is the idle close or a
+// crash, which the restart count and the failure rule cover, not traffic.
+// Silent under KATAGO_MIN_MOVES_FOR_RATE moves, where one overlapping pair of
+// games would read as 10%.
+//
+// Failures (action): each game is its own event, edge-triggered on room ids the
+// way bot losses on time are, and fires at any count, however few moves.
+function katagoJungleActions(
+  katago: MistboardReadoutKatagoJungle | undefined,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!katago) return [];
+  const actions: MistboardReadoutAction[] = [];
+  const share = katago.moves > 0 ? katago.slowWaitMoves / katago.moves : 0;
+  const p95 = katago.p95QueueWaitMs ?? 0;
+  if (
+    katago.moves >= KATAGO_MIN_MOVES_FOR_RATE &&
+    (share > KATAGO_SLOW_QUEUE_WAIT_SHARE || p95 > KATAGO_P95_QUEUE_WAIT_MS)
+  ) {
+    actions.push({
+      code: 'katago-jungle-queue-busy',
+      severity: 'watch',
+      dedupeKey: 'katago-jungle-queue-busy',
+      ownerIssue: null,
+      text:
+        `Jungle KataGo bot: ${Math.round(share * 100)}% of its ${katago.moves} moves in the last 7 days ` +
+        `waited more than ${seconds(KATAGO_SLOW_QUEUE_WAIT_MS)} for another game's move to finish, ` +
+        `and 1 move in 20 waited ${seconds(p95)} or longer. Every game shares one KataGo process, ` +
+        "and a 1+1 move has only about 0.15 s to spare, so the waits come out of the bot's clock. " +
+        'Add a second Jungle KataGo process before the bot starts losing on time.',
+    });
+  }
+  const previous = previousReport?.botTiming?.katagoJungle;
+  const fresh = (current: string[], before: string[] | undefined) =>
+    current.filter((roomId) => !(before ?? []).includes(roomId));
+  const timeouts = fresh(katago.queueTimeoutRoomIds, previous?.queueTimeoutRoomIds);
+  const resigns = fresh(katago.engineResignRoomIds, previous?.engineResignRoomIds);
+  const flags = fresh(katago.timeLossRoomIds, previous?.timeLossRoomIds);
+  if (timeouts.length + resigns.length + flags.length > 0) {
+    const games = (n: number) => `${n} game${n === 1 ? '' : 's'}`;
+    const list = (ids: string[]) => `${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}`;
+    const parts = [
+      ...(timeouts.length > 0
+        ? [
+            `${games(timeouts.length)} where a move gave up waiting for the engine (${list(timeouts)})`,
+          ]
+        : []),
+      ...(resigns.length > 0
+        ? [
+            `${games(resigns.length)} the bot resigned because the engine gave no move (${list(resigns)})`,
+          ]
+        : []),
+      ...(flags.length > 0 ? [`${games(flags.length)} lost on time (${list(flags)})`] : []),
+    ];
+    actions.push({
+      code: 'katago-jungle-engine-failures',
+      severity: 'action',
+      dedupeKey:
+        'katago-jungle-engine-failures:' +
+        [
+          ...timeouts.map((id) => `queue:${id}`),
+          ...resigns.map((id) => `resign:${id}`),
+          ...flags.map((id) => `flag:${id}`),
+        ].join(','),
+      ownerIssue: null,
+      text:
+        `Jungle KataGo bot, new since the last readout (expected none): ${parts.join('; ')}. ` +
+        "Read those games' live-engine-decision artifacts (the katago block) and the server log's " +
+        'katago_jungle lines. If moves were waiting on each other, add a second Jungle KataGo process.',
+    });
+  }
+  return actions;
+}
+
+// Any bot whose engine gave no usable move (action): each game is its own
+// event, edge-triggered on variant and room id the way bot losses on time are,
+// one line per variant, at any count. With no previous readout, or one from
+// before this list existed, every game in the window is new. The KataGo jungle
+// seat's resignations are told by katago-jungle-engine-failures above, with the
+// shared process named, so a jungle room in its list is left out here: one game
+// is one line.
+function botEngineFailureActions(
+  botTiming: MistboardReadoutBotTiming | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!botTiming?.engineFailures) return [];
+  const reported = new Set(
+    (previousReport?.botTiming?.engineFailures ?? []).flatMap((entry) =>
+      [...entry.resignedRoomIds, ...entry.abortedRoomIds].map(
+        (roomId) => `${entry.variant}:${roomId}`,
+      ),
+    ),
+  );
+  const katagoRooms = new Set(botTiming.katagoJungle?.engineResignRoomIds ?? []);
+  const games = (n: number) => `${n} game${n === 1 ? '' : 's'}`;
+  const list = (ids: string[]) => `${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}`;
+  return botTiming.engineFailures.flatMap((entry) => {
+    const fresh = (ids: string[]) =>
+      ids.filter(
+        (roomId) =>
+          !reported.has(`${entry.variant}:${roomId}`) &&
+          !(entry.variant === 'jungle' && katagoRooms.has(roomId)),
+      );
+    const resigned = fresh(entry.resignedRoomIds);
+    const aborted = fresh(entry.abortedRoomIds);
+    if (resigned.length + aborted.length === 0) return [];
+    const parts = [
+      ...(resigned.length > 0
+        ? [`${games(resigned.length)} the bot resigned (${list(resigned)})`]
+        : []),
+      ...(aborted.length > 0 ? [`${games(aborted.length)} aborted (${list(aborted)})`] : []),
+    ];
+    return [
+      {
+        code: 'bot-engine-failures',
+        severity: 'action' as const,
+        dedupeKey:
+          `bot-engine-failures:${entry.variant}:` +
+          [...resigned.map((id) => `resign:${id}`), ...aborted.map((id) => `abort:${id}`)].join(
+            ',',
+          ),
+        ownerIssue: null,
+        text:
+          `${entry.variant}: ${parts.join(' and ')} because the bot's engine gave no move, ` +
+          'new since the last readout (expected none). ' +
+          "Read those games' live-engine-decision artifacts and the server log's " +
+          '*_engine_failed_closed lines for the reject reason.',
+      },
+    ];
+  });
+}
+
+function seconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
 }
 
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
@@ -1044,6 +1241,8 @@ const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set([
   'login-email-complaint-new',
   // Each bot loss on time is its own game; the key names the rooms.
   'bot-time-losses',
+  'katago-jungle-engine-failures',
+  'bot-engine-failures',
   'bot-ratings-stale',
   'bot-ratings-calibration-held',
   'site-milestone-crossed',
@@ -1252,6 +1451,9 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   }
   if (report.botTiming) {
     lines.push(renderBotTiming(report.botTiming));
+    if (report.botTiming.katagoJungle) {
+      lines.push(renderKatagoJungle(report.botTiming.katagoJungle));
+    }
   } else if (report.botTiming === null) {
     lines.push('- Bot timing unavailable.');
   }
@@ -1286,6 +1488,21 @@ export function renderBotTiming(botTiming: MistboardReadoutBotTiming): string {
         ` over ${entry.replies} repl${entry.replies === 1 ? 'y' : 'ies'}`,
     );
   return `- Bot timing, last 7 days (compute plus pacing wait): ${parts.join('; ')}`;
+}
+
+export function renderKatagoJungle(katago: MistboardReadoutKatagoJungle): string {
+  const wait =
+    katago.p95QueueWaitMs === null
+      ? 'no recorded waits'
+      : `${katago.slowWaitMoves} waited over ${seconds(KATAGO_SLOW_QUEUE_WAIT_MS)} for another game, ` +
+        `1 in 20 waited ${seconds(katago.p95QueueWaitMs)} or longer, the longest ${seconds(katago.maxQueueWaitMs ?? 0)}`;
+  return (
+    `- Jungle KataGo process, last 7 days: ${katago.moves} move${katago.moves === 1 ? '' : 's'}, ${wait}; ` +
+    `${katago.coldStarts} cold start${katago.coldStarts === 1 ? '' : 's'} (${katago.restarts} after a crash), ` +
+    `${katago.retriedMoves} retried, ${katago.queueTimeoutRoomIds.length} gave up waiting, ` +
+    `${katago.engineResignRoomIds.length} engine resignation${katago.engineResignRoomIds.length === 1 ? '' : 's'}, ` +
+    `${katago.timeLossRoomIds.length} lost on time`
+  );
 }
 
 function signedDelta(value: number): string {

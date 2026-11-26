@@ -273,7 +273,7 @@ export class UciEnginePool {
 // Search slots are released between moves, but parked children still hold their
 // hash/net in RAM. This independent lease lasts until the OS closes the child.
 // 12 processes leaves headroom on the 24 GB web host even for the ~1 GB engines.
-const parkedProcesses = new Map<UciEngineSession, () => void>();
+const parkedProcesses = new Map<object, () => void>();
 
 function abortReason(signal: AbortSignal): Error {
   return signal.reason instanceof Error ? signal.reason : new Error('engine slot wait aborted');
@@ -292,6 +292,22 @@ const engineProcessPool = new UciEnginePool({
   queueTimeoutMessage: 'Total engine process queue timed out',
   onSaturated: () => parkedProcesses.values().next().value?.(),
 });
+
+/**
+ * A warm process kept outside UciWarmSessionCache (the jungle KataGo session)
+ * parks here while it is idle, so a saturated total cap can evict it exactly as
+ * it evicts a parked UCI session. `evict` must kill the process; its lease is
+ * released when the OS closes it.
+ */
+export function parkEngineProcess(owner: object, evict: () => void): void {
+  parkedProcesses.set(owner, evict);
+  if (engineProcessPool.stats().queueDepth > 0) evict();
+}
+
+/** The process is busy again (or gone): no longer evictable. */
+export function unparkEngineProcess(owner: object): void {
+  parkedProcesses.delete(owner);
+}
 
 /** Call track immediately after spawn. Failed spawns and every exit release the
  * physical lease; resolving a bestmove or sending SIGKILL does not release it. */

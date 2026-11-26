@@ -425,6 +425,28 @@ export function botSeat(participantsAlias = 'p'): string {
   return `${participantsAlias}.subject_type IN ('bot', 'engine-version')`;
 }
 
+// A person's PvE game against a first-party bot that ended, completed or
+// aborted, at any length: the population the readout's bot-engine-failures
+// rule searches. Looser than countedHumanGame on purpose: an engine that fails
+// on its first move leaves a game where only one side moved (or none), and a
+// failure the server turns into an abort leaves status 'aborted'. Still
+// launch-dated, internal corpora and stats-excluded seats out, a person seated
+// (humanSeatExists, so the prod smoke probes' aborted rooms stay out), and a
+// bot seated. Games alias as above.
+export function pveBotGameEnded(gamesAlias = 'g'): string {
+  const g = gamesAlias;
+  return `${g}.mode = 'pve' AND ${g}.status IN ('completed', 'aborted')
+    AND ${g}.corpus_id IS DISTINCT FROM '${INTERNAL_BANQI_CORPUS_ID}'
+    AND ${g}.corpus_id IS DISTINCT FROM '${RELEASE_SMOKE_CORPUS_ID}'
+    AND ${sinceLaunch(g)}
+    AND ${humanSeatExists(g)}
+    AND EXISTS (
+      SELECT 1 FROM game_participants bsp
+      WHERE bsp.game_id = ${g}.room_id AND ${botSeat('bsp')}
+    )
+    AND NOT ${excludedFromStats(g)}`;
+}
+
 // A game on a live clock: not days-per-move correspondence. The room-created
 // event (seq 0) is the durable home of the time control, as in
 // persistence-games.ts's NOT_CORRESPONDENCE_SQL. Games alias as above.
