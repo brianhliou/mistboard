@@ -15,6 +15,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- Xiangqi has a Bold piece set and two new board colours, Green and Pine ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- Room quick chat sends Hi, Good luck, Good game, Well played and Thanks, shown in each reader's language ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- Game cards on /games and /correspondence are simpler: the board, one line per player with the clock, and Accept in the open seat of a seek ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - At the end of a game, Review game now sits right under Rematch with a green outline ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - Verified titles and flair now show beside player names in game rooms, review, /games, /watch, the correspondence inbox and the homepage game board ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - In games against a bot you now have five minutes to make your first move before the game is cancelled, up from 30 seconds ([8ba06e9c](https://github.com/brianhliou/mistboard/commit/8ba06e9c))
@@ -83,6 +86,7 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- Study lessons fit one phone screen with the board edge to edge, move on with Next puzzle, and show the closing comment in a sheet you can tuck away by tapping the board ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - The Pikafish guide links the easier bot levels and the analysis board on its first screen and has a new section on downloading Pikafish and its licence ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - The Fanfanqi study embed animates each move and flip ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - The classical collections have their own tab on the studies page, shown as study cards ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
@@ -124,6 +128,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- The watch page and the homepage game show each side's HP in Fanfanqi and points in Three Kingdoms Banqi ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- Finished game cards show 1, 0 or ½ beside each player ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Broadcast board pages now use the game review layout on phone and desktop, with a larger board and the moves, chart and chat where review has them ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - Live games on Watch glide each new move ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
 - Duck Xiangqi replays glide moves when stepping ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
@@ -175,6 +181,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Site
 
+- Stats count a game between a site operator account and a guest player when the guest's browser has no tie to an operator account ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- Article and rules diagrams draw the Green and Pine boards in full ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Rapfi is the first Gomoku champion on the champions page, and engine champions carry the crown in the About menu ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
 - The champions page lists Fanfanqi and Three Kingdoms Banqi ([e553f544](https://github.com/brianhliou/mistboard/commit/e553f544))
 - The Play a person controls sit in one row with a single sign-in button ([6f77cc2c](https://github.com/brianhliou/mistboard/commit/6f77cc2c))
@@ -237,6 +245,12 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Fixed
 
+- The last-move band is readable on the light board colours ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- The move list marks the last move while the board shows it ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- The jieqi odds strips keep one height as a side's pool empties, so the board no longer shifts on the last flip ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- Names beside a seat disc no longer repeat the seat colour ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- Bot levels on /games cards and day-scale clocks read in the visitor's language ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
+- A finished Fanfanqi game's HP ending reads HP depletion everywhere ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - On a broadcast board page the game list and chat now start and end level with the board, as on the game review page ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - A profile no longer tells other visitors that the account is an admin ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
 - A bot game aborted before its first move now offers New game ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
