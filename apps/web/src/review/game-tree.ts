@@ -89,6 +89,9 @@ export interface NodeShape {
 export interface NodeGamebook {
   hint?: string;
   deviation?: string;
+  /** Optional per-locale hint and deviation, keyed by Locale code, resolved by
+   *  the render layer against the reader's locale like a comment's `i18n`. */
+  i18n?: Record<string, { hint?: string; deviation?: string }>;
 }
 
 /** User-authored annotations carried on a tree node. All fields optional; an absent

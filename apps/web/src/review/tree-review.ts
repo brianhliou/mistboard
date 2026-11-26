@@ -1967,6 +1967,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             gamebook: {
               hint: patch.hint?.trim() || undefined,
               deviation: patch.deviation?.trim() || undefined,
+              // The editor writes the base text only; translations ride along.
+              ...(currentNode().annotations?.gamebook?.i18n
+                ? { i18n: currentNode().annotations?.gamebook?.i18n }
+                : {}),
             },
           });
           notifyChange();
