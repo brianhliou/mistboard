@@ -574,8 +574,8 @@ export const MOVED_POSTS_ZH_HANS: Readonly<Record<string, string>> = {
     '这 960 个评估值是在一次 Modal 运行中算出的，底层是为此搭建的国际象棋960管线：`UCI_Chess960` 引擎模式、X-FEN 王车易位往返转换、主变重演中的 shredder-UCI 王车易位，以及国际象棋960正确性的回归测试覆盖。',
   "The successful production run took 33.1 minutes wall time: 96 ten-position batches, run in parallel under Modal's 100-container Starter cap. At Modal's base CPU/memory rates, that run lands under $3 of cloud spend.":
     '成功的正式运行实际耗时 33.1 分钟：96 个十局面批次，在 Modal 的 100 容器 Starter 上限下并行运行。按 Modal 的基础 CPU/内存费率，这次运行的云端花费不到 3 美元。',
-  "Corrected two histogram counts, SP-663's depth-36 score and the run cost against the published CSV.":
-    '对照已发布的 CSV，更正了两个直方图计数、SP-663 在深度 36 下的评估值，以及运行成本。',
+  'Added a button at the end to read the Fog Chess rules.':
+    '在文末添加了一个按钮，可以阅读迷雾国际象棋的规则。',
   // lichess-analysis-accuracy: restored 2026-10-24, not native-reviewed; 50 strings reused from the brianhliou.com zh-hans and zh-hant posts where they still say what the moved English says, 15 machine-drafted for text the move changed or added.
   'Lichess Analysis: What a Million Nodes a Move Buys': 'Lichess 分析：每着一百万节点换来了什么',
   'Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.':
@@ -1485,8 +1485,8 @@ export const MOVED_POSTS_ZH_HANT: Readonly<Record<string, string>> = {
     '這 960 個評估值是在一次 Modal 執行中算出的，建立在為此打造的西洋棋960底層之上：`UCI_Chess960` 引擎模式、X-FEN 王車易位的往返轉換、主變重播中的 shredder-UCI 王車易位，以及針對西洋棋960正確性的回歸測試覆蓋。',
   "The successful production run took 33.1 minutes wall time: 96 ten-position batches, run in parallel under Modal's 100-container Starter cap. At Modal's base CPU/memory rates, that run lands under $3 of cloud spend.":
     '成功的正式執行實際耗時 33.1 分鐘：96 個十局面批次，在 Modal 的 100 容器 Starter 方案上限下並行執行。以 Modal 的基本 CPU／記憶體費率計算，這次執行的雲端花費在 3 美元以下。',
-  "Corrected two histogram counts, SP-663's depth-36 score and the run cost against the published CSV.":
-    '對照已發佈的 CSV，更正了兩個直方圖計數、SP-663 在深度 36 下的評估值，以及執行成本。',
+  'Added a button at the end to read the Fog Chess rules.':
+    '在文末加上了一個按鈕，可以閱讀迷霧西洋棋的規則。',
   // lichess-analysis-accuracy: restored 2026-10-24, not native-reviewed; 50 strings reused from the brianhliou.com zh-hans and zh-hant posts where they still say what the moved English says, 15 machine-drafted for text the move changed or added.
   'Lichess Analysis: What a Million Nodes a Move Buys': 'Lichess 分析：每著一百萬節點換來了什麼',
   'Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.':
