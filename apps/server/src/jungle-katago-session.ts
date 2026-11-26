@@ -401,6 +401,9 @@ export function gtpProcessSpawner(
           child.stdin.write(text);
         },
         kill: () => {
+          // An idle child is unref'd; hold the loop until it exits, or a caller
+          // waiting on its slot (released on 'close') can outlive the process.
+          process.setActive(true);
           try {
             child.kill('SIGKILL');
           } catch {
