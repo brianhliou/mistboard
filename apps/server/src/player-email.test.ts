@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { accountCodeEmail } from './account-session.js';
+import { clubConfirmEmail, clubConfirmUrl } from './club-signup.js';
 import { renderEmail } from './email-layout.js';
 import {
   challengeUrl,
@@ -33,7 +34,7 @@ const INBOX_COPY = {
   en: {
     subject: 'Unread message from Fox <Chess> (@fox333)',
     button: 'Open your inbox',
-    reason: 'You received this email because you have an unread message on Mistboard.',
+    reason: 'You got this email because you have an unread message on Mistboard.',
     unsubscribe: 'Unsubscribe from message emails',
   },
   'zh-Hans': {
@@ -258,8 +259,8 @@ test('English subjects name the variant and the opponent', () => {
     deadlineEmail('en').subject,
     'Your move against mistwalker in Fog Xiangqi is running out of time',
   );
-  assert.equal(digestEmail('en', 1).subject, 'Your move in jieqi against flipper');
-  assert.equal(digestEmail('en').subject, 'Your move in jieqi against flipper and 1 other game');
+  assert.equal(digestEmail('en', 1).subject, 'Your move in Jieqi against flipper');
+  assert.equal(digestEmail('en').subject, 'Your move in Jieqi against flipper and 1 other game');
 });
 
 test('zh subjects name the variant and the opponent', () => {
@@ -373,7 +374,7 @@ test('player-supplied names are escaped in the html part', () => {
     },
     'en',
   );
-  assert.ok(!email.html.includes('<img'));
+  assert.ok(!email.html.includes('<img src=x'));
   assert.ok(email.html.includes('&lt;img src=x onerror=alert(1)&gt;'));
   assert.ok(email.html.includes('/room/r%22%3E%3Cx'));
 });
@@ -437,6 +438,79 @@ test('the layout renders without a button or settings link', () => {
   });
   assert.equal(email.text, 'Mistboard\n\nHello\n\nOne line.\n\n--\nBecause.');
   assert.ok(!email.html.includes('mb-button'));
+});
+
+test('the layout never prints a raw URL in the html part; the button is the only link to it', () => {
+  const url =
+    'https://mistboard.com/xiangqi/game/xq_7c2dbfde-41a9-4c3e-9b8f-2d6e5a1c0f37?from=email';
+  const email = renderEmail({
+    headline: 'You won your Xiangqi game',
+    paragraphs: ['The game ended by checkmate.'],
+    button: { label: 'Review the game', url },
+    footer: { reason: 'Because.', manage: { label: 'Manage', url: 'https://mistboard.com/m' } },
+  });
+  // The full URL lives only in href attributes; the visible text is short.
+  const visible = email.html.replace(/<[^>]*>/g, ' ');
+  assert.ok(!visible.includes('https://'), 'a URL printed as text');
+  assert.ok(!visible.includes('xq_7c2dbfde'), 'the room id printed as text');
+  assert.equal(email.html.split(`href="${url}"`).length - 1, 1, 'one link to the game');
+  assert.ok(!email.html.includes('word-break'), 'no wrapped URL block');
+  // The text part keeps every URL in full.
+  assert.ok(email.text.includes(`Review the game: ${url}`));
+  assert.ok(email.text.includes('Manage: https://mistboard.com/m'));
+});
+
+test('no html body carries a link line under the button, in any email or locale', () => {
+  const all: Array<[string, PlayerEmail]> = [];
+  for (const locale of LOCALES) {
+    all.push(
+      ...correspondenceEmails(locale),
+      ...noticeEmails(locale),
+      [
+        'inbox notice',
+        inboxNoticeEmail(
+          { senderHandle: 'fox333', senderName: 'Fox', unsubscribeUrl: 'https://mistboard.com/u' },
+          locale,
+        ),
+      ],
+      [
+        'club confirm',
+        clubConfirmEmail(locale, clubConfirmUrl('https://mistboard.com', 't', locale)),
+      ],
+      ...CODE_PURPOSES.map((purpose): [string, PlayerEmail] => [
+        `code ${purpose}`,
+        accountCodeEmail('1', purpose, locale),
+      ]),
+    );
+  }
+  for (const [name, email] of all) {
+    for (const line of ['Or open', '或打开', '或打開', 'class="mb-muted"']) {
+      assert.ok(!email.html.includes(line), `${name} (${email.subject}) html has "${line}"`);
+    }
+  }
+});
+
+test('the layout is one centred 560px column with the icon beside the wordmark', () => {
+  const { html } = renderEmail({
+    headline: 'h',
+    paragraphs: ['p'],
+    footer: { reason: 'r', manage: null },
+  });
+  assert.match(
+    html,
+    /<table role="presentation" align="center" width="100%"[^>]*style="width:100%;max-width:560px;margin:0 auto">/,
+  );
+  assert.ok(html.includes('<!--[if mso]><table role="presentation" align="center" width="560"'));
+  assert.match(
+    html,
+    /<img src="https:\/\/mistboard\.com\/logo-192\.png" width="28" height="28" alt=""/,
+  );
+  assert.match(
+    html,
+    /<a class="mb-wordmark" href="https:\/\/mistboard\.com\/"[^>]*>Mistboard<\/a>/,
+  );
+  // No web font is loaded.
+  assert.ok(!/<link\b|@import|@font-face|Noto Sans/.test(html));
 });
 
 // ── #1057: challenge, joiner start, Play the host, game over ────────────────
@@ -526,8 +600,12 @@ test('#1057 emails: settings link, both parts, no em dash, in every locale', () 
       for (const part of [email.subject, email.text, email.html]) {
         assert.ok(!part.includes('\u2014'), `em dash in ${locale} ${kind}`);
       }
-      // Text only: no board, no image.
-      assert.ok(!email.html.includes('<img'), `${locale} ${kind}: image`);
+      // Text only: no board, and no image but the site's own icon.
+      assert.deepEqual(
+        email.html.match(/<img [^>]*>/g)?.map((tag) => /src="([^"]+)"/.exec(tag)?.[1]),
+        ['https://mistboard.com/logo-192.png'],
+        `${locale} ${kind}: image`,
+      );
       assert.ok(!email.html.includes('<svg'), `${locale} ${kind}: svg`);
     }
   }
@@ -588,9 +666,9 @@ test('the host gets "New game", the player a receipt', () => {
 
 test('the game-over email says the result and links to the review', () => {
   const byKind = new Map(noticeEmails('en'));
-  assert.equal(byKind.get('over-won')?.subject, 'You won your xiangqi game against Bob');
-  assert.equal(byKind.get('over-lost')?.subject, 'You lost your xiangqi game against Bob');
-  assert.equal(byKind.get('over-draw')?.subject, 'Your xiangqi game against Bob was drawn');
+  assert.equal(byKind.get('over-won')?.subject, 'You won your Xiangqi game against Bob');
+  assert.equal(byKind.get('over-lost')?.subject, 'You lost your Xiangqi game against Bob');
+  assert.equal(byKind.get('over-draw')?.subject, 'Your Xiangqi game against Bob was drawn');
   const won = byKind.get('over-won')!;
   assert.match(won.text, /ended by resignation/);
   assert.match(won.text, /Review the game: https:\/\/mistboard\.com\/xiangqi\/review\/xq_room/);
@@ -598,7 +676,7 @@ test('the game-over email says the result and links to the review', () => {
   assert.equal(correspondencePlayAgainUrl({ roomId: 'xq_room', gameSpecId: 'xiangqi' }), null);
   assert.ok(!won.text.includes('Play again'));
   const cancelled = byKind.get('over-cancelled')!;
-  assert.equal(cancelled.subject, 'Your xiangqi game against Bob was cancelled');
+  assert.equal(cancelled.subject, 'Your Xiangqi game against Bob was cancelled');
   assert.match(cancelled.text, /has no result/);
   assert.ok(!cancelled.text.includes('resignation'));
   assert.match(cancelled.text, /https:\/\/mistboard\.com\/room\/xq_room/);
@@ -614,7 +692,7 @@ test('the game-over email says the result and links to the review', () => {
     },
     'en',
   );
-  assert.equal(noReview.subject, 'Your xiangqi game was drawn');
+  assert.equal(noReview.subject, 'Your Xiangqi game was drawn');
   assert.match(noReview.text, /https:\/\/mistboard\.com\/room\/r1/);
   assert.ok(!noReview.text.includes('ended by'), 'an unlisted termination says nothing');
 });
@@ -658,7 +736,7 @@ test('#1057 emails escape player names in the html part', () => {
     ),
   ];
   for (const email of emails) {
-    assert.ok(!email.html.includes('<img'), email.subject);
+    assert.ok(!email.html.includes('<img src=x'), email.subject);
     assert.ok(email.html.includes('&lt;img src=x onerror=alert(1)&gt;'), email.subject);
   }
 });

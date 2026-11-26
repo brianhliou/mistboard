@@ -1,6 +1,6 @@
 // Renders every player email (correspondence start, deadline warning, daily
 // digest, challenge, joiner start, Play the host start and receipt, game over,
-// and the account codes) with sample data to HTML and text files, plus
+// the unread-message notice, the club sign-up confirmation and the account codes) with sample data to HTML and text files, plus
 // an index.html linking them, for looking at the templates in a browser.
 //
 //   npm run email:preview [-- <out-dir>]   (default: a folder in the OS temp dir)
@@ -11,6 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { accountCodeEmail } from '../account-session.js';
+import { clubConfirmEmail, clubConfirmUrl } from '../club-signup.js';
 import { escapeHtml } from '../email-layout.js';
 import {
   correspondenceChallengeEmail,
@@ -22,6 +23,7 @@ import {
   correspondenceJoinedStartEmail,
   correspondenceStartEmail,
   type EmailLocale,
+  inboxNoticeEmail,
   type PlayerEmail,
 } from '../player-email.js';
 
@@ -199,6 +201,24 @@ for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as EmailLocale[]) {
           reviewPath: null,
         },
         locale,
+      ),
+    },
+    {
+      name: `${tag}-inbox-notice`,
+      email: inboxNoticeEmail(
+        {
+          senderHandle: 'alice',
+          senderName: 'Alice',
+          unsubscribeUrl: 'https://mistboard.com/api/inbox/email/unsubscribe?t=preview-token',
+        },
+        locale,
+      ),
+    },
+    {
+      name: `${tag}-club-confirm`,
+      email: clubConfirmEmail(
+        locale,
+        clubConfirmUrl('https://mistboard.com', 'preview.token-signature', locale),
       ),
     },
   );

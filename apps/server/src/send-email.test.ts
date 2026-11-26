@@ -4,7 +4,7 @@ import { dmEmailUnsubscribe } from './inbox-email-unsubscribe.js';
 
 // Placeholder only; all provider calls are replaced below.
 process.env.RESEND_API_KEY = 're_placeholder_for_tests';
-const { sendTransactionalEmail } = await import('./send-email.js');
+const { senderWithDisplayName, sendTransactionalEmail } = await import('./send-email.js');
 const message = {
   from: 'Mistboard <play@example.com>',
   to: ['player@example.com'],
@@ -31,6 +31,30 @@ test('transactional email preserves the accepted Resend ID and request fields', 
     },
   });
   assert.deepEqual(result, { ok: true, providerEmailId: 'resend-login-1' });
+});
+
+test('a bare From address is sent under the Mistboard name; a named one is kept', async () => {
+  assert.equal(
+    senderWithDisplayName('noreply@auth.mistboard.com'),
+    'Mistboard <noreply@auth.mistboard.com>',
+  );
+  assert.equal(senderWithDisplayName(' play@example.com '), 'Mistboard <play@example.com>');
+  assert.equal(
+    senderWithDisplayName('Mistboard <play@example.com>'),
+    'Mistboard <play@example.com>',
+  );
+  assert.equal(senderWithDisplayName('Club <club@example.com>'), 'Club <club@example.com>');
+  let sentFrom = '';
+  await sendTransactionalEmail(
+    { ...message, from: 'noreply@auth.mistboard.com' },
+    {
+      fetchImpl: async (_url, init) => {
+        sentFrom = JSON.parse(String(init?.body)).from;
+        return Response.json({ id: 'resend-bare-1' });
+      },
+    },
+  );
+  assert.equal(sentFrom, 'Mistboard <noreply@auth.mistboard.com>');
 });
 
 test('transactional email never propagates an ID from a rejected send', async () => {

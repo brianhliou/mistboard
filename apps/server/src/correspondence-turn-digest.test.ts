@@ -145,9 +145,9 @@ test('the email names every game with its opponent, time left and link', () => {
   const now = new Date('2026-09-20T15:00:00Z');
   const c = candidate('u1', [{ roomId: 'xq_one' }, { roomId: 'xq_two', opponentName: null }], now);
   const one = digestEmail(candidate('u1', [{ roomId: 'xq_one' }], now), now);
-  assert.equal(one.subject, 'Your move in xiangqi against Opp');
+  assert.equal(one.subject, 'Your move in Xiangqi against Opp');
   const email = digestEmail(c, now);
-  assert.equal(email.subject, 'Your move in xiangqi against Opp and 1 other game');
+  assert.equal(email.subject, 'Your move in Xiangqi against Opp and 1 other game');
   assert.match(email.text, /2 correspondence games are waiting on your move/);
   assert.match(
     email.text,
