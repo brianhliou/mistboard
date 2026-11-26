@@ -1952,6 +1952,33 @@ html.landing-setup-open body {
   font: inherit;
   cursor: pointer;
 }
+/* Desktop: the picked player sits beside Share a link | Pick a player, so
+   the Send to row stays one control tall and the dialog fits a laptop
+   screen without scrolling. The phone sheet keeps them stacked. */
+.landing-setup-dialog:not(.landing-setup-sheet)
+.landing-setup-section:has(> .landing-challenge-player-row:not([hidden])) {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+}
+.landing-setup-dialog:not(.landing-setup-sheet)
+  .landing-setup-section
+  > .landing-challenge-player-row:not([hidden]) {
+  min-height: 44px;
+  min-width: 0;
+  padding-block: 2px;
+}
+.landing-setup-dialog:not(.landing-setup-sheet)
+  .landing-setup-section:has(> .landing-challenge-player-row:not([hidden]))
+  > .landing-start-options {
+  grid-template-columns: auto auto;
+}
+.landing-setup-dialog:not(.landing-setup-sheet)
+  .landing-setup-section:has(> .landing-challenge-player-row:not([hidden]))
+  .landing-start-option {
+  padding-inline: 12px;
+  white-space: nowrap;
+}
 .landing-challenge-player-option:hover,
 .landing-challenge-player-row:hover {
   background: var(--site-hover);
