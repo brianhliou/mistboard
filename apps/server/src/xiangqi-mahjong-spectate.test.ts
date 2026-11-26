@@ -204,11 +204,13 @@ function nextMove(room: XmjRuntimeRoom, now: number): XmjMove {
 
 /**
  * Whenever the drawn tile has a twin in the hand, throw that face and say it is
- * the twin, so every match exercises `handCopy` discards.
+ * the twin, so every match exercises `handCopy` discards. A hand locked by a
+ * 聽牌 declaration may throw only the drawn tile itself, so it keeps its move.
  */
 function withHandCopy(room: XmjRuntimeRoom, move: XmjMove): XmjMove {
   if (move.action !== 'discard') return move;
   const own = snapshotView(room, move.by);
+  if (own.declared?.[move.by]) return move;
   if (own.phase.type !== 'discard' || own.phase.drawn === null) return move;
   const drawn = own.phase.drawn;
   const copies = (own.hands[move.by] ?? []).filter((tile) => tile === drawn).length;
@@ -370,6 +372,72 @@ test('xmj spectate: the TV live frame is the spectator view, with no handCopy an
   assert.ok(frames > 20, 'frames were built across the match');
   assert.ok(flagged > 0, 'a handCopy discard went through the TV timeline');
   assert.equal(xmjLiveWatchPayloadFor('xmj_other', room), null);
+});
+
+test('xmj spectate: a declared match stays public through spectator, reconnect and TV', () => {
+  // New rooms score table 3: the bots declare 聽牌, a locked hand's blank draws
+  // go out on the runtime's automatic discard, and twins are still thrown.
+  let declarations = 0;
+  let lockedDiscards = 0;
+  let twins = 0;
+  let declaredWins = 0;
+  for (const seed of [57, 58, 59, 60, 61, 62]) {
+    const room = pvpRoom(seed);
+    assert.equal(room.projection.state.match.hand.taiTable, 3, 'a new live room scores table 3');
+    let lockedBefore: Partial<Record<XmjSeat, boolean>> = {};
+    playMatch(room, ({ room: live, event, seq }) => {
+      const where = `seed ${seed} event ${seq}`;
+      const move = event.type === 'move-played' ? event.move : null;
+      if (move?.action === 'declare-ready') declarations += 1;
+      if (move?.action === 'discard' && lockedBefore[move.by]) lockedDiscards += 1;
+      if (move?.action === 'discard' && move.handCopy) twins += 1;
+      const ply = tenantPlyAtEventIndex(live.events, seq);
+      const sent = tenant.visibility.clientEventFor(event, 'spectator', ply);
+      assertNoSecrets(sent, `${where} event`);
+      assertNoHandCopy(sent, `${where} event`);
+      const spectator = snapshotView(live, 'spectator');
+      lockedBefore = spectator.declared ?? {};
+      if (
+        spectator.phase.type === 'won' &&
+        spectator.phase.score.lines.some((line) => line.key === 'declared-ready')
+      ) {
+        declaredWins += 1;
+      }
+      if (live.projection.state.status.type !== 'playing') return;
+      // The declaration is public: every seat and the spectator agree on it.
+      const seatViews = { east: snapshotView(live, 'east'), west: snapshotView(live, 'west') };
+      assert.ok(spectator.declared, `${where}: table 3 shows who has declared`);
+      assert.deepEqual(seatViews.east.declared, spectator.declared, where);
+      assert.deepEqual(seatViews.west.declared, spectator.declared, where);
+      assertSpectatorIsPublic(spectator, seatViews, `${where} snapshot`);
+      assertNoSecrets(tenantEventsForClient(tenant, live, SPECTATOR), `${where} log`);
+      if (seq % 7 !== 0) return;
+      // A reconnecting spectator and a restarted server serve the same table.
+      const replayed = hydrate(live.events as XmjEvent[]);
+      assert.deepEqual(
+        wire({ ...tenantSnapshotPayload(tenant, replayed, SPECTATOR), serverAt: 0 }),
+        wire({ ...tenantSnapshotPayload(tenant, live, SPECTATOR), serverAt: 0 }),
+        `${where}: a restart serves the spectator the same snapshot`,
+      );
+      const frame = xmjLiveWatchPayloadFor(live.id, live);
+      assert.ok(frame, `${where}: a live match has a TV frame`);
+      assertNoSecrets(frame, `${where} TV`);
+      assertNoHandCopy(frame, `${where} TV`);
+      assert.deepEqual(
+        wire(frame).view,
+        wire(tenantLiveHistoryExtras(tenant, live, SPECTATOR).liveHistory ?? []).at(-1)?.view,
+        `${where}: the TV view is the spectator's`,
+      );
+    });
+    assert.equal(room.projection.state.status.type, 'finished');
+    const timeline = xmjWatchTimeline(room.events as XmjEvent[]);
+    for (const entry of timeline) assert.ok(!('handCopy' in entry.move), `seed ${seed} TV`);
+    if (declarations > 0 && lockedDiscards > 0 && twins > 0 && declaredWins > 0) break;
+  }
+  assert.ok(declarations > 0, 'a bot declared ready');
+  assert.ok(lockedDiscards > 0, "a locked hand's draw went out on the automatic discard");
+  assert.ok(twins > 0, 'a drawn tile twin was thrown');
+  assert.ok(declaredWins > 0, 'a declared win scored the 聽牌 line');
 });
 
 test('xmj spectate: the TV timeline keeps each move public fields only', () => {

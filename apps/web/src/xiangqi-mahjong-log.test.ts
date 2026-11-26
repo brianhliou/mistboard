@@ -38,7 +38,7 @@ function playMatch(seed: number) {
   while (state.status.type === 'playing' && moves.length < 5000) {
     const move = nextMove(state);
     const phase = state.match.between ? null : state.match.hand.phase;
-    if (move.action === 'discard') {
+    if (move.action === 'discard' || move.action === 'declare-ready') {
       drewBeforeDiscard.push(phase?.type === 'discard' && phase.drawn !== null);
     }
     const after = applyXmjMove(state, move);
@@ -90,14 +90,20 @@ describe('xiangqi mahjong hand log', () => {
         }
         // Only the last row ends the hand.
         for (const row of hand.rows.slice(0, -1)) {
-          expect(['discard', 'claim']).toContain(row.kind);
+          expect(['discard', 'declare-ready', 'claim']).toContain(row.kind);
         }
       });
-      // Every discard is shown once, in order, flagged with whether its seat drew.
-      const discards = log.flatMap((hand) => hand.rows.filter((row) => row.kind === 'discard'));
-      const played = moves.filter((entry) => entry.move.action === 'discard');
+      // Every discard, a declaring one included, is shown once, in order,
+      // flagged with whether its seat drew.
+      const isDiscard = (kind: string) => kind === 'discard' || kind === 'declare-ready';
+      const discards = log.flatMap((hand) => hand.rows.filter((row) => isDiscard(row.kind)));
+      const played = moves.filter((entry) => isDiscard(entry.move.action));
       expect(discards.map((row) => row.ply)).toEqual(played.map((entry) => entry.ply));
-      expect(discards.map((row) => row.kind === 'discard' && row.drew)).toEqual(drewBeforeDiscard);
+      expect(
+        discards.map((row) => (row.kind === 'discard' || row.kind === 'declare-ready') && row.drew),
+      ).toEqual(drewBeforeDiscard);
+      // New tables score table 3, and the bots declare in some of these matches.
+      expect(state.match.hand.taiTable).toBe(3);
       // Passes and the steps between hands are folded away.
       const shownPlies = new Set(log.flatMap((hand) => hand.rows.map((row) => row.ply)));
       for (const entry of moves) {

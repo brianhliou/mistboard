@@ -531,6 +531,84 @@ describe('xiangqi mahjong table', () => {
     expect(marked).toBeGreaterThan(0);
   });
 
+  it('renders a declared table-3 match: public badges, the locked drawn slot, twins in the pond', () => {
+    let declarations = 0;
+    let lockedRenders = 0;
+    let twins = 0;
+    let declaredWins = 0;
+    for (const seed of [21, 22, 23, 24, 25, 26, 27, 28]) {
+      let current = createXmjRoomState(createXmjSetup(seeded(seed)), `xmj_declared_${seed}`);
+      expect(current.match.hand.taiTable).toBe(3);
+      for (let steps = 0; current.status.type === 'playing' && steps < 5000; steps += 1) {
+        const declared = xmjViewFor(current, 'spectator').declared;
+        for (const seat of ['east', 'west', 'spectator'] as const) {
+          const view = xmjViewFor(current, seat);
+          const host = doc(xiangqiMahjongTableHtml(view, opts(seat !== 'spectator')));
+          // Who has declared is public: every viewer shows the same badges.
+          expect(view.declared).toEqual(declared);
+          const badged = [...host.querySelectorAll('.xmj-badge--declared')].map((badge) =>
+            badge.closest('[data-xmj-seat]')?.getAttribute('data-xmj-seat'),
+          );
+          expect(badged.sort()).toEqual(
+            (['east', 'west'] as const).filter((who) => declared?.[who]).sort(),
+          );
+          if (view.between) continue;
+          // A pond lays out identical copies one tile each, marks as drawn.
+          for (const pondSeat of ['east', 'west'] as const) {
+            const tiles = [...host.querySelectorAll(`[data-xmj-pond="${pondSeat}"] .xmj-tile`)];
+            expect(tiles).toHaveLength(view.discards[pondSeat].length);
+            expect(tiles.map((tile) => tile.classList.contains('xmj-tile--fromdraw'))).toEqual(
+              view.drawnDiscards[pondSeat],
+            );
+          }
+          if (seat === 'spectator' || !view.declared?.[seat]) continue;
+          // A locked hand offers no declaration and at most the drawn slot.
+          expect(host.querySelector('[data-xmj-declare]')).toBeNull();
+          const offered = [...host.querySelectorAll<HTMLElement>('[data-xmj-tile]')];
+          if (view.phase.type === 'discard' && view.phase.drawn !== null && view.turn === seat) {
+            lockedRenders += 1;
+            expect(offered).toHaveLength(1);
+            expect(offered[0]?.dataset.xmjTile).toBe(view.phase.drawn);
+            expect(offered[0]?.classList).toContain('xmj-tile--drawn');
+          } else {
+            expect(offered).toHaveLength(0);
+          }
+        }
+        const won = xmjViewFor(current, 'east');
+        if (won.between && won.phase.type === 'won') {
+          const line = [
+            ...doc(xiangqiMahjongTableHtml(won, opts(true))).querySelectorAll('.xmj-lines li'),
+          ].find((row) => row.textContent?.includes('Declared ready'));
+          if (won.phase.score.lines.some((row) => row.key === 'declared-ready')) {
+            declaredWins += 1;
+            expect(line?.classList).toContain('xmj-line--on');
+          }
+        }
+        let move = botStepMove(current);
+        // Throw the drawn tile's twin whenever an open hand holds one.
+        const own = xmjViewFor(current, move.by);
+        const drawn = own.phase.type === 'discard' ? own.phase.drawn : null;
+        if (
+          move.action === 'discard' &&
+          !own.declared?.[move.by] &&
+          drawn !== null &&
+          (own.hands[move.by] ?? []).filter((tile) => tile === drawn).length > 1
+        ) {
+          move = { ...move, tile: drawn, handCopy: true };
+          twins += 1;
+        }
+        if (move.action === 'declare-ready') declarations += 1;
+        current = applyXmjMove(current, move);
+      }
+      expect(current.status.type).toBe('finished');
+      if (declarations > 0 && lockedRenders > 0 && twins > 0 && declaredWins > 0) break;
+    }
+    expect(declarations).toBeGreaterThan(0);
+    expect(lockedRenders).toBeGreaterThan(0);
+    expect(twins).toBeGreaterThan(0);
+    expect(declaredWins).toBeGreaterThan(0);
+  });
+
   it('with a win on offer, raises one tapped discard and asks for a second tap', () => {
     let found: { view: XmjPlayerView; seat: XmjSeat } | null = null;
     for (let seed = 1; seed < 200 && !found; seed += 1) {
@@ -753,9 +831,9 @@ describe('xiangqi mahjong table', () => {
           `${total}${total === 1 ? 'point' : 'points'}`,
         );
         // The whole scoring table, in the rules page's order, with this hand's
-        // lines lit; the lit lines add up to the total.
+        // lines lit; the lit lines add up to the total. Table 3 adds 聽牌 to the ten.
         const rows = [...host.querySelectorAll('.xmj-lines li')];
-        expect(rows.length).toBe(10);
+        expect(rows.length).toBe(11);
         const lit = rows.filter((row) => row.classList.contains('xmj-line--on'));
         expect(lit.length).toBe(won.score.lines.length);
         expect(lit.map((row) => row.querySelector('.xmj-sr')?.textContent)).toEqual(
@@ -887,7 +965,7 @@ describe('xiangqi mahjong table', () => {
       expect(texts.length).toBe(hands.reduce((sum, hand) => sum + hand.rows.length, 0));
       for (const text of texts) {
         expect(text).toMatch(
-          /^(You|Bot|Misty) (discards?|draws?, discards?|takes? for a (sequence|triplet)|wins? on a discard|wins? by self-draw)$|^The wall ran out$/,
+          /^(You|Bot|Misty) (discards?|draws?, discards?|declares? ready, discards?|takes? for a (sequence|triplet)|wins? on a discard|wins? by self-draw)$|^The wall ran out$/,
         );
       }
     }
