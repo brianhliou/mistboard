@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { chapterIdFromStudyPath, mountStudy, studyChapterPath } from './study.js';
+import { chapterIdFromStudyPath, mountStudy, nextLessonPath, studyChapterPath } from './study.js';
 import { studyDraftKey } from './study-autosave.js';
 
 afterEach(() => {
@@ -438,6 +438,28 @@ describe('study chapter permalinks', () => {
     await mountStudy(root, 'study1');
     expect(root.querySelector('.embed-score-chart')).toBeNull();
     expect(root.querySelector('[data-tab="analysis"]')).toBeNull();
+  });
+
+  it('reads the next lesson from a link to another study in the description', () => {
+    const site = 'https://mistboard.com';
+    const next = (text: string, pathname = '/study/study1') =>
+      nextLessonPath(text, 'study1', site, pathname);
+    expect(next('Level 1. Next, level 2: https://mistboard.com/study/study2')).toBe(
+      '/study/study2',
+    );
+    // A link to a chapter still leads to the study, in the reader's language.
+    expect(next('Next: https://mistboard.com/study/study2/ch1.', '/zh-hant/study/study1')).toBe(
+      '/zh-hant/study/study2',
+    );
+    // Its own link, another site and a page that is not a study lead nowhere.
+    expect(next('Share https://mistboard.com/study/study1')).toBeNull();
+    expect(next('From https://example.com/study/study2')).toBeNull();
+    expect(next('Rules: https://mistboard.com/rules/xiangqi')).toBeNull();
+    expect(next('The last of six levels.')).toBeNull();
+    // The first other study wins.
+    expect(next('https://mistboard.com/study/study1 then https://mistboard.com/study/study3')).toBe(
+      '/study/study3',
+    );
   });
 
   it('preserves locale prefixes and rejects another study chapter path', () => {

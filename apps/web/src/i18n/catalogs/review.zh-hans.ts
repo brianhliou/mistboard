@@ -309,6 +309,7 @@ export const ZH_HANS_REVIEW = {
   'study.phone.next': '前进',
   'study.phone.nextChapter': '下一章',
   'study.gamebook.nextPuzzle': '下一题',
+  'study.gamebook.nextLesson': '下一课',
   'study.phone.previousMove': '上一着',
   'study.phone.nextMove': '下一着',
   'study.phone.searchChapters': '搜索章节',

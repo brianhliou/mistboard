@@ -894,6 +894,7 @@ export const EN_REVIEW = {
   'study.phone.next': 'Next',
   'study.phone.nextChapter': 'Next chapter',
   'study.gamebook.nextPuzzle': 'Next puzzle',
+  'study.gamebook.nextLesson': 'Next lesson',
   'study.phone.previousMove': 'Previous move',
   'study.phone.nextMove': 'Next move',
   'study.phone.searchChapters': 'Search chapters',

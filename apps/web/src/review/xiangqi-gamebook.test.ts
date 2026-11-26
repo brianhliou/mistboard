@@ -261,6 +261,33 @@ test('a solved line with a chapter after it leads to Next puzzle, and says Solve
   expect(onNext).toHaveBeenCalledTimes(1);
 });
 
+test('the last chapter of a lesson with a study to go on to offers Next lesson', () => {
+  const { tree, m1, m3 } = fixture();
+  const host = document.createElement('div');
+  const onNext = vi.fn();
+  mountXiangqiGamebook(host, { tree, orientation: 'red', onNext, nextKind: 'lesson' });
+  expect(nextButton(host)?.hidden).toBe(true);
+  play(host, m1);
+  play(host, m3);
+  const next = nextButton(host);
+  expect(next?.hidden).toBe(false);
+  expect(next?.textContent).toBe('Next lesson');
+  // This lesson is over, so its closing line stays beside the way on.
+  expect(feedback(host)).toBe('Lesson complete! 🎉');
+  next?.click();
+  expect(onNext).toHaveBeenCalledTimes(1);
+});
+
+test('the last chapter with nowhere to go on to offers no button', () => {
+  const { tree, m1, m3 } = fixture();
+  const host = document.createElement('div');
+  mountXiangqiGamebook(host, { tree, orientation: 'red' });
+  play(host, m1);
+  play(host, m3);
+  expect(nextButton(host)).toBeNull();
+  expect(feedback(host)).toBe('Lesson complete! 🎉');
+});
+
 test('solved, a tap on the board tucks the text and a tap on the text opens it', () => {
   const { tree, m1, m3 } = fixture();
   const host = document.createElement('div');

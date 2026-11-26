@@ -58,6 +58,10 @@ export interface XiangqiGamebookOptions {
   /** Opens the following chapter. Omitted on the last chapter, so the button is
    *  not offered at all rather than offered and inert. */
   onNext?: () => void;
+  /** What `onNext` leads to. 'lesson' is the last chapter of a study whose
+   *  description links to another study: the button reads "Next lesson" and the
+   *  closing "Lesson complete!" line stays, since this lesson is over. */
+  nextKind?: 'puzzle' | 'lesson';
 }
 
 // The puzzle page's timings, so a lesson and a puzzle answer a move alike: a
@@ -189,8 +193,12 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   // The only control once the line is solved. There is no Restart: the chapter
   // list beside the board replays any puzzle.
   const onNext = opts.onNext;
+  const leadsToLesson = opts.nextKind === 'lesson';
   const nextBtn = onNext
-    ? button(t('study.gamebook.nextPuzzle'), 'gamebook__btn gamebook__btn--primary gamebook__next')
+    ? button(
+        t(leadsToLesson ? 'study.gamebook.nextLesson' : 'study.gamebook.nextPuzzle'),
+        'gamebook__btn gamebook__btn--primary gamebook__next',
+      )
     : null;
   if (nextBtn && onNext) {
     nextBtn.addEventListener('click', () => onNext());
@@ -464,8 +472,8 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
       comment.textContent = view.comment ?? '';
       // With a chapter still to come, "Lesson complete!" read as the end of the
       // study; the header says Solved and the Next button leads on. The last
-      // chapter keeps the closing line.
-      feedback.textContent = nextBtn ? '' : t('study.gamebook.complete');
+      // chapter keeps the closing line, with or without a lesson to go on to.
+      feedback.textContent = nextBtn && !leadsToLesson ? '' : t('study.gamebook.complete');
     } else {
       comment.textContent = view.comment ?? '';
       // The prompt above already says whose move it is; this line reports only

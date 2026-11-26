@@ -11,7 +11,7 @@ import './game-shell.css';
 import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
-import { appendLinkedText } from './link-text.js';
+import { appendLinkedText, splitLinkedText } from './link-text.js';
 import {
   displayComment,
   localizedChapterTags,
@@ -938,6 +938,14 @@ function renderStudy(
       }
       const gamebookIndex = chapters.findIndex((entry) => entry.id === chapter.id);
       const gamebookNext = chapters[gamebookIndex + 1];
+      const nextLesson = gamebookNext
+        ? null
+        : nextLessonPath(
+            localizedStudyDescription(study.description, study.i18n) ?? '',
+            study.id,
+            window.location.origin,
+            window.location.pathname,
+          );
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
@@ -948,7 +956,11 @@ function renderStudy(
         ...(players ? { seats: { red: players.red, black: players.black } } : {}),
         // The practice branch's progress and Next, for the same reasons.
         progress: { index: gamebookIndex + 1, total: chapters.length },
-        ...(gamebookNext ? { onNext: () => void switchTo(gamebookNext.id) } : {}),
+        ...(gamebookNext
+          ? { onNext: () => void switchTo(gamebookNext.id) }
+          : nextLesson
+            ? { nextKind: 'lesson' as const, onNext: () => window.location.assign(nextLesson) }
+            : {}),
       });
       phone.attach(root);
       phone.bindMoveNav(root);
@@ -1342,6 +1354,39 @@ function buildSummaryToggle(summary: HTMLElement): HTMLElement {
   });
   button.setAttribute('aria-expanded', 'false');
   return button;
+}
+
+/**
+ * Where a lesson study leads once its last chapter is solved: the first link in
+ * its description to another study on this site, as a path. A description is
+ * the one place an author can already point at the next study, so a series
+ * ("level 1 ... Next, level 2: <link>") needs no new field. Null when the
+ * description links nowhere, only to itself, or only off the site.
+ */
+export function nextLessonPath(
+  description: string,
+  studyId: string,
+  origin: string,
+  pathname = '/',
+): string | null {
+  for (const part of splitLinkedText(description)) {
+    if (part.kind !== 'link') continue;
+    let url: URL;
+    try {
+      url = new URL(part.href);
+    } catch {
+      continue;
+    }
+    if (url.origin !== origin && url.origin !== 'https://mistboard.com') continue;
+    const next = /^(?:\/(?:zh-hans|zh-hant))?\/study\/([A-Za-z0-9]+)(?:\/[A-Za-z0-9]+)?\/?$/.exec(
+      url.pathname,
+    )?.[1];
+    if (!next || next === studyId) continue;
+    // The reader's language, not the link's: a description is shared by locales.
+    const localePrefix = /^\/(zh-hans|zh-hant)(?:\/|$)/.exec(pathname)?.[1];
+    return `${localePrefix ? `/${localePrefix}` : ''}/study/${next}`;
+  }
+  return null;
 }
 
 export function studyChapterPath(studyId: string, chapterId: string, pathname = '/'): string {
