@@ -17,9 +17,9 @@
  *     The window opens after EVERY discard: a claimant with nothing to claim
  *     passes when the short pause ends, one with a claim keeps the full window,
  *     and the discarder sees the same phase and deadlines either way.
- *     Explicit table-3 setups also persist automatic discards after nonwinning
- *     declared draws; their deadlines derive from the last persisted move.
- *     New production setups remain table 2.
+ *     Table-3 setups (the default for new games) also persist automatic
+ *     discards after nonwinning declared draws; their deadlines derive from the
+ *     last persisted move. Older stored setups keep the table they started on.
  *   - Correspondence (days per move) has neither deadline. The claimant's turn
  *     opens with the claim decision on every discard (claim, or pass and then
  *     draw and discard, all on one move deadline), and the next hand deals at
