@@ -3116,6 +3116,7 @@ function profilePreviewFixture(): UserProfile {
     ],
     puzzleRatings: [],
     puzzleStreak: { current: 0, best: 0 },
+    puzzleModes: { storm: { best: 0, runs: 0 }, streak: { best: 0, runs: 0 } },
     achievements: [],
     games: [],
     gamesTotal: 18,

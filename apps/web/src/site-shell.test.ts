@@ -201,7 +201,7 @@ describe('site shell nav', () => {
     ].find((el) => el.textContent === 'Community');
     expect(communityToggle?.tagName).toBe('A');
     expect((communityToggle as HTMLAnchorElement).getAttribute('href')).toBe('/player');
-    // Rating stats stays in the community rail only.
+    // Rating stats is unlisted (2026-11-25): reachable by URL, linked from nowhere.
     expect(nav.querySelector('a[href="/player/rating-stats"]')).toBeNull();
 
     // Watch is a split menu: the title links to Mistboard TV (/watch) and the

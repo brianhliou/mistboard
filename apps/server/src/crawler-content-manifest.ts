@@ -141,6 +141,10 @@ export const CLIENT_ONLY_NOINDEX: readonly { routeId: string; path: string }[] =
     path: '/verify-title',
   },
   {
+    routeId: '/player/rating-stats',
+    path: '/player/rating-stats',
+  },
+  {
     routeId: '/xiangqi/game/*',
     path: '/xiangqi/game/crawler',
   },
@@ -913,19 +917,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: [],
     source: 'prerender',
     baselineChars: 153,
-  },
-  {
-    routeId: '/player/rating-stats',
-    path: '/player/rating-stats',
-    minChars: 199,
-    phrase: 'rating distribution',
-    phraseKey: 'profile.ratingStatsSuffix',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'db-fixture',
-    baselineChars: 333,
   },
   {
     routeId: '/leaderboard',

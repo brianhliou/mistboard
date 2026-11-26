@@ -157,6 +157,11 @@ export type ProfileVariantActivity = {
   losses: number;
 };
 
+export type ProfilePuzzleModes = {
+  storm: { best: number; runs: number };
+  streak: { best: number; runs: number };
+};
+
 export type UserProfile = {
   user: PublicProfileUser;
   ratings: ProfileBucketRating[];
@@ -167,6 +172,10 @@ export type UserProfile = {
   // caller passed (the viewer's browser; exact for your own profile, a close
   // read for anyone else's).
   puzzleStreak: { current: number; best: number };
+  // Puzzle Storm and Puzzle Streak bests, with the runs that had at least one
+  // answer (a run opened and left untouched does not count). Zeros when the
+  // user has never played the mode.
+  puzzleModes: ProfilePuzzleModes;
   // Earned achievements, oldest first (persistence-achievements.ts).
   achievements: UserAchievement[];
   // First page of games (newest first). Older pages load via getUserGamesPage.
@@ -863,8 +872,9 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
-  const [puzzleStreak, achievements, champions] = await Promise.all([
+  const [puzzleStreak, puzzleModes, achievements, champions] = await Promise.all([
     getPuzzleStreak(user.id, { timeZone: options.timeZone }),
+    getProfilePuzzleModes(user.id),
     getUserAchievements(user.id),
     user.profileVisibility !== 'private' && !user.closedAt
       ? getChampions().then((entries) => championsForUser(entries, user.id, user.handle))
@@ -891,9 +901,38 @@ export async function getUserProfileByHandle(
     activity,
     puzzleRatings,
     puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
+    puzzleModes,
     achievements,
     games,
     gamesTotal,
+  };
+}
+
+// Storm's best is the all-time max of its per-day bests (what the Storm page
+// shows); Streak's is the best run score. A run counts once it has an answer.
+async function getProfilePuzzleModes(userId: string): Promise<ProfilePuzzleModes> {
+  const { rows } = await getPool().query<{
+    storm_best: number | string | null;
+    storm_runs: number | string | null;
+    streak_best: number | string | null;
+    streak_runs: number | string | null;
+  }>(
+    `SELECT
+       (SELECT COALESCE(MAX(score), 0) FROM puzzle_storm_bests WHERE user_id = $1) AS storm_best,
+       (SELECT COUNT(*) FROM puzzle_storm_runs
+         WHERE user_id = $1
+           AND jsonb_array_length(COALESCE(state->'results', '[]'::jsonb)) > 0) AS storm_runs,
+       (SELECT COALESCE(MAX((state->>'score')::integer), 0) FROM puzzle_streak_runs
+         WHERE user_id = $1) AS streak_best,
+       (SELECT COUNT(*) FROM puzzle_streak_runs
+         WHERE user_id = $1
+           AND jsonb_array_length(COALESCE(state->'results', '[]'::jsonb)) > 0) AS streak_runs`,
+    [userId],
+  );
+  const row = rows[0];
+  return {
+    storm: { best: Number(row?.storm_best ?? 0), runs: Number(row?.storm_runs ?? 0) },
+    streak: { best: Number(row?.streak_best ?? 0), runs: Number(row?.streak_runs ?? 0) },
   };
 }
 

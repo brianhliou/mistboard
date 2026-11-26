@@ -114,11 +114,11 @@ export function communityNavItems(): NavItem[] {
 }
 
 // Community sub-navigation rail (lichess parity): Leaderboard + Bots for
-// now. Forum lives in the top-nav dropdown, not the rail.
+// now. Forum lives in the top-nav dropdown, not the rail. /player/rating-stats
+// is unlisted since 2026-11-25: reachable by URL, noindex, linked from nowhere.
 export function communityRailItems(): NavItem[] {
   return [
     { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
-    { label: 'Rating stats', labelKey: 'nav.ratingStats', href: '/player/rating-stats' },
     { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
   ];
 }

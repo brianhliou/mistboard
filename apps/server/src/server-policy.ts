@@ -674,6 +674,9 @@ export function isNoindexRoute(pathname: string): boolean {
     // title until 2026-10-24, and Bing filed them as duplicates of it.
     normalized === '/lag' ||
     normalized === '/verify-title' ||
+    // Unlisted since 2026-11-25: the rating distribution stays reachable by
+    // URL, but nothing links it and search should drop it.
+    normalized === '/player/rating-stats' ||
     isSitePlayedGamePage(normalized)
   );
 }

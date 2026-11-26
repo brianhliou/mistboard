@@ -179,6 +179,50 @@ definePersistenceTests('daily puzzles', () => {
   // Fortress Xiangqi was retired on 2026-10-11 and its puzzle registry deleted,
   // but prod still holds its rows: mined puzzles, attempts, a rating pool, maybe
   // a persisted daily. None of them may serve, and none may break a listing.
+  test('the profile reads Puzzle Storm and Puzzle Streak bests and answered runs', async () => {
+    await createUser({
+      id: 'mode-solver',
+      email: 'mode-solver@example.com',
+      emailVerifiedAt: new Date(),
+      handle: 'modesolver',
+      displayName: 'modesolver',
+      now: new Date(),
+    });
+    const empty = await getUserProfileByHandle('modesolver', null);
+    assert.deepEqual(empty?.puzzleModes, {
+      storm: { best: 0, runs: 0 },
+      streak: { best: 0, runs: 0 },
+    });
+    const run = (score: number, answers: number) =>
+      JSON.stringify({
+        score,
+        results: Array.from({ length: answers }, (_, i) => ({ id: `p${i}` })),
+      });
+    await getPool().query(
+      `INSERT INTO puzzle_storm_runs (id, user_id, day, state) VALUES
+         (gen_random_uuid(), 'mode-solver', '2026-11-01', $1),
+         (gen_random_uuid(), 'mode-solver', '2026-11-02', $2),
+         (gen_random_uuid(), 'mode-solver', '2026-11-03', $3)`,
+      [run(12, 14), run(7, 9), run(0, 0)],
+    );
+    await getPool().query(
+      `INSERT INTO puzzle_storm_bests (user_id, day, score) VALUES
+         ('mode-solver', '2026-11-01', 12), ('mode-solver', '2026-11-02', 7)`,
+    );
+    await getPool().query(
+      `INSERT INTO puzzle_streak_runs (id, user_id, state) VALUES
+         (gen_random_uuid(), 'mode-solver', $1),
+         (gen_random_uuid(), 'mode-solver', $2)`,
+      [run(5, 6), run(0, 0)],
+    );
+    const profile = await getUserProfileByHandle('modesolver', null);
+    // A run opened and never answered does not count.
+    assert.deepEqual(profile?.puzzleModes, {
+      storm: { best: 12, runs: 2 },
+      streak: { best: 5, runs: 1 },
+    });
+  });
+
   test('leftover Fortress puzzle rows are not served and break no listing', async () => {
     const fortressId = 'fortress-xiangqi-mined-v2-001';
     resetPuzzleStoreForTests();

@@ -1754,14 +1754,6 @@
   font-weight: 500;
 }
 
-/* The puzzle streak sits on the heading line, right-aligned and quiet. */
-.profile-puzzle-streak {
-  color: var(--site-muted);
-  font-size: 12px;
-  font-weight: 500;
-  text-align: right;
-}
-
 .profile-puzzle-rail {
   display: flex;
   flex-direction: column;
@@ -1807,6 +1799,41 @@
   font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* Puzzle-mode rows (Storm, Streak, days in a row): an icon column ahead of
+   the same name / count / score layout as the variant rows. */
+.profile-puzzle-mode-row {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+.profile-puzzle-mode-row .profile-puzzle-name,
+.profile-puzzle-mode-row .profile-puzzle-games {
+  grid-column: 2;
+}
+
+.profile-puzzle-mode-row .profile-puzzle-value {
+  grid-column: 3;
+}
+
+.profile-puzzle-mode-icon {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  color: var(--site-accent);
+}
+
+a.profile-puzzle-mode-row:hover {
+  background: var(--site-hover);
+}
+
+a.profile-puzzle-mode-row:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
 }
 
 button.profile-puzzle-row {
@@ -2681,8 +2708,9 @@ button.profile-puzzle-row[aria-pressed="true"] {
   align-items: start;
 }
 
-/* One section per rated pace that has a player (lichess /player): a quiet
-   pace heading over that pace's ladder wall. */
+/* One section per launched variant, in the canonical order: a quiet variant
+   heading over one panel per rated pool (bullet, blitz, rapid, then
+   correspondence), so a pace sits in the same column for every variant. */
 .leaderboard-ladders {
   grid-area: grid;
   display: grid;
@@ -2690,11 +2718,54 @@ button.profile-puzzle-row[aria-pressed="true"] {
   padding-top: 12px;
 }
 
-.leaderboard-pace-heading {
+.leaderboard-variant-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 8px;
   color: var(--site-heading);
   font-size: 18px;
   font-weight: 400;
+}
+
+/* A variant with no player in any pool: one line, heading then the empty
+   note, wrapping under the name on a narrow screen. Consecutive empty lines
+   sit closer than full sections. */
+.leaderboard-variant-section-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+}
+
+.leaderboard-variant-section-empty .leaderboard-variant-heading {
+  margin: 0;
+}
+
+.leaderboard-variant-section-empty + .leaderboard-variant-section-empty {
+  margin-top: -12px;
+}
+
+.leaderboard-variant-empty {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.leaderboard-variant-thumb {
+  flex: 0 0 22px;
+  display: flex;
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.leaderboard-variant-thumb svg,
+.leaderboard-variant-thumb .variant-marker {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .rating-stats-body {

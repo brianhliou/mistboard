@@ -852,6 +852,21 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                   },
                   puzzleRatings: { type: 'array', items: { type: 'object' } },
                   puzzleStreak: ref('PlayStreak'),
+                  puzzleModes: {
+                    type: 'object',
+                    description:
+                      'Puzzle Storm and Puzzle Streak bests, with the count of runs that had at least one answer.',
+                    properties: {
+                      storm: {
+                        type: 'object',
+                        properties: { best: { type: 'integer' }, runs: { type: 'integer' } },
+                      },
+                      streak: {
+                        type: 'object',
+                        properties: { best: { type: 'integer' }, runs: { type: 'integer' } },
+                      },
+                    },
+                  },
                   games: { type: 'array', items: { type: 'object' } },
                   gamesTotal: { type: 'integer' },
                 },
