@@ -59,22 +59,25 @@ export type FirstPartyBotProfile = {
 
 // Snapshot only at game write time. Historical aliases must not be resolved
 // through the current ladder: the unnumbered full-strength id moved to L7.
+const MISTY_LEVEL_TIERS: Readonly<
+  Record<string, readonly { readonly id: string; readonly level?: number }[]>
+> = {
+  banqi: BANQI_PLAYABLE_ENGINES,
+  'jungle-flip': JUNGLE_FLIP_PLAYABLE_ENGINES,
+  jungle: JUNGLE_PLAYABLE_MISTY_TIERS,
+  'three-kingdoms-banqi': THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES,
+  'ffq-banqi': FFQ_BANQI_PLAYABLE_ENGINES,
+};
+
+/** The variants whose Misty seats record a level (game_participants.bot_level):
+ *  the per-level records /api/bots reports are kept for exactly these. */
+export const MISTY_LEVELLED_GAME_SPEC_IDS: readonly string[] = Object.keys(MISTY_LEVEL_TIERS);
+
 export function mistyLevelForEngine(
   variant: string,
   engineId: string | null | undefined,
 ): number | null {
-  const tiers =
-    variant === 'banqi'
-      ? BANQI_PLAYABLE_ENGINES
-      : variant === 'jungle-flip'
-        ? JUNGLE_FLIP_PLAYABLE_ENGINES
-        : variant === 'jungle'
-          ? JUNGLE_PLAYABLE_MISTY_TIERS
-          : variant === 'three-kingdoms-banqi'
-            ? THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES
-            : variant === 'ffq-banqi'
-              ? FFQ_BANQI_PLAYABLE_ENGINES
-              : [];
+  const tiers = MISTY_LEVEL_TIERS[variant] ?? [];
   return tiers.find((tier) => tier.id === engineId)?.level ?? null;
 }
 

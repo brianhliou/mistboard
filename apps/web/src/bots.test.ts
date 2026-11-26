@@ -315,6 +315,52 @@ describe('bot pages', () => {
   );
 
   it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'gives the Rapfi card its level bio in %s, and keeps localized ladder bios localized',
+    async (locale) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      await ensureLocaleCatalog(locale);
+      vi.spyOn(localeModule, 'currentLocale').mockReturnValue(locale);
+      const { t } = await import('./i18n/catalog.js');
+      const { mountBots } = await import('./bots.js');
+      // Shaped like prod's /api/bots: only the eight level profiles, each with its
+      // stored bio, and no bare `rapfi` profile.
+      const rapfi = Array.from({ length: 8 }, (_, i) => {
+        const level = i + 1;
+        const id = `rapfi-level-${level}`;
+        return misty({
+          id,
+          displayName: `Rapfi Level ${level}`,
+          bio: `Rapfi plays freestyle Gomoku at level ${level} of 8. An open-source engine by dhbloo and the Rapfi contributors.`,
+          activeEngineId: id,
+          defaultGameSpecId: 'gomoku',
+          supportedGameSpecIds: ['gomoku'],
+          rating: null,
+          ratings: [],
+          playOptions: [{ gameSpecId: 'gomoku', engineId: id, playable: true }],
+        });
+      });
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+        jsonResponse({ bots: [...rosterPayload().bots, ...rapfi] }),
+      );
+      window.history.replaceState(null, '', '/bots?game=gomoku');
+      const root = document.createElement('div');
+      await mountBots(root);
+      const bioOf = (card: HTMLElement | null): string =>
+        card?.querySelector('.profile-summary-card-bio')?.textContent ?? '';
+      expect(bioOf(cardFor(root, 'rapfi'))).toBe(String(rapfi[0]!.bio));
+      expect(bioOf(pickLevel(root, 'rapfi', 'rapfi-level-8'))).toBe(String(rapfi[7]!.bio));
+
+      // A ladder that has a localized level bio still shows it, not its stored one.
+      window.history.replaceState(null, '', '/bots?game=xiangqi');
+      await mountBots(root);
+      window.history.replaceState(null, '', '/');
+      const ladder = bioOf(cardFor(root, 'fairy-stockfish'));
+      expect(ladder).toBe(t('bots.fairyStockfishLevelBio', { level: 2 }));
+      expect(ladder).not.toContain('Fairy-Stockfish at level');
+    },
+  );
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
     'offers only eight Rapfi levels in %s setup and posts Level 8',
     async (locale) => {
       await ensureLocaleCatalog(locale);
@@ -1749,6 +1795,72 @@ describe('/bots covers every launched bot variant', () => {
     });
   });
 
+  // Since #1157 Misty's profile offers Three Kingdoms Banqi (prod /api/bots
+  // shape, 2026-11-25): the level ladder must replace her plain card, not sit
+  // beside it with the same games, and keep the version her play option names.
+  it("shows one Three Kingdoms Banqi card when Misty's profile offers it, with its levels and version", async () => {
+    vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'true');
+    const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await serverFixtures();
+    const tkMisty = misty({
+      supportedGameSpecIds: ['dark-chess', 'three-kingdoms-banqi'],
+      playOptions: [
+        { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.6', playable: true },
+        {
+          gameSpecId: 'three-kingdoms-banqi',
+          engineId: 'misty-three-kingdoms-banqi-level-4',
+          playable: true,
+          version: '0.3.1',
+        },
+      ],
+      recordsByGameSpecId: {
+        'dark-chess': { games: 12, wins: 8, losses: 3, draws: 1 },
+        'three-kingdoms-banqi': { games: 109, wins: 72, losses: 37, draws: 0 },
+      },
+      levelRecordsByGameSpecId: {
+        'three-kingdoms-banqi': [
+          { level: 4, games: 9, wins: 6, losses: 3, draws: 0 },
+          { level: null, games: 100, wins: 66, losses: 34, draws: 0 },
+        ],
+      },
+    });
+    const fetchMock = stubFetch([tkMisty], THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES);
+    window.history.replaceState(null, '', '/bots?game=three-kingdoms-banqi');
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+    await mountBots(root);
+
+    const cards = root.querySelectorAll<HTMLElement>('.bot-roster-section .profile-summary-card');
+    expect([...cards].map((card) => card.dataset.opponentId)).toEqual(['misty']);
+    const card = cards[0]!;
+    expect(card.querySelector('.profile-summary-card-name')?.textContent).toBe(
+      'Misty Three Kingdoms Banqi',
+    );
+    const select = card.querySelector<HTMLSelectElement>('select.bot-level-select');
+    expect(select?.value).toBe('misty-three-kingdoms-banqi-level-4');
+    expect(card.textContent).toContain('Version 0.3.1');
+    const bio = card.querySelector('.profile-summary-card-bio')?.textContent ?? '';
+    expect(bio).not.toMatch(/Level \d/);
+    expect(bio).toContain('Three Kingdoms Banqi');
+    // The foot is the picked level's games, not the 109 across levels.
+    const footer = card.querySelector('.profile-summary-card-footer')?.textContent ?? '';
+    expect(footer).not.toContain('All levels');
+    expect(footer).toContain('6-3-0');
+
+    const picked = pickLevel(root, 'misty', 'misty-three-kingdoms-banqi-level-2');
+    expect(picked.textContent).toContain('Version 0.3.1');
+    expect(picked.querySelector('.profile-summary-card-footer')?.textContent).toContain(
+      'No games yet',
+    );
+    fetchMock.mockClear();
+    picked.querySelector<HTMLButtonElement>('button.profile-summary-card-action')?.click();
+    await flushPromises();
+    const roomCall = fetchMock.mock.calls.find(([input]) => String(input) === '/api/rooms');
+    const body = JSON.parse(String((roomCall?.[1] as RequestInit | undefined)?.body));
+    expect(body.engineId).toBe('misty-three-kingdoms-banqi-level-2');
+    expect(body.gameSpecId).toBe('three-kingdoms-banqi');
+    expect(body.botId).toBeUndefined();
+  });
+
   it('a visitor without the TK flag sees no TK game, even when the roster names TK tiers', async () => {
     vi.stubEnv('VITE_THREE_KINGDOMS_BANQI_ENABLED', 'false');
     const { THREE_KINGDOMS_BANQI_PLAYABLE_ENGINES } = await serverFixtures();
@@ -1770,7 +1882,12 @@ describe('/bots covers every launched bot variant', () => {
       supportedGameSpecIds: ['dark-chess', 'ffq-banqi'],
       playOptions: [
         { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.5', playable: true },
-        { gameSpecId: 'ffq-banqi', engineId: 'misty-ffq-banqi-level-4', playable: true },
+        {
+          gameSpecId: 'ffq-banqi',
+          engineId: 'misty-ffq-banqi-level-4',
+          playable: true,
+          version: '0.1.0',
+        },
       ],
       recordsByGameSpecId: { 'ffq-banqi': { games: 3, wins: 2, losses: 1, draws: 0 } },
     });
@@ -1793,6 +1910,8 @@ describe('/bots covers every launched bot variant', () => {
     const footer = card.querySelector('.profile-summary-card-footer')?.textContent;
     expect(footer).toContain('All levels');
     expect(footer).toContain('2-1-0');
+    // The level's card keeps the build her Fanfanqi play option names.
+    expect(card.textContent).toContain('Version 0.1.0');
 
     const picked = pickLevel(root, 'misty', 'misty-ffq-banqi-level-2');
     fetchMock.mockClear();

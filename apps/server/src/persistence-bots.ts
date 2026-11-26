@@ -1,4 +1,5 @@
 import { defaultEngineTimeControl } from '@mistboard/game';
+import { MISTY_LEVELLED_GAME_SPEC_IDS } from './first-party-bots.js';
 import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
 import { countedPublicGame, seatWonGame } from './persistence-counted-games.js';
@@ -442,10 +443,11 @@ async function queryBotRecordsByGameSpecId(
 }
 
 async function queryBotLevelRecordsByGameSpecId(
-  bots: readonly Pick<BotProfile, 'id'>[],
+  bots: readonly Pick<BotProfile, 'id' | 'supportedGameSpecIds'>[],
 ): Promise<Map<string, Record<string, BotLevelRecord[]>>> {
   const byBot = new Map<string, Record<string, BotLevelRecord[]>>();
-  if (!bots.some((bot) => bot.id === 'misty')) return byBot;
+  const misty = bots.find((bot) => bot.id === 'misty');
+  if (!misty) return byBot;
   const { rows } = await getPool().query<{
     variant: string;
     bot_level: number | null;
@@ -468,11 +470,20 @@ async function queryBotLevelRecordsByGameSpecId(
         AND game_participants.visibility = 'public'
         AND games.visibility = 'public'
         AND ${countedPublicGame('games')}
-        AND games.variant IN ('banqi', 'jungle-flip')
+        AND games.variant = ANY($1::text[])
       GROUP BY games.variant, game_participants.bot_level
       ORDER BY games.variant, game_participants.bot_level NULLS LAST`,
+    [MISTY_LEVELLED_GAME_SPEC_IDS],
   );
-  const records: Record<string, BotLevelRecord[]> = { banqi: [], 'jungle-flip': [] };
+  // Every variant whose Misty seats record a level, Three Kingdoms Banqi and
+  // Fanfanqi included since #1157 moved their engine seats onto her profile.
+  // Each one she offers is seeded empty, so a level with no games reads as
+  // none rather than as the total across levels.
+  const records: Record<string, BotLevelRecord[]> = Object.fromEntries(
+    MISTY_LEVELLED_GAME_SPEC_IDS.filter((variant) =>
+      misty.supportedGameSpecIds.includes(variant),
+    ).map((variant) => [variant, []]),
+  );
   for (const row of rows) {
     const bucket = records[row.variant] ?? [];
     bucket.push({ level: row.bot_level, ...recordFromRow(row) });

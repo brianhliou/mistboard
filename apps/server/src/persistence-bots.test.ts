@@ -3,6 +3,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { gameSpecForId } from '@mistboard/game';
 import './gomoku-registration.js';
 import { listBotRatingSnapshots, promoteBotRatingSnapshots } from './bot-rating-snapshots.js';
+import { mistyLevelForEngine } from './first-party-bots.js';
+import { JUNGLE_PLAYABLE_MISTY_TIERS } from './jungle-engine.js';
 import {
   getGameSummary,
   getPublicBotProfile,
@@ -164,6 +166,26 @@ definePersistenceTests('bot profiles', () => {
       assert.deepEqual(bot.recordsByGameSpecId[variant], expected);
       assert.equal(bot.gamesByGameSpecId[variant].length, 9);
     }
+    // The moved seats keep their levels, so /bots splits these games by level
+    // as it does Banqi's: one win at each level, the second Level 4 win on the
+    // already-attributed FFQ seat, and the unnumbered TK engine apart.
+    const win = (level: number | null, games = 1) => ({
+      level,
+      games,
+      wins: games,
+      losses: 0,
+      draws: 0,
+    });
+    const levels = [1, 2, 3, 4, 5, 6, 7, 8];
+    const expectedLevels = {
+      'three-kingdoms-banqi': [...levels.map((level) => win(level)), win(null)],
+      'ffq-banqi': levels.map((level) => win(level, level === 4 ? 2 : 1)),
+    };
+    for (const variant of variants) {
+      assert.deepEqual(profile?.levelRecordsByGameSpecId[variant], expectedLevels[variant]);
+      assert.deepEqual(listed?.levelRecordsByGameSpecId[variant], expectedLevels[variant]);
+      assert.deepEqual(bot.levelRecordsByGameSpecId[variant], expectedLevels[variant]);
+    }
   });
 
   test('unlists retired Rapfi from /api/bots while preserving finished strongest games', async (t) => {
@@ -290,7 +312,7 @@ definePersistenceTests('bot profiles', () => {
   test('splits Misty records by stored level without attributing unlabelled games to a level', async () => {
     await insertBotProfile('misty', 'Misty', 'public', {
       gameSpecId: 'jungle-flip',
-      supportedGameSpecIds: ['jungle-flip', 'banqi'],
+      supportedGameSpecIds: ['jungle-flip', 'banqi', 'jungle'],
     });
     const seed = async (
       id: string,
@@ -355,6 +377,9 @@ definePersistenceTests('bot profiles', () => {
     }
     await seed('legacy-alias', 'jungle-flip', 'misty-jungle-flip', 'draw');
     await seed('current-alias', 'banqi', 'misty-banqi', 'black-wins');
+    // Classical Jungle records its level too; its full-strength id is Level 7.
+    await seed('jungle-level-3', 'jungle', 'misty-jungle-classical-level-3', 'white-wins');
+    await seed('jungle-level-7', 'jungle', 'misty-jungle-level-2', 'black-wins');
     await seed('too-short', 'jungle-flip', 'misty-jungle-flip-level-1', 'black-wins', {
       plyCount: 1,
     });
@@ -377,6 +402,10 @@ definePersistenceTests('bot profiles', () => {
       { level: null, games: 2, wins: 0, losses: 0, draws: 2 },
     ]);
     assert.deepEqual(records(listed)?.banqi, [
+      { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
+    ]);
+    assert.deepEqual(records(listed)?.jungle, [
+      { level: 3, games: 1, wins: 0, losses: 1, draws: 0 },
       { level: 7, games: 1, wins: 1, losses: 0, draws: 0 },
     ]);
     for (const [variant, levels] of Object.entries(records(listed) ?? {})) {
@@ -421,6 +450,116 @@ definePersistenceTests('bot profiles', () => {
     } finally {
       await client.end();
     }
+  });
+
+  test('the Jungle level migration labels Misty seats by the server map, full strength as Level 7', async () => {
+    await insertBotProfile('misty', 'Misty', 'public', {
+      gameSpecId: 'jungle',
+      supportedGameSpecIds: ['jungle', 'banqi'],
+    });
+    const seed = async (
+      id: string,
+      variant: string,
+      engineId: string | null,
+      subjectId = 'misty',
+    ) =>
+      recordGameEnd(id, {
+        variant,
+        mode: 'pve',
+        result: 'black-wins',
+        termination: 'king-captured',
+        plyCount: 20,
+        startedAt: new Date('2026-11-01T00:00:00Z'),
+        endedAt: new Date('2026-11-01T00:10:00Z'),
+        whiteClient: 'human',
+        blackClient: engineId,
+        whiteName: 'Guest',
+        blackName: 'Misty',
+        corpusId: null,
+        visibility: 'public',
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility: 'public',
+          },
+          {
+            color: 'black',
+            displayName: 'Misty',
+            subjectType: 'bot',
+            subjectId,
+            engineId,
+            visibility: 'public',
+          },
+        ],
+      });
+    for (const tier of JUNGLE_PLAYABLE_MISTY_TIERS) await seed(tier.id, 'jungle', tier.id);
+    await seed('retired-l1', 'jungle', 'misty-jungle-level-1');
+    await seed('retired-l3', 'jungle', 'misty-jungle-level-3');
+    await seed('no-engine', 'jungle', null);
+    await seed('kept-level', 'jungle', 'misty-jungle-level-2');
+    await seed('other-variant', 'banqi', 'misty-jungle-level-2');
+    await seed('other-bot', 'jungle', 'misty-jungle-level-2', 'katago');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      // Model seats finished before Jungle joined the level table, and one
+      // whose level was already stored and must not be overwritten.
+      await client.query(
+        "UPDATE game_participants SET bot_level = NULL WHERE color = 'black' AND game_id <> 'kept-level'",
+      );
+      await client.query(
+        "UPDATE game_participants SET bot_level = 3 WHERE color = 'black' AND game_id = 'kept-level'",
+      );
+      const migration = readFileSync(
+        new URL('../migrations/211_misty_jungle_bot_level.sql', import.meta.url),
+        'utf8',
+      );
+      await client.query(migration);
+      const snapshot = async () =>
+        new Map(
+          (
+            await client.query<{ game_id: string; bot_level: number | null }>(
+              "SELECT game_id, bot_level FROM game_participants WHERE color = 'black'",
+            )
+          ).rows.map((row) => [row.game_id, row.bot_level]),
+        );
+      const once = await snapshot();
+      await client.query(migration);
+      assert.deepEqual(await snapshot(), once, 'the backfill is idempotent');
+      // The same level the finish write stores today, for every playable rung.
+      for (const tier of JUNGLE_PLAYABLE_MISTY_TIERS) {
+        assert.equal(once.get(tier.id), mistyLevelForEngine('jungle', tier.id), tier.id);
+      }
+      // The full-strength id names a 2 but is Level 7.
+      assert.equal(once.get('misty-jungle-level-2'), 7);
+      for (const id of ['retired-l1', 'retired-l3', 'no-engine', 'other-variant', 'other-bot']) {
+        assert.equal(once.get(id), null, id);
+      }
+      assert.equal(once.get('kept-level'), 3);
+    } finally {
+      await client.end();
+    }
+    const win = (level: number | null, games = 1) => ({
+      level,
+      games,
+      wins: games,
+      losses: 0,
+      draws: 0,
+    });
+    const listed = (await listPublicBots()).find((bot) => bot.id === 'misty');
+    assert.deepEqual(listed?.levelRecordsByGameSpecId.jungle, [
+      win(1),
+      win(2),
+      win(3, 2),
+      win(4),
+      win(5),
+      win(6),
+      win(7),
+      win(null, 3),
+    ]);
   });
 
   test('splits a multi-variant bot record and recent games per game spec', async () => {
