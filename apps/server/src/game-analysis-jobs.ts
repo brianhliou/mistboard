@@ -18,6 +18,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { type AnalysisJobProgress, withAnalysisJobProgress } from './analysis-job-progress.js';
+import { captureServerEvent } from './analytics-server.js';
 import { VacuousAnalysisError } from './game-analysis-sweep.js';
 import { inFlightWork, logger } from './obs.js';
 
@@ -81,6 +82,69 @@ function pendingJobs(): AnalysisJob[] {
   return [...jobs.values()].filter((job) => job.status === 'pending');
 }
 
+// ── Per-job timing (#1244) ────────────────────────────────────────────────────
+//
+// One record per job: how long it waited behind its lane and how long it ran,
+// so the priority / scaling decision in #1244 is made on data. A refused
+// enqueue (queue full, account cap) is recorded as 'dropped' with no times.
+
+export type AnalysisJobOutcome = 'ok' | 'failed' | 'dropped';
+
+export type AnalysisJobTiming = {
+  /** Route id ('xiangqi', 'jungle-flip', …), the same value as AnalysisJob.variant. */
+  variant: string;
+  kind: AnalysisJobKind;
+  lane: JobLane;
+  /** Moves in the game, when the caller passed a position total; null otherwise. */
+  plies: number | null;
+  /** Jobs already waiting or running in this job's lane when it was enqueued. */
+  queueLengthAtEnqueue: number;
+  /** Enqueue to start; null when dropped. */
+  waitMs: number | null;
+  /** Start to finish or failure; null when dropped. */
+  runMs: number | null;
+  outcome: AnalysisJobOutcome;
+  /** Error code on failed or dropped. */
+  error: string | null;
+};
+
+type AnalysisJobTelemetry = {
+  now(): number;
+  record(accountId: string, timing: AnalysisJobTiming): void;
+};
+
+function recordToPostHog(accountId: string, timing: AnalysisJobTiming): void {
+  // A line in the deploy logs too, so the queue can be read when analytics is
+  // off or blocked. No account id in the line.
+  console.log(`[analysis-job] ${JSON.stringify(timing)}`);
+  void captureServerEvent({
+    event: 'analysis_job_finished',
+    distinctId: accountId,
+    properties: { ...timing },
+  });
+}
+
+const defaultTelemetry: AnalysisJobTelemetry = { now: Date.now, record: recordToPostHog };
+let telemetry: AnalysisJobTelemetry = defaultTelemetry;
+
+/** Test seam: swap the clock and/or the recorder. Returns a restore function. */
+export function setAnalysisJobTelemetryForTests(next: Partial<AnalysisJobTelemetry>): () => void {
+  const previous = telemetry;
+  telemetry = { ...previous, ...next };
+  return () => {
+    telemetry = previous;
+  };
+}
+
+function laneQueueLength(lane: JobLane): number {
+  return pendingJobs().filter((job) => laneFor(job.variant) === lane).length;
+}
+
+function pliesFromTotal(total: number | undefined): number | null {
+  // Callers pass total = plies + 1 (positions, start included).
+  return total !== undefined && Number.isSafeInteger(total) && total > 0 ? total - 1 : null;
+}
+
 /** The pending job for a (variant, room, kind), if any — POSTs coalesce onto it. */
 export function findPendingAnalysisJob(
   variant: string,
@@ -139,14 +203,37 @@ export function enqueueAnalysisJob(args: {
   total?: number;
   run(): Promise<unknown>;
 }): EnqueueAnalysisJobResult {
+  const lane = laneFor(args.variant);
+  const queueLengthAtEnqueue = laneQueueLength(lane);
+  const plies = pliesFromTotal(args.total);
+  const timing = (
+    outcome: AnalysisJobOutcome,
+    error: string | null,
+    waitMs: number | null,
+    runMs: number | null,
+  ): AnalysisJobTiming => ({
+    variant: args.variant,
+    kind: args.kind,
+    lane,
+    plies,
+    queueLengthAtEnqueue,
+    waitMs,
+    runMs,
+    outcome,
+    error,
+  });
+
   const pending = pendingJobs();
-  if (pending.length >= ANALYSIS_QUEUE_PENDING_CAP) {
-    return { ok: false, error: 'analysis_queue_full' };
-  }
-  if (
-    pending.filter((job) => job.accountId === args.accountId).length >= ANALYSIS_ACCOUNT_PENDING_CAP
-  ) {
-    return { ok: false, error: 'too_many_pending_analyses' };
+  const refusal: 'too_many_pending_analyses' | 'analysis_queue_full' | null =
+    pending.length >= ANALYSIS_QUEUE_PENDING_CAP
+      ? 'analysis_queue_full'
+      : pending.filter((job) => job.accountId === args.accountId).length >=
+          ANALYSIS_ACCOUNT_PENDING_CAP
+        ? 'too_many_pending_analyses'
+        : null;
+  if (refusal) {
+    telemetry.record(args.accountId, timing('dropped', refusal, null, null));
+    return { ok: false, error: refusal };
   }
 
   const job: AnalysisJob = {
@@ -160,18 +247,17 @@ export function enqueueAnalysisJob(args: {
     result: null,
     startedAt: null,
     progress: { phase: 'analysis', completed: 0, total: args.total ?? 0 },
-    createdAt: Date.now(),
+    createdAt: telemetry.now(),
     finishedAt: null,
   };
   jobs.set(job.id, job);
 
-  const lane = laneFor(args.variant);
   chains[lane] = chains[lane].then(async () => {
     const endWork = inFlightWork.startJob(
       args.kind === 'analysis' ? 'game_analysis' : 'game_decisions',
     );
     try {
-      job.startedAt = Date.now();
+      job.startedAt = telemetry.now();
       job.result = await withAnalysisJobProgress((update) => {
         if (update.phase) job.progress.phase = update.phase;
         if (Number.isSafeInteger(update.total) && update.total! >= 0)
@@ -199,7 +285,21 @@ export function enqueueAnalysisJob(args: {
       );
     } finally {
       endWork();
-      job.finishedAt = Date.now();
+      job.finishedAt = telemetry.now();
+      const startedAt = job.startedAt ?? job.finishedAt;
+      try {
+        telemetry.record(
+          job.accountId,
+          timing(
+            job.status === 'done' ? 'ok' : 'failed',
+            job.error,
+            startedAt - job.createdAt,
+            job.finishedAt - startedAt,
+          ),
+        );
+      } catch {
+        // Recording never fails a job.
+      }
       // Retain for polling, then drop. .unref() so a pending GC timer never
       // keeps the process alive (repo hard rule on speculative timers).
       setTimeout(() => jobs.delete(job.id), FINISHED_JOB_TTL_MS).unref();
