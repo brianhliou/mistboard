@@ -309,9 +309,9 @@ export const EN_PLAY = {
   'correspondence.moveDeadlineList': 'Every move has a deadline. Miss one and you lose the game.',
   'correspondence.confirmMove': 'Confirm',
   'correspondence.cancelMove': 'Cancel',
-  'correspondence.pendingMove': 'Move preview. Confirm to send.',
+  'correspondence.pendingTitle': 'Confirm your move',
+  'correspondence.pendingMove': 'Nothing is sent until you confirm.',
   'correspondence.nextGame': 'Next game ({count} waiting)',
-  'correspondence.backToGames': 'Correspondence games',
   'correspondence.loadingGames': 'Loading your games',
   'correspondence.gamesUnavailable': 'Games unavailable',
   'correspondence.gamesUnavailableBody': 'Your correspondence games could not be loaded right now.',
@@ -723,9 +723,6 @@ export const EN_PLAY = {
   'live.challengeFriend': 'Challenge a friend',
   'live.challengeFriendCreating': 'Creating challenge',
   'live.challengeFriendRetry': 'Try challenge again',
-  // Postgame "play again by correspondence" (correspondence-again.ts, #606).
-  'live.correspondenceAgain': 'Play again by correspondence',
-  'live.correspondenceAgainSending': 'Sending challenge',
   'live.finishWinner': 'Winner',
   // Tenant live room (variant-tenant/room-chrome.ts and the live-*.ts tenants), #427.
   'variant.mahjong.name': 'Mahjong',

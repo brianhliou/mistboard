@@ -17,11 +17,7 @@ export type GameStartSource =
   | 'lobby-seek'
   | 'quick-pair'
   | 'setup-dialog'
-  | 'engine-offer'
-  // "Play again by correspondence" after a finished game (#606): from the
-  // room's postgame actions, or from the game's review page.
-  | 'postgame-correspondence'
-  | 'review-correspondence';
+  | 'engine-offer';
 
 const KEY = 'mistboard.gameStartSource';
 // Long enough for a slow room create and a matchmaking wait to land; short

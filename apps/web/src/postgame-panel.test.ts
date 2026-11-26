@@ -8,7 +8,6 @@ import {
 
 vi.mock('./analytics.js', () => ({
   track: vi.fn(),
-  trackCorrespondenceAgainShown: vi.fn(),
   trackCorrespondenceSeekPosted: vi.fn(),
 }));
 
@@ -17,48 +16,27 @@ function labels(box: HTMLElement): string[] {
 }
 
 describe('postGameActions', () => {
-  // #606: the correspondence offer rides after the rematch and Review game
-  // (#1235), seated only.
-  it('places "Play again by correspondence" after the rematch and review for a seated player', () => {
-    const correspondenceAgain = {
-      offer: {
-        gameSpecId: 'xiangqi',
-        opponentHandle: 'bob',
-        preferredColor: 'second' as const,
-        daysPerMove: 1,
-      },
-      roomId: 'room-1',
-    };
-    const rematch = document.createElement('button');
-    rematch.textContent = 'Rematch';
-    const seated = postGameActions({
-      variant: 'xiangqi',
-      mode: 'pvp',
-      seated: true,
-      rematch,
-      reviewHref: '/game/room-1',
-      correspondenceAgain,
-    });
-    expect(labels(seated).slice(0, 4)).toEqual([
-      'Rematch',
-      'Review game',
-      'Play again by correspondence',
-      'New opponent',
-    ]);
-    expect(
-      seated.querySelector('.postgame-actions__correspondence[data-correspondence-again]'),
-    ).not.toBeNull();
-
-    const spectator = postGameActions({
-      variant: 'xiangqi',
-      mode: 'pvp',
-      seated: false,
-      rematch: null,
-      reviewHref: '/game/room-1',
-      correspondenceAgain,
-    });
-    expect(labels(spectator)).toEqual(['Review game']);
-  });
+  // "Play again by correspondence" (#606) was removed on 2026-11-25: no finished
+  // game offers it, after a live game between two accounts or a correspondence one.
+  it.each(['pvp', 'correspondence'])(
+    'offers no correspondence play-again after a finished %s game between two accounts',
+    (mode) => {
+      const rematch = document.createElement('button');
+      rematch.textContent = 'Rematch';
+      const seated = postGameActions({
+        variant: 'xiangqi',
+        mode,
+        seated: true,
+        rematch,
+        reviewHref: '/game/room-1',
+      });
+      expect(labels(seated).slice(0, 2)).toEqual(['Rematch', 'Review game']);
+      expect(labels(seated)).not.toContain('Play again by correspondence');
+      expect(seated.querySelector('[data-correspondence-again]')).toBeNull();
+      expect(seated.querySelector('.postgame-actions__correspondence')).toBeNull();
+      expect(seated.textContent?.toLowerCase()).not.toContain('by correspondence');
+    },
+  );
 
   it('gives a spectator only the review', () => {
     const box = postGameActions({

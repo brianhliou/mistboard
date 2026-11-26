@@ -1414,14 +1414,36 @@ a.clock-name.player-name-link {
   background: color-mix(in srgb, var(--site-accent) 10%, transparent);
   color: var(--site-accent-strong);
 }
+/* Its own row of the table, ruled off from the move list above like the
+   finished game's actions, with even room above and below the buttons. */
 .correspondence-room {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid var(--site-border-soft);
 }
 
-.correspondence-room p {
-  margin: 0;
+/* A move waiting for Confirm reads like the "Your move" / "Waiting on"
+   notice it replaces: centred bold title over a muted line. */
+.correspondence-room__notice {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+  color: var(--site-muted);
+  padding: 2px 10px 0;
+}
+
+.correspondence-room__notice strong {
+  color: var(--site-heading);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.correspondence-room__notice span {
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .correspondence-room__actions {
