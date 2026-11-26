@@ -48,6 +48,38 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-26',
+    kind: 'update',
+    headline: 'A Bold piece set, and Green and Pine boards.',
+    body: 'Xiangqi has a new piece set, Bold, with heavy plain characters that read at a glance on a small screen. Two boards come with it: Green, a light green board, and Pine, a wood grain board with a frame. Pick them under Xiangqi piece set and Board color in your display settings.',
+    href: '/?play=computer&gameSpecId=xiangqi',
+    cta: 'Play xiangqi',
+  },
+  {
+    date: '2026-11-26',
+    kind: 'update',
+    headline: 'Fanfanqi game review now shows the better move.',
+    body: "In a Fanfanqi game review, Misty's better move is now drawn on the board wherever a move was missed, and named in the advice beside it. You can try your own moves as a branch off the game, as long as they do not flip a piece or capture a face-down one, since what those would reveal is hidden. Grades load sooner, and the board is larger on a desktop.",
+    href: '/?play=computer&gameSpecId=ffq-banqi',
+    cta: 'Play Fanfanqi',
+  },
+  {
+    date: '2026-11-26',
+    kind: 'update',
+    headline: 'Play Fanfanqi by correspondence.',
+    body: 'Fanfanqi now has correspondence games: one, two, three or seven days a move, and we email you when it is your move. Correspondence Fanfanqi games are casual. Sign in to start one or join an open game.',
+    href: '/correspondence?gameSpecId=ffq-banqi',
+    cta: 'Play by correspondence',
+  },
+  {
+    date: '2026-11-26',
+    kind: 'update',
+    headline: 'Quick chat now reads in your own language.',
+    body: "The quick chat buttons in a game now send Hi, Good luck, Good game, Well played and Thanks. Each one shows in the reader's language, so an English player's Good luck reaches a Chinese reader in Chinese, and the other way round. Anything you type yourself shows as you wrote it.",
+    href: '/?play=lobby',
+    cta: 'Find an opponent',
+  },
+  {
     date: '2026-11-18',
     kind: 'article',
     headline: 'A player page for Meng Fanrui.',

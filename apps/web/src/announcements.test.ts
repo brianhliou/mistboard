@@ -121,7 +121,10 @@ it('announces the casual Three Kingdoms Banqi launch in English, Chinese and Vie
 it('announces Fanfanqi once in English at the November 17 boundary', () => {
   vi.stubEnv('DEV', false);
   try {
-    const entries = allAnnouncements().filter((entry) => entry.headline.includes('Fanfanqi'));
+    // The launch is the one release; later Fanfanqi updates (review, correspondence) are not.
+    const entries = allAnnouncements().filter(
+      (entry) => entry.kind === 'release' && entry.headline.includes('Fanfanqi'),
+    );
     expect(entries).toHaveLength(1);
     const entry = entries[0]!;
     expect(entry).toMatchObject({

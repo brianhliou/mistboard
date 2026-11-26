@@ -35,6 +35,20 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-26 (Bold set, Green and Pine boards; Fanfanqi review and correspondence; quick chat) ── 黑体 / 浅绿 / 松木 / 象棋棋子样式 / 棋盘颜色 follow the display settings; 翻翻棋 the variant name; 你好 / 请多指教 / 好棋 / 下得好 / 谢谢 the chat presets.
+  'A Bold piece set, and Green and Pine boards.': '新增黑体棋子，以及浅绿和松木棋盘。',
+  'Xiangqi has a new piece set, Bold, with heavy plain characters that read at a glance on a small screen. Two boards come with it: Green, a light green board, and Pine, a wood grain board with a frame. Pick them under Xiangqi piece set and Board color in your display settings.':
+    '象棋新增一套棋子样式“黑体”，字体粗重，在小屏幕上也能一眼看清。同时新增两种棋盘：“浅绿”是淡绿色的棋盘，“松木”是带边框的木纹棋盘。在显示设置的“象棋棋子样式”和“棋盘颜色”中选择。',
+  'Fanfanqi game review now shows the better move.': '翻翻棋复盘现在会显示更好的着法。',
+  "In a Fanfanqi game review, Misty's better move is now drawn on the board wherever a move was missed, and named in the advice beside it. You can try your own moves as a branch off the game, as long as they do not flip a piece or capture a face-down one, since what those would reveal is hidden. Grades load sooner, and the board is larger on a desktop.":
+    '在翻翻棋对局复盘中，凡是错过好棋的地方，棋盘上都会画出 Misty 给出的更好着法，旁边的评注也会写出这步棋。你可以从对局中分出变化，试走自己的着法，只要不翻子、不吃暗子即可，因为这些着法会揭示的内容是隐藏的。评分加载得更快，电脑上的棋盘也更大。',
+  'Play Fanfanqi': '下翻翻棋',
+  'Play Fanfanqi by correspondence.': '下翻翻棋通信对局。',
+  'Fanfanqi now has correspondence games: one, two, three or seven days a move, and we email you when it is your move. Correspondence Fanfanqi games are casual. Sign in to start one or join an open game.':
+    '翻翻棋现在可以下通信对局：每步一天、两天、三天或七天，轮到你走时我们会发邮件提醒你。翻翻棋通信对局都是休闲对局。登录后即可发起一盘，或加入一盘公开对局。',
+  'Quick chat now reads in your own language.': '快捷聊天现在用你的语言显示。',
+  "The quick chat buttons in a game now send Hi, Good luck, Good game, Well played and Thanks. Each one shows in the reader's language, so an English player's Good luck reaches a Chinese reader in Chinese, and the other way round. Anything you type yourself shows as you wrote it.":
+    '对局中的快捷聊天按钮现在发送“你好”“请多指教”“好棋”“下得好”和“谢谢”。每一句都按读者的语言显示：英文玩家发出的 Good luck，中文读者看到的是“请多指教”，反过来也一样。你自己输入的文字按原样显示。',
   // ── 2026-11-15 (real-time challenges) ── 好友 / 选择棋手 / 当前在线 / 实时 follow the play and account catalogs.
   'Challenge someone you follow to a game right now.': '邀请你关注的棋手立即对局。',
   'Open Play, choose Friend, then Pick a player. The list shows the people you follow and the people who follow you, and which of them are online. Your invitation reaches them on whatever page they are on, and they have a minute to accept. Then you are both in the game. Sign in to play. You can turn off incoming invitations in settings.':
@@ -610,6 +624,20 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-26 (Bold set, Green and Pine boards; Fanfanqi review and correspondence; quick chat) ── 黑體 / 淺綠 / 松木 / 象棋棋子樣式 / 棋盤顏色 follow the display settings; 翻翻棋 the variant name; 你好 / 請多指教 / 好棋 / 下得好 / 謝謝 the chat presets.
+  'A Bold piece set, and Green and Pine boards.': '新增黑體棋子，以及淺綠和松木棋盤。',
+  'Xiangqi has a new piece set, Bold, with heavy plain characters that read at a glance on a small screen. Two boards come with it: Green, a light green board, and Pine, a wood grain board with a frame. Pick them under Xiangqi piece set and Board color in your display settings.':
+    '象棋新增一套棋子樣式「黑體」，字體粗重，在小螢幕上也能一眼看清。同時新增兩種棋盤：「淺綠」是淡綠色的棋盤，「松木」是帶邊框的木紋棋盤。在顯示設定的「象棋棋子樣式」和「棋盤顏色」中選擇。',
+  'Fanfanqi game review now shows the better move.': '翻翻棋覆盤現在會顯示更好的著法。',
+  "In a Fanfanqi game review, Misty's better move is now drawn on the board wherever a move was missed, and named in the advice beside it. You can try your own moves as a branch off the game, as long as they do not flip a piece or capture a face-down one, since what those would reveal is hidden. Grades load sooner, and the board is larger on a desktop.":
+    '在翻翻棋對局覆盤中，凡是錯過好棋的地方，棋盤上都會畫出 Misty 給出的更好著法，旁邊的評註也會寫出這步棋。你可以從對局中分出變化，試走自己的著法，只要不翻子、不吃暗子即可，因為這些著法會揭示的內容是隱藏的。評分載入得更快，電腦上的棋盤也更大。',
+  'Play Fanfanqi': '下翻翻棋',
+  'Play Fanfanqi by correspondence.': '下翻翻棋通信對局。',
+  'Fanfanqi now has correspondence games: one, two, three or seven days a move, and we email you when it is your move. Correspondence Fanfanqi games are casual. Sign in to start one or join an open game.':
+    '翻翻棋現在可以下通信對局：每步一天、兩天、三天或七天，輪到你走時我們會寄信提醒你。翻翻棋通信對局都是休閒對局。登入後即可發起一盤，或加入一盤公開對局。',
+  'Quick chat now reads in your own language.': '快捷聊天現在用你的語言顯示。',
+  "The quick chat buttons in a game now send Hi, Good luck, Good game, Well played and Thanks. Each one shows in the reader's language, so an English player's Good luck reaches a Chinese reader in Chinese, and the other way round. Anything you type yourself shows as you wrote it.":
+    '對局中的快捷聊天按鈕現在發送「你好」「請多指教」「好棋」「下得好」和「謝謝」。每一句都按讀者的語言顯示：英文玩家發出的 Good luck，中文讀者看到的是「請多指教」，反過來也一樣。你自己輸入的文字按原樣顯示。',
   // ── 2026-11-15 (real-time challenges) ── 好友 / 選擇棋手 / 目前在線 / 即時 follow the play and account catalogs.
   'Challenge someone you follow to a game right now.': '邀請你關注的棋手立即對局。',
   'Open Play, choose Friend, then Pick a player. The list shows the people you follow and the people who follow you, and which of them are online. Your invitation reaches them on whatever page they are on, and they have a minute to accept. Then you are both in the game. Sign in to play. You can turn off incoming invitations in settings.':
