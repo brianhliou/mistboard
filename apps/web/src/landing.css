@@ -1139,7 +1139,42 @@
      sharing block below overrides this with the shared feed-row square so the
      viewer board is the SAME square as the daily-puzzle box and both align
      flush with the center column top-and-bottom (issue #120). */
-  --showcase-widget-size: min(100cqw - 26px, 534px, calc(100dvh - 240px));
+  --landing-replay-base-size: min(100cqw - 26px, 534px, calc(100dvh - 240px));
+  --showcase-widget-size: var(--landing-replay-base-size);
+}
+
+/* Below the desktop band the seats sit in flow above and below the board, so the
+   viewer's height depends on the variant (a banqi strip, a square gomoku board,
+   the fixed-size mahjong table, a 9x10 xiangqi board). The loading skeleton
+   cannot know which game the TV will put on, so the slot is held at the tallest
+   board the TV shows, the xiangqi family (rail x 612/552) plus the two seat rows,
+   and shorter boards centre in it. Nothing below the viewer moves when the first
+   game lands or when the TV swaps variants. Jungle, taller still, takes the
+   xiangqi board's height as it does in the desktop band. No .landing-page here:
+   the prerendered shell paints this slot before the page script adds that class. */
+@media (max-width: 1240px) {
+  .landing-board-column #landing-replay {
+    min-height: calc(
+      var(--landing-replay-base-size) *
+      612 / 552 +
+      (var(--landing-board-caption-line) + var(--landing-board-caption-gap)) *
+      2
+    );
+    justify-content: center;
+  }
+
+  .landing-board-column #landing-replay:has(.jungle-live-svg) {
+    --showcase-widget-size: calc(var(--landing-replay-base-size) * 612 / 552 * 336 / 432);
+  }
+
+  /* The mahjong table grows its felt to the slot (fitToHost), but it mounts its seats
+     before the match loads. Stretching the layout and its board from that first
+     frame puts the seats where they finish, instead of a centred two-seat strip that
+     jumps to the slot's edges when the table arrives. */
+  .landing-board-column #landing-replay > .xmj-watch-layout,
+  .landing-board-column #landing-replay > .xmj-watch-layout > .xmj-watch-board {
+    flex-grow: 1;
+  }
 }
 
 /* The viewer now lives in a narrow side rail, so keep the seat name + clock
@@ -3051,7 +3086,8 @@
   }
 
   .landing-board-column #landing-replay {
-    --showcase-widget-size: min(100cqw, 534px);
+    --landing-replay-base-size: min(100cqw, 534px);
+    --showcase-widget-size: var(--landing-replay-base-size);
   }
 
   /* Play: the solid primary, then Play the computer / Play a friend. */
