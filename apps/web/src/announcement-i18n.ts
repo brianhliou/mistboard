@@ -35,7 +35,7 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
-  // ── 2026-11-26 (Bold set, Green and Pine boards; Fanfanqi review and correspondence; quick chat) ── 黑体 / 浅绿 / 松木 / 象棋棋子样式 / 棋盘颜色 follow the display settings; 翻翻棋 the variant name; 你好 / 请多指教 / 好棋 / 下得好 / 谢谢 the chat presets.
+  // ── 2026-11-26 (Bold set, Green and Pine boards; Fanfanqi review and correspondence; quick chat) ── 黑体 / 浅绿 / 松木 / 象棋棋子样式 / 棋盘颜色 follow the display settings; Fanfanqi keeps its catalog name; 你好 / 请多指教 / 好棋 / 下得好 / 谢谢 the chat presets.
   'A Bold piece set, and Green and Pine boards.': '新增黑体棋子，以及浅绿和松木棋盘。',
   'Xiangqi has a new piece set, Bold, with heavy plain characters that read at a glance on a small screen. Two boards come with it: Green, a light green board, and Pine, a wood grain board with a frame. Pick them under Xiangqi piece set and Board color in your display settings.':
     '象棋新增一套棋子样式“黑体”，字体粗重，在小屏幕上也能一眼看清。同时新增两种棋盘：“浅绿”是淡绿色的棋盘，“松木”是带边框的木纹棋盘。在显示设置的“象棋棋子样式”和“棋盘颜色”中选择。',
@@ -624,7 +624,7 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
-  // ── 2026-11-26 (Bold set, Green and Pine boards; Fanfanqi review and correspondence; quick chat) ── 黑體 / 淺綠 / 松木 / 象棋棋子樣式 / 棋盤顏色 follow the display settings; 翻翻棋 the variant name; 你好 / 請多指教 / 好棋 / 下得好 / 謝謝 the chat presets.
+  // ── 2026-11-26 (Bold set, Green and Pine boards; Fanfanqi review and correspondence; quick chat) ── 黑體 / 淺綠 / 松木 / 象棋棋子樣式 / 棋盤顏色 follow the display settings; Fanfanqi keeps its catalog name; 你好 / 請多指教 / 好棋 / 下得好 / 謝謝 the chat presets.
   'A Bold piece set, and Green and Pine boards.': '新增黑體棋子，以及淺綠和松木棋盤。',
   'Xiangqi has a new piece set, Bold, with heavy plain characters that read at a glance on a small screen. Two boards come with it: Green, a light green board, and Pine, a wood grain board with a frame. Pick them under Xiangqi piece set and Board color in your display settings.':
     '象棋新增一套棋子樣式「黑體」，字體粗重，在小螢幕上也能一眼看清。同時新增兩種棋盤：「淺綠」是淡綠色的棋盤，「松木」是帶邊框的木紋棋盤。在顯示設定的「象棋棋子樣式」和「棋盤顏色」中選擇。',

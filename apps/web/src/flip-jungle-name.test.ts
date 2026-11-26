@@ -101,6 +101,34 @@ const ALLOWED: Record<string, { sentence: string; count: number }[]> = {
       count: 1,
     },
   ],
+  'apps/web/src/announcement-i18n.ts': [
+    // 2026-11-26 News: Fanfanqi review and correspondence, both scripts.
+    { sentence: '翻翻棋复盘现在会显示更好的着法。', count: 1 },
+    {
+      sentence:
+        '在翻翻棋对局复盘中，凡是错过好棋的地方，棋盘上都会画出 Misty 给出的更好着法，旁边的评注也会写出这步棋。你可以从对局中分出变化，试走自己的着法，只要不翻子、不吃暗子即可，因为这些着法会揭示的内容是隐藏的。评分加载得更快，电脑上的棋盘也更大。',
+      count: 1,
+    },
+    { sentence: "'Play Fanfanqi': '下翻翻棋',", count: 2 },
+    { sentence: '下翻翻棋通信对局。', count: 1 },
+    {
+      sentence:
+        '翻翻棋现在可以下通信对局：每步一天、两天、三天或七天，轮到你走时我们会发邮件提醒你。翻翻棋通信对局都是休闲对局。登录后即可发起一盘，或加入一盘公开对局。',
+      count: 1,
+    },
+    { sentence: '翻翻棋覆盤現在會顯示更好的著法。', count: 1 },
+    {
+      sentence:
+        '在翻翻棋對局覆盤中，凡是錯過好棋的地方，棋盤上都會畫出 Misty 給出的更好著法，旁邊的評註也會寫出這步棋。你可以從對局中分出變化，試走自己的著法，只要不翻子、不吃暗子即可，因為這些著法會揭示的內容是隱藏的。評分載入得更快，電腦上的棋盤也更大。',
+      count: 1,
+    },
+    { sentence: '下翻翻棋通信對局。', count: 1 },
+    {
+      sentence:
+        '翻翻棋現在可以下通信對局：每步一天、兩天、三天或七天，輪到你走時我們會寄信提醒你。翻翻棋通信對局都是休閒對局。登入後即可發起一盤，或加入一盤公開對局。',
+      count: 1,
+    },
+  ],
 };
 
 function repoRoot(): string {
