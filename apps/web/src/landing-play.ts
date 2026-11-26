@@ -690,7 +690,7 @@ function engineSeedRow(seed: LandingEngineSeed, locale: Locale): HTMLElement {
   const miniId = variantMiniIdForGameSpec(seed.gameSpecId);
   if (miniId) {
     thumb.innerHTML = renderVariantMarker(miniId, {
-      size: 100,
+      size: 40,
       label: `${seed.variantLabel} marker`,
     });
   }
@@ -881,7 +881,7 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
     thumb.setAttribute('aria-hidden', 'true');
     const miniId = variantMiniIdForGameSpec(gameSpecId);
     if (miniId) {
-      thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
+      thumb.innerHTML = renderVariantMarker(miniId, { size: 40, label: `${label} marker` });
     }
     const name = document.createElement('span');
     name.className = 'landing-quickpair-variant';
@@ -1423,7 +1423,7 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
   thumb.setAttribute('aria-hidden', 'true');
   const miniId = variantMiniIdForGameSpec(specId);
   if (miniId) {
-    thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${gameLabel} marker` });
+    thumb.innerHTML = renderVariantMarker(miniId, { size: 40, label: `${gameLabel} marker` });
   }
   // Open seeks are anonymous on the wire, so the opponent reads "Anonymous" with
   // the same cell grammar (and an explicit Human tag) the bot rows use.
@@ -2113,7 +2113,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       const thumb = document.createElement('span');
       thumb.className = 'landing-variant-option-thumb';
       if (miniId) {
-        thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
+        thumb.innerHTML = renderVariantMarker(miniId, { size: 40, label: `${label} marker` });
       }
       const name = document.createElement('span');
       name.className = 'landing-variant-option-name';
@@ -2149,7 +2149,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       }
       const label = variantLabelForGameSpec(selectedGameSpecId, locale);
       const miniId = variantMiniIdForGameSpec(selectedGameSpecId);
-      rowThumb.innerHTML = miniId ? renderVariantMarker(miniId, { size: 100, label: '' }) : '';
+      rowThumb.innerHTML = miniId ? renderVariantMarker(miniId, { size: 40, label: '' }) : '';
       rowName.textContent = label;
       row.setAttribute('aria-label', `${t('setup.variant', {}, locale)}: ${label}`);
       row.setAttribute('aria-expanded', variantPickerOpen ? 'true' : 'false');
@@ -2200,7 +2200,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (miniId) {
       const thumb = document.createElement('span');
       thumb.className = 'landing-variant-control-thumb';
-      thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
+      thumb.innerHTML = renderVariantMarker(miniId, { size: 40, label: `${label} marker` });
       variantControl.append(thumb);
     }
     const name = document.createElement('span');

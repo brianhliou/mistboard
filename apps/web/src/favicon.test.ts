@@ -3,7 +3,7 @@
 // cream field, so the crop never cuts the mark's corners. The tab draws the
 // full-bleed favicon-32.png instead: browsers take the declared size nearest
 // the tab, and Google ignores anything under 48px. logo-mark.png stays the
-// header and card art.
+// card art; the header draws logo-mark-96.png, a sips copy of it.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';

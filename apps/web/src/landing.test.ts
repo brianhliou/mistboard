@@ -10,6 +10,7 @@ import {
   fetchPlayableEnginesOnce,
   loadLandingContent,
   loadPlayableEnginesWithRetry,
+  PHONE_NEWS_ROWS,
   renderLandingPageForPrerender,
   renderLandingShellForPrerender,
   shouldUseBundledShowcaseDemos,
@@ -386,6 +387,35 @@ describe('landing shell', () => {
     ).not.toBeNull();
   });
 
+  it('draws every variant marker from its small copy, so they leave the bandwidth to the board', () => {
+    // 2026-11-25: the homepage asked for its 24 to 40px markers at size 100,
+    // which read the 1254px masks, and on a slow connection that 1.4 MB came in
+    // ahead of the board's piece art.
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderLandingShellForPrerender();
+    wrap.append(buildLandingStage(fallbackPlayableEngines(), { skipLiveWidgets: true }).el);
+    const masks = [...wrap.querySelectorAll<HTMLElement>('.variant-marker')].map((marker) =>
+      marker.style.getPropertyValue('--variant-marker-mask'),
+    );
+    expect(masks.length).toBeGreaterThan(0);
+    for (const mask of masks) expect(mask).toMatch(/^url\('\/variant-markers\/final\/128\//);
+  });
+
+  it('bakes the phone mission beside the desktop counts, so a phone first paint has its box', () => {
+    // 2026-11-25: the shell had no mission, so a phone painted the desktop
+    // activity line and twelve News rows, then the mount swapped in the
+    // mission and collapsed News, moving everything under the Play button.
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderLandingShellForPrerender();
+    const mission = wrap.querySelector('.landing-demo > .landing-phone-mission');
+    expect(mission?.querySelector('.landing-activity-value')?.textContent).toBe('–');
+    expect(mission?.querySelector('.landing-activity-label')?.textContent).toBe('games played');
+    // Desktop keeps its own line in the play rail.
+    const activity = wrap.querySelector<HTMLElement>('.landing-play-stack .landing-activity');
+    expect(activity?.hidden).toBe(false);
+    expect(activity?.querySelector('.landing-activity-value')?.textContent).toBe('–');
+  });
+
   it('keeps the grid-area hooks the homepage band CSS keys on', () => {
     // landing.css places the bands via these class names (grid-areas
     // left/panel/play, puzzle/forum/chat, news/blogs+learn/studies); renaming
@@ -597,6 +627,22 @@ describe('homepage band layout (CSS)', () => {
       );
     expect(order('.landing-demo .landing-dives-row')).toBeLessThan(
       order('.landing-demo .landing-articles-row:not(.landing-dives-row)'),
+    );
+  });
+
+  it('gives the prerendered shell the phone mount boxes at phone width', () => {
+    // Hidden above the breakpoint with the other phone-only pieces, shown at it.
+    const hidden = '.landing-phone-tiles,\n.landing-phone-mission {\n  display: none;\n}';
+    expect(css).toContain(hidden);
+    const phone = css.slice(css.indexOf(hidden));
+    expect(phone).toMatch(/\.landing-phone-mission \{\s*display: block;/);
+    // The mission holds the counts, so the play rail's line steps aside.
+    expect(phone).toMatch(
+      /\.landing-demo:has\(> \.landing-phone-mission\) \.landing-activity \{\s*display: none;/,
+    );
+    // News shows the rows a phone mount builds, and no closing row.
+    expect(phone).toContain(
+      `.landing-news-column .landing-news-update:nth-child(n + ${PHONE_NEWS_ROWS + 1}) {\n    display: none;`,
     );
   });
 

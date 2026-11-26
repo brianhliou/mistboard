@@ -25,6 +25,18 @@
 // copy, and piece-set-first-paint.test.ts fails if the two drift apart (compared
 // with whitespace collapsed) and runs this exact text against the real reader
 // over generated environments, requiring the same id.
+//
+// The same script starts the board's piece art. A board page draws its pieces
+// as PNGs inside an SVG, which the browser fetches at low priority and only once
+// the board is in the DOM; on a slow connection they lost the bandwidth to the
+// page's other images and the pieces sat as blank discs for seconds
+// (2026-11-25). When the set is the international one and the page opens on a
+// xiangqi board (PIECE_PRELOADS, after any locale prefix), the script adds a
+// high-priority preload for each piece that board draws, at the URL the board
+// asks for, so the board reuses those requests: the fourteen starting pieces,
+// and on the homes, whose TV and puzzle are mid-game, both crossed soldiers.
+// Every other set draws its pieces inline or from SVG files the board asks for
+// itself, and gets none.
 import {
   DEFAULT_LOCALE,
   DEFAULT_SCRIPT_BY_LANGUAGE,
@@ -48,6 +60,8 @@ import {
 } from './xiangqi-appearance-storage.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
+  internationalCrossedSoldierHrefs,
+  internationalStartingPieceHrefs,
   RETIRED_XIANGQI_PIECE_SETS,
   XIANGQI_PIECE_SETS,
 } from './xiangqi-piece-sets.js';
@@ -55,6 +69,11 @@ import {
 export const PIECE_SET_PENDING_ATTRIBUTE = 'data-piece-set-pending';
 /** The id of the <style> element the script adds; syncNavQuickPieces removes it. */
 export const PIECE_SET_FIRST_PAINT_STYLE_ID = 'piece-set-first-paint';
+/** Pages whose first view is a xiangqi board, and the piece art each preloads. */
+export const PIECE_PRELOADS: Readonly<Record<string, readonly string[]>> = {
+  '/': [...internationalStartingPieceHrefs(), ...internationalCrossedSoldierHrefs()],
+  '/analysis/xiangqi': internationalStartingPieceHrefs(),
+};
 
 function buildPieceSetFirstPaintScript(): string {
   const json = JSON.stringify;
@@ -166,6 +185,28 @@ function buildPieceSetFirstPaintScript(): string {
     id = "";
   }
   root.setAttribute(${json(PIECE_SET_PENDING_ATTRIBUTE)}, id);
+  if (id === "international") {
+    try {
+      let path = window.location.pathname.toLowerCase();
+      while (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
+      for (const [prefix] of ${json(localePaths)}) {
+        if (path === prefix || path.startsWith(prefix + "/")) path = path.slice(prefix.length) || "/";
+      }
+      const PRELOADS = ${json(PIECE_PRELOADS)};
+      if (Object.prototype.hasOwnProperty.call(PRELOADS, path)) {
+        for (const href of PRELOADS[path]) {
+          const link = document.createElement("link");
+          link.rel = "preload";
+          link.as = "image";
+          link.href = href;
+          link.setAttribute("fetchpriority", "high");
+          document.head.append(link);
+        }
+      }
+    } catch {
+      /* The board asks for its pieces itself. */
+    }
+  }
   window.addEventListener(
     "error",
     (event) => {

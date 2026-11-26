@@ -37,7 +37,7 @@ export function buildLandingActivity(
   body.className = 'landing-activity-body';
   // No live-line placeholder: it would flash before hydrate on the (common)
   // zero case and then vanish.
-  const primary = activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]);
+  const primary = landingActivityPlaceholder();
   const totalsTarget = options.totalsTarget ?? body;
   totalsTarget.append(primary);
   // On phones the mission holds every count (totals and the live line), so
@@ -48,6 +48,13 @@ export function buildLandingActivity(
     void hydrateLandingActivity(box, primary, totalsTarget, options.pollMs ?? ACTIVITY_POLL_MS);
   }
   return box;
+}
+
+// The games-played line before its first read: a dash in the number's place,
+// so the line already holds its height. The prerendered shell also puts one in
+// the phone mission, where a phone mount moves the live totals.
+export function landingActivityPlaceholder(): HTMLElement {
+  return activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]);
 }
 
 // The durable total is the headline; the month count rides along in a

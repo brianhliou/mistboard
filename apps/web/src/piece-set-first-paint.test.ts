@@ -29,7 +29,13 @@ import {
   PIECE_SET_PENDING_ATTRIBUTE,
 } from './piece-set-first-paint.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
-import { RETIRED_XIANGQI_PIECE_SETS, XIANGQI_PIECE_SETS } from './xiangqi-piece-sets.js';
+import {
+  internationalCrossedSoldierHrefs,
+  internationalStartingPieceHrefs,
+  RETIRED_XIANGQI_PIECE_SETS,
+  renderXiangqiPieceGlyphed,
+  XIANGQI_PIECE_SETS,
+} from './xiangqi-piece-sets.js';
 
 type StorageMode = 'ok' | 'getter-throws' | 'getitem-throws' | 'setitem-throws';
 
@@ -119,6 +125,7 @@ function install(env: Env): string[] {
 function clearMark(): void {
   document.documentElement.removeAttribute(PIECE_SET_PENDING_ATTRIBUTE);
   document.getElementById(PIECE_SET_FIRST_PAINT_STYLE_ID)?.remove();
+  for (const link of document.head.querySelectorAll('link[rel="preload"]')) link.remove();
 }
 
 const compile = (source: string) => new Function(source) as () => void;
@@ -441,6 +448,75 @@ describe('piece-set first-paint script', () => {
     expect(mark).toBe('');
     expect(document.getElementById(PIECE_SET_FIRST_PAINT_STYLE_ID)).toBeNull();
     expect(hidesBakedSlot('international')).toBe(true);
+  });
+
+  // 2026-11-25: the board's piece PNGs were fetched at low priority once the
+  // board mounted, and on Slow 4G the last glyph landed 39s after the board.
+  describe('piece preloads', () => {
+    const preloads = () =>
+      [...document.head.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="image"]')].map(
+        (link) => [link.getAttribute('href'), link.getAttribute('fetchpriority')],
+      );
+
+    const STARTING = internationalStartingPieceHrefs();
+    const HOME = [...STARTING, ...internationalCrossedSoldierHrefs()];
+
+    it('preloads every piece the home boards draw at high priority, at the URLs they draw', () => {
+      runScript(compile(PIECE_SET_FIRST_PAINT_SCRIPT), CLEAN);
+      expect(preloads()).toEqual(HOME.map((href) => [href, 'high']));
+      expect(STARTING).toHaveLength(14);
+      expect(STARTING).toContain('/piece-sets/xiangqi/international/black-soldier.png?v=18');
+      // The board's own <image> asks for the same URL, so it reuses the preload.
+      const href = (color: string, role: string, crossed = false) =>
+        renderXiangqiPieceGlyphed(
+          { color, role } as Parameters<typeof renderXiangqiPieceGlyphed>[0],
+          'international',
+          { crossed },
+        ).match(/<image href="([^"]+)"/)?.[1];
+      const drawn = ['red', 'black'].flatMap((color) =>
+        ['general', 'advisor', 'elephant', 'horse', 'chariot', 'cannon', 'soldier'].map((role) =>
+          href(color, role),
+        ),
+      );
+      expect(drawn).toEqual(STARTING);
+      expect([href('red', 'soldier', true), href('black', 'soldier', true)]).toEqual(
+        internationalCrossedSoldierHrefs(),
+      );
+    });
+
+    it.each([
+      ['/', HOME],
+      ['/zh-hant', HOME],
+      ['/zh-hans/', HOME],
+      ['/analysis/xiangqi', STARTING],
+      ['/zh-hant/analysis/xiangqi', STARTING],
+    ])('preloads the pieces %s opens on', (path, expected) => {
+      runScript(compile(PIECE_SET_FIRST_PAINT_SCRIPT), {
+        ...CLEAN,
+        path,
+        storage: {
+          'mistboard.xiangqiPieceSet': 'international',
+          'mistboard.xiangqiPieceSetVersion': '4',
+        },
+      });
+      expect(preloads().map(([url]) => url)).toEqual(expected);
+    });
+
+    it.each([
+      ['a page with no board', { ...CLEAN, path: '/blog' }],
+      ['a path named like an object key', { ...CLEAN, path: '/toString' }],
+      [
+        'another set',
+        {
+          ...CLEAN,
+          storage: { 'mistboard.xiangqiPieceSet': 'wood', 'mistboard.xiangqiPieceSetVersion': '4' },
+        },
+      ],
+      ['a set it could not work out', { ...CLEAN, languages: undefined }],
+    ] as const)('preloads nothing for %s', (_name, env) => {
+      runScript(compile(PIECE_SET_FIRST_PAINT_SCRIPT), env);
+      expect(preloads()).toEqual([]);
+    });
   });
 
   it('shows the baked icon again when the app script fails to load or throws', () => {
