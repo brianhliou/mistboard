@@ -535,6 +535,7 @@ export const ZH_HANS_PLAY = {
   'correspondence.moveDeadlineDay': '你每步有 {days} 天时间。超时未走就会判负。',
   'correspondence.moveDeadlineDays': '你每步有 {days} 天时间。超时未走就会判负。',
   'correspondence.moveDeadlineList': '每步都有期限。超时未走就会判负。',
+  'correspondence.moveDeadlineShort': '超时未走就会判负。',
   'correspondence.confirmMove': '确认',
   'correspondence.cancelMove': '取消',
   'correspondence.pendingMove': '着法预览。确认后发送。',

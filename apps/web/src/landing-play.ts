@@ -79,12 +79,7 @@ import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
-import {
-  buildCorrespondenceDeadlineNotice,
-  buildCorrespondenceListDeadlineNotice,
-  buildSeekAcceptAction,
-  correspondenceDeadlineText,
-} from './seek-accept.js';
+import { buildCorrespondenceListDeadlineNotice, buildSeekAcceptAction } from './seek-accept.js';
 import {
   buildSetupRowSection,
   colorOptionButton,
@@ -2375,7 +2370,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
   // one chip group for the active segment; keeps the allowed real-time presets in
   // sync (rated keeps only rated-eligible paces, and a pick that is no longer offered falls back to 3+2).
-  const deadlineNotice = buildCorrespondenceDeadlineNotice(selectedCorrespondenceDays ?? 1, locale);
   const syncTimeControls = () => {
     const corrAvailable = correspondenceAvailable();
     if (!corrAvailable) {
@@ -2421,11 +2415,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     hostPaceChip.hidden = !withHost;
     syncHostSide(withHost);
     const corrActive = selectedTimeMode === 'correspondence';
-    deadlineNotice.hidden = !corrActive;
-    deadlineNotice.textContent = correspondenceDeadlineText(
-      selectedCorrespondenceDays ?? 1,
-      locale,
-    );
 
     timeModeToggle.hidden = !corrAvailable;
     realtimeModeButton.classList.toggle('selected', !corrActive);
@@ -2439,7 +2428,13 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       .closest('[data-setup-section="time"]')
       ?.querySelector<HTMLSpanElement>('.landing-setup-row-hint');
     if (timeHint) {
-      timeHint.textContent = corrActive ? '' : t('setup.timeUnits', {}, locale);
+      // The chips name the days, so in correspondence the hint says what a miss costs. It
+      // sits under Time rather than above Start so the dialog keeps one height in both paces.
+      timeHint.textContent = t(
+        corrActive ? 'correspondence.moveDeadlineShort' : 'setup.timeUnits',
+        {},
+        locale,
+      );
     }
     challengePlayer.section.hidden = choice.mode !== 'pvp' || isGuest();
     challengePlayer.setRealtime(!corrActive);
@@ -3187,13 +3182,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const accordion = document.createElement('div');
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
-  actions.append(
-    seekPrompt,
-    deadlineNotice,
-    startButton,
-    correspondenceAccountNotice,
-    signInButton,
-  );
+  actions.append(seekPrompt, startButton, correspondenceAccountNotice, signInButton);
   const notice = choice.notice ? document.createElement('p') : null;
   if (notice) {
     notice.className = 'landing-setup-notice';

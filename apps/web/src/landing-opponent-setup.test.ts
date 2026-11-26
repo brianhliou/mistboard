@@ -328,7 +328,9 @@ describe('#1123 opponent-first setup', () => {
       expect(document.querySelector<HTMLElement>('.landing-correspondence-presets')?.hidden).toBe(
         false,
       );
-      expect(section('time')?.querySelector('.landing-setup-row-hint')?.textContent).toBe('');
+      expect(section('time')?.querySelector('.landing-setup-row-hint')?.textContent).toBe(
+        'Miss a move and you lose.',
+      );
       click('.landing-time-mode button:first-child');
       expect(document.querySelector<HTMLElement>('.landing-correspondence-presets')?.hidden).toBe(
         true,

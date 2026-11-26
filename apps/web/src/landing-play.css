@@ -1722,7 +1722,7 @@ html.landing-setup-open body {
   padding-top: max(18px, calc((100vh - 740px) / 2));
 }
 
-/* Real-time units appear once under Time control; correspondence chips name days. */
+/* Under Time: the real-time units, or in correspondence what a missed move costs. */
 .landing-setup-row-hint {
   display: block;
   margin-top: 3px;

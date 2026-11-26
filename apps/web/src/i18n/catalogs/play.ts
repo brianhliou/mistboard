@@ -311,6 +311,8 @@ export const EN_PLAY = {
   'correspondence.moveDeadlineDays':
     "You'll have {days} days for each move. Miss one and you lose the game.",
   'correspondence.moveDeadlineList': 'Every move has a deadline. Miss one and you lose the game.',
+  // Play a game dialog: the pace chips beside it already name the days.
+  'correspondence.moveDeadlineShort': 'Miss a move and you lose.',
   'correspondence.confirmMove': 'Confirm',
   'correspondence.cancelMove': 'Cancel',
   'correspondence.pendingMove': 'Move preview. Confirm to send.',
@@ -1028,6 +1030,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'correspondence.moveDeadlineDay',
   'correspondence.moveDeadlineDays',
   'correspondence.moveDeadlineList',
+  'correspondence.moveDeadlineShort',
   'play.startPlaying',
   'play.playGame',
   'play.opponentLabel',
