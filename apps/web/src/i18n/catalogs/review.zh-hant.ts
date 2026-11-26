@@ -309,6 +309,7 @@ export const ZH_HANT_REVIEW = {
   'study.phone.next': '前進',
   'study.phone.nextChapter': '下一章',
   'study.gamebook.nextPuzzle': '下一題',
+  'study.gamebook.nextLesson': '下一課',
   'study.phone.previousMove': '上一著',
   'study.phone.nextMove': '下一著',
   'study.phone.searchChapters': '搜尋章節',
