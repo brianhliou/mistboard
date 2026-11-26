@@ -6,6 +6,12 @@ import { runUciEval, UciEnginePool } from './uci-engine-harness.js';
 
 export type FFQPublicEval = Omit<SweepPlyEval, 'ply'>;
 export type FFQPublicSearch = (fen: string) => Promise<FFQPublicEval>;
+/** The shared level-7 budget that review and luck both read. */
+export const FFQ_PUBLIC_SEARCH_NODES = 25_000;
+/** Time cap for a search: the shared budget's 3s, or 20s for a deeper re-search
+ *  (1M nodes takes about 1.3s locally, so the cap only stops a runaway). */
+export const ffqPublicSearchMovetimeMs = (nodes: number): number =>
+  nodes === FFQ_PUBLIC_SEARCH_NODES ? 3_000 : 20_000;
 const pool = new UciEnginePool({
   name: 'ffq-banqi-analysis',
   maxProcessesEnvVar: 'MISTBOARD_FFQ_BANQI_ANALYSIS_PROCESSES',
@@ -32,7 +38,13 @@ export function cachedFFQPublicSearch(search: FFQPublicSearch, limit = 8192): FF
 }
 
 const search = cachedFFQPublicSearch(async (key) => {
-  const [bin, _version, fen] = JSON.parse(key) as [string, string, string];
+  const [bin, _version, fen, nodes = FFQ_PUBLIC_SEARCH_NODES] = JSON.parse(key) as [
+    string,
+    string,
+    string,
+    number?,
+  ];
+  const movetimeMs = ffqPublicSearchMovetimeMs(nodes);
   const release = await pool.acquire();
   try {
     const result = await runUciEval({
@@ -42,9 +54,9 @@ const search = cachedFFQPublicSearch(async (key) => {
         'ucinewgame',
         'isready',
         `position fen ${fen}`,
-        'go nodes 25000 movetime 3000',
+        `go nodes ${nodes} movetime ${movetimeMs}`,
       ],
-      timeoutMs: 7000,
+      timeoutMs: movetimeMs + 4000,
       timeoutMessage: 'FFQ analysis timed out',
     });
     if (result.cp === null && result.mate === null) throw new VacuousAnalysisError('ffq-banqi');
@@ -54,8 +66,21 @@ const search = cachedFFQPublicSearch(async (key) => {
   }
 });
 
-export const searchFFQPublicFen: FFQPublicSearch = async (fen) => {
+/**
+ * One public-FEN search. The default budget is the one review and luck share; a
+ * larger `nodes` (the review's bounce re-search) gets its own cache entry.
+ */
+export async function searchFFQPublicFen(
+  fen: string,
+  nodes = FFQ_PUBLIC_SEARCH_NODES,
+): Promise<FFQPublicEval> {
   const bin = ffqBanqiEnginePath();
   if (!bin) throw new Error('FFQ analysis engine unavailable');
-  return search(JSON.stringify([bin, FFQ_BANQI_ENGINE_VERSION, fen]));
-};
+  return search(
+    JSON.stringify(
+      nodes === FFQ_PUBLIC_SEARCH_NODES
+        ? [bin, FFQ_BANQI_ENGINE_VERSION, fen]
+        : [bin, FFQ_BANQI_ENGINE_VERSION, fen, nodes],
+    ),
+  );
+}
