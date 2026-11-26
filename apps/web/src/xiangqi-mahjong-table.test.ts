@@ -234,6 +234,31 @@ describe('xiangqi mahjong table', () => {
     expect(host.textContent).not.toMatch(/East|West|東|西/);
   });
 
+  it('says how many tiles the wall has left, in plain words in all three locales', async () => {
+    for (const [locale, many, one] of [
+      ['en', '21 tiles left', '1 tile left'],
+      ['zh-Hans', '剩 21 张', '剩 1 张'],
+      ['zh-Hant', '剩 21 張', '剩 1 張'],
+    ] as const) {
+      await ensureLocaleCatalog(locale);
+      window.history.pushState(null, '', locale === 'en' ? '/' : `/${locale.toLowerCase()}/play`);
+      try {
+        for (const [count, label] of [
+          [21, many],
+          [1, one],
+        ] as const) {
+          const view = { ...xmjViewFor(state, 'east'), wallCount: count };
+          const wall = doc(xiangqiMahjongTableHtml(view, opts(true))).querySelector('.xmj-wall');
+          expect(wall?.getAttribute('aria-label')).toBe(label);
+          expect(wall?.querySelector('.xmj-wall__count')?.textContent).toBe(label);
+          expect(wall?.querySelector('.xmj-wall__n')?.textContent).toBe(String(count));
+        }
+      } finally {
+        window.history.pushState(null, '', '/');
+      }
+    }
+  });
+
   it('offers no discard buttons when the room says this seat may not act', () => {
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(state, mover), opts(false)));
     expect(host.querySelectorAll('[data-xmj-tile]').length).toBe(0);
@@ -497,7 +522,7 @@ describe('xiangqi mahjong table', () => {
     // The wall is drawn tile by tile, with its count in words.
     expect(host.querySelectorAll('.xmj-wall .xmj-stack i').length).toBe(view.wallCount);
     expect(host.querySelector('.xmj-wall')?.getAttribute('aria-label')).toBe(
-      `Wall ${view.wallCount}`,
+      `${view.wallCount} tiles left`,
     );
   });
 

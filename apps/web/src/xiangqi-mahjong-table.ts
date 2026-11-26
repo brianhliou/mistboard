@@ -73,8 +73,108 @@ export interface XmjTableOptions {
 
 /** The wall at the deal: 32 tiles less both hands. */
 const XMJ_WALL_AT_DEAL = 32 - XMJ_DEALER_TILES - XMJ_OTHER_TILES;
-/** Discards per pond row. Two rows hold any seat's discards in a hand. */
+/** Claimed sets a seat may hold: a seat with one set claims no more. */
+const XMJ_SETS_PER_SEAT = 1;
+
+/**
+ * The most discards one seat's pond can hold in a hand. Discards alternate
+ * seats from the dealer's opening one (the dealer is dealt a tile more and
+ * draws none first); every draw from the wall is followed by one discard, and
+ * so is every claim, which takes the claimed tile out of the other seat's
+ * pond. A seat claims at most one set. So a hand that runs the wall dry makes
+ * 1 + wall + claims discards, and the dealer, claiming once from a seat that
+ * never claims, keeps the most: 13 of 25 with the 23-tile wall.
+ */
+export function xmjMostPondDiscards(wallAtDeal: number, setsPerSeat: number): number {
+  let most = 0;
+  for (let dealerClaims = 0; dealerClaims <= setsPerSeat; dealerClaims += 1) {
+    for (let otherClaims = 0; otherClaims <= setsPerSeat; otherClaims += 1) {
+      const discards = 1 + wallAtDeal + dealerClaims + otherClaims;
+      const dealerPond = Math.ceil(discards / 2) - otherClaims;
+      const otherPond = Math.floor(discards / 2) - dealerClaims;
+      most = Math.max(most, dealerPond, otherPond);
+    }
+  }
+  return most;
+}
+
+/** The most discards a seat can make in a hand (13); the desk pond is one row of it. */
+export const XMJ_MAX_DISCARDS = xmjMostPondDiscards(XMJ_WALL_AT_DEAL, XMJ_SETS_PER_SEAT);
+/**
+ * Discards per pond row between a phone and a desk (521-799px wide), where two
+ * rows of eight hold any seat's discards. A desk and a phone draw one row of
+ * XMJ_MAX_DISCARDS instead (xiangqi-mahjong.css).
+ */
 export const XMJ_POND_COLUMNS = 8;
+
+/** The desk table's fixed pieces, as xiangqi-mahjong.css draws them. */
+export const XMJ_DESK = {
+  /** The felt's side padding and edge: 16px and 1px each side. */
+  sideChrome: 34,
+  /**
+   * A pond row's width in discard widths, as the CSS divides by it: 13 tiles
+   * and 12 gaps of 5/44 of a tile, rounded up.
+   */
+  pondSpan: 14.37,
+  /**
+   * The felt's top and bottom padding and edge (30), its two gaps (24), the
+   * middle's two (20), and the band each rack keeps on the felt's edge for its
+   * badges (10 each), so a badge never lies over a tile or its depth.
+   */
+  fixedHeight: 94,
+  /** The badge band each rack keeps between its tiles and the felt's edge. */
+  badgeBand: 10,
+  /** A rack's height past its tile and depth: a claimed set's tray. */
+  rackExtra: 8,
+  /** A pond's height past its tile: 6px over the row, 4px under it for the depth. */
+  pondExtra: 10,
+  /** The table's height before the tiles spent it: 130px + 395u + the centre's floor. */
+  baseHeight: 130,
+  baseHeightPerU: 395,
+  centreFloor: 118,
+} as const;
+
+export type XmjDeskSizes = {
+  /** A hand tile, either seat's. */
+  tileW: number;
+  tileH: number;
+  /** A discard tile. */
+  pondW: number;
+  pondH: number;
+  pondGap: number;
+  /** The table's height, pinned to what it was before. */
+  tableH: number;
+  /** What the centre band gets of it. */
+  centreH: number;
+};
+
+/**
+ * The desk table's sizes (800px and wider), the sum xiangqi-mahjong.css does
+ * in custom properties. `feltW` is the table's width, `unitW` the width the
+ * page's height budget gives a board (--xmj-unit-w, as the felt sees it).
+ * Neither is a count of tiles: the sizes hold for the whole match.
+ */
+export function xmjDeskSizes({ feltW, unitW }: { feltW: number; unitW: number }): XmjDeskSizes {
+  const u = unitW / 560;
+  const inner = feltW - XMJ_DESK.sideChrome;
+  const pondW = inner / XMJ_DESK.pondSpan;
+  const pondH = (pondW * 58) / 44;
+  const pondGap = (pondW * 5) / 44;
+  // A rack is its tile, the tile's depth (5/68 of its height) and the tray.
+  const rackPerTileW = 73 / 52;
+  const centreFloor = Math.max(XMJ_DESK.centreFloor, XMJ_DESK.centreFloor * u);
+  const tableH = XMJ_DESK.baseHeight + XMJ_DESK.baseHeightPerU * u + centreFloor;
+  const ponds = 2 * (pondH + XMJ_DESK.pondExtra);
+  const tileW = Math.min(
+    xmjWidestHandTileW(inner),
+    (tableH - centreFloor - XMJ_DESK.fixedHeight - 2 * XMJ_DESK.rackExtra - ponds) /
+      (2 * rackPerTileW),
+  );
+  const tileH = (tileW * 68) / 52;
+  const racks = 2 * (tileW * rackPerTileW + XMJ_DESK.rackExtra);
+  const centreH = tableH - XMJ_DESK.fixedHeight - racks - ponds;
+  return { tileW, tileH, pondW, pondH, pondGap, tableH, centreH };
+}
 /** The rules section that explains each scoring line. */
 export const XMJ_SCORING_HREF = '/rules/xiangqi-mahjong-32#adding-it-up';
 
@@ -300,69 +400,146 @@ export function xmjTagOverflow(tags: ReadonlyArray<{ column: XmjSpan; badge: Xmj
   return overflow;
 }
 
-/** Below this the tiles read too small to play; a badge may then clip. */
-const XMJ_RACK_MIN_SCALE = 0.6;
-
-/** A rack laid out with its tiles at a scale: badge overflow, tile widths summed. */
-export type XmjRackMeasure = { overflow: number; tiles: number };
-
 /**
- * The scale for one rack's tiles that keeps its badges inside their columns.
- * The hand is the `auto` column between two equal `1fr` badge columns, so each
- * pixel the tiles give up widens each badge column by half of it. A seat with
- * a claimed set shown beside its hand ran wider than the table had room for,
- * and "To discard" ran past the felt's edge and was clipped (2026-10-27).
+ * The gaps in a hand, as xiangqi-mahjong.css draws them at 521px and wider:
+ * between two concealed tiles 7% of a tile, never under 4px, and between the
+ * concealed tiles and a claimed set 21% of a tile, never under 20px, so the
+ * set always stands clearly apart. Inside a set the tiles stay 2px apart.
  */
-export function xmjRackTileScale(measure: (scale: number) => XmjRackMeasure): number {
-  let scale = 1;
-  for (let pass = 0; pass < 4; pass += 1) {
-    const { overflow, tiles } = measure(scale);
-    if (overflow <= 0.5 || tiles <= 0) break;
-    const next = Math.max(XMJ_RACK_MIN_SCALE, scale * (1 - (2 * overflow) / tiles));
-    if (next >= scale - 0.001) break;
-    scale = next;
-  }
-  return scale;
+export const XMJ_HAND_GAPS = {
+  concealedMin: 4,
+  concealedPerTile: 0.07,
+  setMin: 20,
+  setPerTile: 0.21,
+} as const;
+
+/** The gap between two concealed tiles at a tile width. */
+export function xmjConcealedGap(tileW: number): number {
+  return Math.max(XMJ_HAND_GAPS.concealedMin, XMJ_HAND_GAPS.concealedPerTile * tileW);
+}
+
+/** The gap between the concealed tiles and a claimed set at a tile width. */
+export function xmjSetGap(tileW: number): number {
+  return Math.max(XMJ_HAND_GAPS.setMin, XMJ_HAND_GAPS.setPerTile * tileW);
 }
 
 /**
- * Shrink the tiles of any rack whose badges would spill out of their columns,
- * as the compact card's zoom does for the whole table. Tile sizes are set on
- * the hand, so the rack keeps its height and the opponent's rack its tiles.
- * Run after each redraw and when the table's width changes.
+ * The hand's fixed width at its widest, a claimed set and two concealed tiles,
+ * one of them just drawn: the gap to the set, the drawn tile's 12px margin,
+ * the gap between the concealed tiles, the set's tray (3px padding and a 1px
+ * edge each side) and the 2px between its tiles. The set holds two upright
+ * tiles and one lying sideways; no hand holds more than one set.
  */
-export function fitXmjRackBadges(root: ParentNode): void {
-  for (const rack of root.querySelectorAll<HTMLElement>('.xmj-rack')) {
-    const hand = rack.querySelector<HTMLElement>('.xmj-rack__hand');
-    if (!hand) continue;
-    hand.style.removeProperty('--xmj-tile-w');
-    hand.style.removeProperty('--xmj-tile-h');
-    if (!rack.querySelector('.xmj-rack__tag > *')) continue;
-    const tile = hand.querySelector<HTMLElement>('.xmj-tile:not(.xmj-tile--sideways)');
-    const base = tile?.getBoundingClientRect();
-    if (!base || base.width === 0) continue;
-    const size = (scale: number) => {
-      if (scale === 1) {
-        hand.style.removeProperty('--xmj-tile-w');
-        hand.style.removeProperty('--xmj-tile-h');
-        return;
-      }
-      hand.style.setProperty('--xmj-tile-w', `${(base.width * scale).toFixed(2)}px`);
-      hand.style.setProperty('--xmj-tile-h', `${(base.height * scale).toFixed(2)}px`);
-    };
-    const scale = xmjRackTileScale((at) => {
-      size(at);
-      const tags = [...rack.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')].map((el) => ({
-        column: (el.parentElement ?? el).getBoundingClientRect(),
-        badge: el.getBoundingClientRect(),
-      }));
-      const tiles = [...hand.querySelectorAll<HTMLElement>('.xmj-tile')].reduce(
-        (sum, el) => sum + el.getBoundingClientRect().width,
-        0,
-      );
-      return { overflow: xmjTagOverflow(tags), tiles };
+export function xmjHandFixed(tileW: number): number {
+  return 12 + 8 + 4 + xmjConcealedGap(tileW) + xmjSetGap(tileW);
+}
+
+/** The widest hand's width at a tile width: four upright tiles, one sideways. */
+export function xmjWidestHand(tileW: number, tileH: number): number {
+  return 4 * tileW + tileH + xmjHandFixed(tileW);
+}
+
+/**
+ * The largest tile whose widest hand fits `inner`. Each gap is the larger of a
+ * floor and a share of the tile, so the hand is the largest of four straight
+ * lines in the tile width, and the tile is the smallest of their four roots:
+ * the same min() the desk CSS takes.
+ */
+export function xmjWidestHandTileW(inner: number): number {
+  const upright = 4 + 68 / 52;
+  const { concealedMin: c, concealedPerTile: cp, setMin: s, setPerTile: sp } = XMJ_HAND_GAPS;
+  return Math.min(
+    (inner - 24 - c - s) / upright,
+    (inner - 24 - s) / (upright + cp),
+    (inner - 24 - c) / (upright + sp),
+    (inner - 24) / (upright + cp + sp),
+  );
+}
+/** The rack's grid gap, either side of the hand. */
+const XMJ_RACK_GAP = 8;
+
+/** What a seat's badge placement is decided from: none of it changes in a match. */
+export type XmjRackRoom = {
+  /** The seat's inner width. */
+  room: number;
+  /** One upright tile of this seat, as the felt draws it. */
+  tileW: number;
+  tileH: number;
+  /** The widest badge the seat can carry (dealer, ready, to discard). */
+  tag: number;
+};
+
+/**
+ * Whether a seat's badges sit beside its hand. Decided from the widest hand the
+ * seat can ever hold, never the hand it holds now, so the answer stays the same
+ * all match at a given table width: a fourth tile or a fifth, a claimed set, a
+ * badge coming or going never moves them. A seat that answers no sets its
+ * badges on the felt's edge at its corners instead; the tiles keep their size
+ * either way. Until 2026-11-25 the rack shrank its tiles to make the badges
+ * fit, so a seat's tiles changed size with its hand.
+ */
+export function xmjRackTagsBeside({ room, tileW, tileH, tag }: XmjRackRoom): boolean {
+  return xmjWidestHand(tileW, tileH) + 2 * (tag + XMJ_RACK_GAP) <= room + 0.5;
+}
+
+/** The class that sets a seat's badges on the felt's edge. */
+export const XMJ_TAGS_EDGE_CLASS = 'xmj-seat--tags-edge';
+
+/** Badge widths by their labels: the type is fixed, so a locale measures once. */
+const xmjTagWidths = new Map<string, number>();
+
+function widestTag(seat: HTMLElement): number {
+  const labels = [
+    ['xmj-badge xmj-badge--dealer', t('live.xmj.dealer')],
+    ['xmj-badge xmj-badge--declared', t('live.xmj.declaredReady')],
+    ['xmj-badge xmj-badge--turn', t('live.xmj.toDiscard')],
+  ] as const;
+  const key = labels.map(([, label]) => label).join('\u0000');
+  const known = xmjTagWidths.get(key);
+  if (known !== undefined) return known;
+  const probe = document.createElement('span');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:0;top:0';
+  for (const [className, label] of labels) {
+    const badge = document.createElement('span');
+    badge.className = className;
+    badge.style.display = 'inline-block';
+    badge.textContent = label;
+    probe.append(badge);
+  }
+  seat.append(probe);
+  const widest = Math.max(
+    0,
+    ...[...probe.children].map((badge) => badge.getBoundingClientRect().width),
+  );
+  probe.remove();
+  if (widest > 0) xmjTagWidths.set(key, widest);
+  return widest;
+}
+
+/**
+ * Put each seat's badges beside its hand where the widest hand it can hold
+ * leaves them room, and on the felt's edge where it does not. Writes one class
+ * on the seat and nothing on the tiles. Run after each redraw and when the
+ * table's width changes.
+ */
+export function placeXmjRackTags(root: ParentNode): void {
+  for (const seat of root.querySelectorAll<HTMLElement>('.xmj-seat')) {
+    const tile = seat
+      .querySelector<HTMLElement>('.xmj-rack__hand .xmj-tile:not(.xmj-tile--sideways)')
+      ?.getBoundingClientRect();
+    const room = seat.clientWidth;
+    if (!tile || tile.width === 0 || room === 0) {
+      seat.classList.remove(XMJ_TAGS_EDGE_CLASS);
+      continue;
+    }
+    const beside = xmjRackTagsBeside({
+      room,
+      tileW: tile.width,
+      tileH: tile.height,
+      tag: widestTag(seat),
     });
-    size(scale);
+    seat.classList.toggle(XMJ_TAGS_EDGE_CLASS, !beside);
   }
 }
 
@@ -541,8 +718,10 @@ function wallHtml(count: number): string {
       `<span class="xmj-stack" data-h="${height}"${stackStyle}>${height > 0 ? '<i></i>'.repeat(height) : ''}</span>`,
     );
   }
-  const label = t('live.xmj.wall', { count: left });
-  return `<div class="xmj-wall" role="img" aria-label="${label}"><span class="xmj-wall__stacks" aria-hidden="true">${html.join('')}</span><span class="xmj-wall__count" aria-hidden="true">${label}</span></div>`;
+  const label = t(left === 1 ? 'live.xmj.wallOne' : 'live.xmj.wall', { count: left });
+  // The number in its own span keeps two digits' width (xiangqi-mahjong.css).
+  const shown = label.replace(String(left), `<span class="xmj-wall__n">${left}</span>`);
+  return `<div class="xmj-wall" role="img" aria-label="${label}"><span class="xmj-wall__stacks" aria-hidden="true">${html.join('')}</span><span class="xmj-wall__count" aria-hidden="true">${shown}</span></div>`;
 }
 
 function claimTiles(claim: XmjClaim, discard: XmjTile): XmjTile[] {

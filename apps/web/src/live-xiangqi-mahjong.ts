@@ -40,7 +40,7 @@ import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
-  fitXmjRackBadges,
+  placeXmjRackTags,
   toggleXmjLogHand,
   XMJ_TILE_LOOKS,
   xiangqiMahjongTableHtml,
@@ -406,24 +406,25 @@ function renderHandsUnderBoard(board: HTMLElement, view: XmjPlayerView | null): 
   if (host.innerHTML !== html) host.innerHTML = html;
 }
 
-let rackFitObserver: ResizeObserver | null = null;
-let rackFitBoard: HTMLElement | null = null;
-let rackFitWidth = -1;
+let rackTagObserver: ResizeObserver | null = null;
+let rackTagBoard: HTMLElement | null = null;
+let rackTagWidth = -1;
 
 /**
- * Keep every rack's badges inside the felt: on each redraw, and when the
- * table's width changes (its tiles scale with the column on desktop).
+ * Place every rack's badges beside the hand or on the felt's edge: on each
+ * redraw, and when the table's width changes (its tiles scale with the column
+ * on desktop). Only the badges move; the tiles keep their size.
  */
-function fitRacks(board: HTMLElement): void {
-  fitXmjRackBadges(board);
-  rackFitWidth = board.clientWidth;
-  if (rackFitBoard === board || typeof ResizeObserver !== 'function') return;
-  rackFitObserver?.disconnect();
-  rackFitBoard = board;
-  rackFitObserver = new ResizeObserver(() => {
-    if (board.isConnected && board.clientWidth !== rackFitWidth) fitRacks(board);
+function placeRackTags(board: HTMLElement): void {
+  placeXmjRackTags(board);
+  rackTagWidth = board.clientWidth;
+  if (rackTagBoard === board || typeof ResizeObserver !== 'function') return;
+  rackTagObserver?.disconnect();
+  rackTagBoard = board;
+  rackTagObserver = new ResizeObserver(() => {
+    if (board.isConnected && board.clientWidth !== rackTagWidth) placeRackTags(board);
   });
-  rackFitObserver.observe(board);
+  rackTagObserver.observe(board);
 }
 
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
@@ -477,7 +478,7 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   refs.board.innerHTML = html;
   lastTableHtml = html;
   // Before the flights: they measure where each tile lands.
-  fitRacks(refs.board);
+  placeRackTags(refs.board);
   if (resultShown) refs.board.querySelector('.xmj-result')?.classList.add('xmj-result--settled');
   if (sources) animateMoves(refs.board, view, sources);
   else drawnCounts = null;
