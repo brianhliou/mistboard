@@ -530,7 +530,10 @@ test('assignSeat: casual room still seats a guest (gate is rated-only)', async (
   assert.equal(assignment.deniedReason, undefined);
 });
 
-test('assignSeat: rated room refuses a stats-excluded account a color seat', async () => {
+// A stats-excluded account rates against anyone but another excluded account
+// (2026-11-26). The refusal needs the opponent's flag from the database, so it
+// is pinned in persistence-rated-stats-excluded.test.ts.
+test('assignSeat: rated room seats a stats-excluded account', async () => {
   const room = makeRoom('rated-excluded');
   const ctx = makeCtx();
 
@@ -542,9 +545,8 @@ test('assignSeat: rated room refuses a stats-excluded account a color seat', asy
     makeAccount({ statsExcludedAt: new Date() }),
   );
 
-  assert.equal(assignment.seat, 'spectator', 'an uncounted account must not rate');
-  assert.equal(assignment.deniedReason, 'rated-requires-counted-account');
-  assert.equal(room.projection.seats.white, undefined, 'no seat was assigned');
+  assert.equal(assignment.seat, 'white', 'an excluded account takes a rated seat');
+  assert.equal(assignment.deniedReason, undefined);
 });
 
 test('assignSeat: casual room seats a stats-excluded account', async () => {

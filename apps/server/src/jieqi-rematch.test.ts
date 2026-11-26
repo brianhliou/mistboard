@@ -354,12 +354,19 @@ test('jieqi rematch context: rated carries over only while the rated switch and 
   }
 });
 
-test('jieqi rematch: a rated game with a stats-excluded seat rematches casual', async () => {
-  const room = finishedHydratedRoom(true, { red: 'u-red', black: 'u-excluded' });
-  const { ctx, calls } = stubContext({ accountMayRate: async (userId) => userId !== 'u-excluded' });
-  const result = await finalizeTenantRematchIfReady(jieqiTenant, ctx, room);
-  assert.ok(result, 'the rematch still opens');
-  assert.deepEqual(calls, [{ rated: false }], 'an uncounted account never rates');
+// A rated game is never formed between two stats-excluded accounts; one of
+// them against a counted player stays rated (2026-11-26).
+test('jieqi rematch: one stats-excluded seat rematches rated, two rematch casual', async () => {
+  const accountStatsExcluded = async (userId: string) => userId.startsWith('u-excluded');
+  const one = finishedHydratedRoom(true, { red: 'u-red', black: 'u-excluded' });
+  const a = stubContext({ accountStatsExcluded });
+  assert.ok(await finalizeTenantRematchIfReady(jieqiTenant, a.ctx, one));
+  assert.deepEqual(a.calls, [{ rated: true }], 'an excluded account rates against a counted one');
+
+  const two = finishedHydratedRoom(true, { red: 'u-excluded-1', black: 'u-excluded-2' });
+  const b = stubContext({ accountStatsExcluded });
+  assert.ok(await finalizeTenantRematchIfReady(jieqiTenant, b.ctx, two), 'the rematch still opens');
+  assert.deepEqual(b.calls, [{ rated: false }], 'two excluded accounts never rate each other');
 });
 
 test('jieqi rematch: a play-locked account cancels the rematch', async () => {

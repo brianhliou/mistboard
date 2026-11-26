@@ -193,13 +193,6 @@ export async function tryHandle(
       writeJson(response, 401, { error: 'rated_requires_account' });
       return true;
     }
-    // A stats-excluded account (operator, QA) is not counted, so it never rates:
-    // refused before a ticket exists, so it can neither post nor accept a rated
-    // seek, and the rated room's seat gate refuses it again for a stale client.
-    if (body.rated === true && persistence.isStatsExcluded(accountUser)) {
-      writeJson(response, 403, { error: 'rated_requires_counted_account' });
-      return true;
-    }
     if (body.rated === true && isFairPlayMarked(accountUser)) {
       writeJson(response, 403, { error: 'rated_account_marked' });
       return true;
@@ -249,6 +242,9 @@ export async function tryHandle(
       timeControl ?? undefined,
       lobbyRated,
       liveGameIdentityForRequest(request, accountUser),
+      // A stats-excluded account seeks rated like anyone; only the pairing
+      // skips another excluded seeker (2026-11-26).
+      lobbyRated && persistence.isStatsExcluded(accountUser),
     );
     writeJson(response, ticket.roomId ? 201 : 202, lobbyTicketResponse(ticket));
     return true;
@@ -298,6 +294,7 @@ async function joinLobby(
   timeControl: RoomTimeControl | undefined,
   rated = false,
   owner: LobbyTicket['owner'] = undefined,
+  statsExcluded = false,
 ): Promise<LobbyTicket> {
   const now = lobbyNow(ctx);
   pruneLobbyTickets(ctx, now);
@@ -312,6 +309,8 @@ async function joinLobby(
       !sameLobbyPlayer(ticket.owner, owner) &&
       ticket.gameSpecId === gameSpecId &&
       ticket.rated === rated &&
+      // A rated game is never formed between two stats-excluded accounts.
+      !(rated && statsExcluded && ticket.statsExcluded === true) &&
       timeControlKey(ticket.timeControl) === timeKey,
   );
   const ticket: LobbyTicket = {
@@ -322,6 +321,7 @@ async function joinLobby(
     lastPolledAt: now,
     gameSpecId,
     rated,
+    ...(statsExcluded ? { statsExcluded: true } : {}),
     region: null,
     matchedAt: null,
     roomId: null,

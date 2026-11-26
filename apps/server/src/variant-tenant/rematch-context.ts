@@ -16,6 +16,7 @@ import { clockPolicyKindFor, isRatedTimeControl, type RoomTimeControl } from '@m
 import { ratedEnabled } from '../feature-flags.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
+import { lookupStatsExcluded } from '../rated-stats-excluded.js';
 import { persistenceRecordForTenantSeatToken } from './events.js';
 import { variantTenantForRoomId } from './registry.js';
 import type { TenantRematchClient, TenantRematchContext } from './rematch.js';
@@ -83,9 +84,8 @@ export function registeredTenantRematchContext<
       return persistence.mayPlayVariantByUserId(userId, registration.gameSpecId);
     },
     accountMayRate: async (userId) =>
-      !persistence.isInitialized() ||
-      (!(await persistence.isUserIdStatsExcluded(userId)) &&
-        !(await isUserIdFairPlayMarked(userId))),
+      !persistence.isInitialized() || !(await isUserIdFairPlayMarked(userId)),
+    accountStatsExcluded: lookupStatsExcluded,
     issueSeatToken: async (room, seat, identity) => {
       if (clockPolicyKindFor(room.projection.timeControl) === 'days-per-move') {
         if (!registration.issueCorrespondenceSeatToken)

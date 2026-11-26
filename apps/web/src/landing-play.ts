@@ -86,7 +86,7 @@ import {
   updateStartOptionButtonLabel,
   variantCardButton,
 } from './setup-panel-parts.js';
-import { isLikelySignedIn, isLikelyStatsExcluded } from './signed-in-state.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { navPhoneMediaQuery } from './site-shell.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -452,10 +452,7 @@ export function buildLandingPlayPanel(
       source: 'hero',
       modeFrom: storedMode ? 'stored' : 'default',
       // Same rule as a mode switch: Friend and Online rate alike, bot games never do.
-      ratedDisabled:
-        !storedMode || storedMode === 'pve'
-          ? undefined
-          : !isRatedModeEnabled() || isLikelyStatsExcluded(),
+      ratedDisabled: !storedMode || storedMode === 'pve' ? undefined : !isRatedModeEnabled(),
     });
   });
   panel.append(playButton);
@@ -1695,7 +1692,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         mode: 'lobby',
         modeSwitcher: true,
         ...initialSetup,
-        ratedDisabled: !isRatedModeEnabled() || isLikelyStatsExcluded(),
+        ratedDisabled: !isRatedModeEnabled(),
         ...(correspondenceDays !== null
           ? { initialTimeMode: 'correspondence', initialCorrespondenceDays: correspondenceDays }
           : {}),
@@ -1716,7 +1713,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         mode: 'pvp',
         modeSwitcher: true,
         // Friend games rate like Find opponent (lichess-style challenges).
-        ratedDisabled: !isRatedModeEnabled() || isLikelyStatsExcluded(),
+        ratedDisabled: !isRatedModeEnabled(),
         ...initialSetup,
         ...(correspondenceDays !== null
           ? { initialTimeMode: 'correspondence', initialCorrespondenceDays: correspondenceDays }
@@ -2719,9 +2716,6 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           ? null
           : t('setup.ratedUnavailable', {}, locale);
       }
-      // An account excluded from stats never rates (the server refuses it).
-      if (isRatedModeEnabled() && isLikelySignedIn() && isLikelyStatsExcluded())
-        return t('setup.ratedNotCounted', {}, locale);
       if (choice.ratedDisabled) {
         return isRatedModeEnabled()
           ? t('setup.ratedSignIn', {}, locale)
@@ -3163,7 +3157,7 @@ function reopenSetupDialogInMode(
       modeSwitcher: true,
       source: 'mode-switch',
       // Friend and Find opponent rate alike; bot games never do.
-      ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled() || isLikelyStatsExcluded(),
+      ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled(),
       ...extra,
     });
   } finally {

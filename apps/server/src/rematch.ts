@@ -10,6 +10,7 @@
 // match in `canOfferRematch`.
 
 import type { Color } from '@mistboard/game';
+import { bothStatsExcluded } from './rated-stats-excluded.js';
 import type { RoomManagerContext } from './room-manager.js';
 import { createWithPairing } from './room-pairing.js';
 import { type SeatIdentity, seatDecorationsOf } from './seat-decorations.js';
@@ -41,10 +42,14 @@ export interface RematchOrchestrator {
   issueSeatToken: RematchIssueToken;
   send: RematchSend;
   buildRoomUrl: RematchUrl;
-  // Whether an account may play rated (a stats-excluded account may not). The
+  // Whether an account may play rated (a fair-play mark refuses it). The
   // pre-issued tokens skip the seat gate that refuses it, so a rated game with
   // such a seat rematches casual instead.
   accountMayRate?: (userId: string) => Promise<boolean>;
+  // Whether an account is stats-excluded. Two excluded seats never form a rated
+  // game (rated-stats-excluded.ts), so that pair rematches casual; one excluded
+  // seat against anyone else stays rated.
+  accountStatsExcluded?: (userId: string) => Promise<boolean>;
 }
 
 function activeSeatTokenForClient(room: Room, client: Client): SeatTokenState | null {
@@ -157,6 +162,11 @@ export async function finalizeRematchIfReady(
       if (token.userId !== null && !(await orch.accountMayRate(token.userId))) rated = false;
     }
   }
+  if (
+    rated &&
+    (await bothStatsExcluded(whiteToken.userId, blackToken.userId, orch.accountStatsExcluded))
+  )
+    rated = false;
   const spec = {
     variant: room.variant,
     gameSpecId: room.gameSpecId,

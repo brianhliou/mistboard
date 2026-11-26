@@ -1,7 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Color } from '@mistboard/game';
 import { isFairPlayMarked } from './fair-play.js';
-import { isPlayDisabled, isStatsExcluded, type UserAccount } from './persistence.js';
+import { isPlayDisabled, type UserAccount } from './persistence.js';
+import { ratedSeatPairsTwoExcluded } from './rated-stats-excluded.js';
 import {
   appendEvent,
   persistSeatToken,
@@ -60,10 +61,14 @@ export async function assignSeat(
   if (room.rated && !accountUser && !isServerEngineClient(clientId)) {
     return { seat: 'spectator', deniedReason: 'rated-requires-account' };
   }
-  // A stats-excluded account (operator, QA) is not counted, so it never takes a
-  // seat in a rated room; the create and lobby routes refuse it first, this
-  // catches a stale client.
-  if (room.rated && isStatsExcluded(accountUser) && !isServerEngineClient(clientId)) {
+  // A rated game is never formed between two stats-excluded accounts (operator
+  // vs QA, 2026-11-26): the second one is refused the seat here. Against anyone
+  // else an excluded account takes a rated seat like any signed-in account.
+  if (
+    room.rated &&
+    !isServerEngineClient(clientId) &&
+    (await ratedSeatPairsTwoExcluded(accountUser, room.seatTokens))
+  ) {
     return { seat: 'spectator', deniedReason: 'rated-requires-counted-account' };
   }
   if (room.rated && isFairPlayMarked(accountUser) && !isServerEngineClient(clientId)) {

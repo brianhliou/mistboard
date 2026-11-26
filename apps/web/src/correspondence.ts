@@ -135,11 +135,9 @@ import {
   type SetupColorPreference,
   startOptionButton,
   updateColorOptionButton,
-  updateStartOptionButtonLabel,
   variantCardButton,
 } from './setup-panel-parts.js';
 import { tagShareUrl } from './share-link-tags.js';
-import { isLikelyStatsExcluded, statsExcludedResolvedEvent } from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
@@ -1054,19 +1052,10 @@ export function buildStartForm(
   const syncRated = (): void => {
     // The whole row is absent while rated correspondence is held (flag off).
     rows.gameType.wrapper.hidden = !isCorrespondenceRatedModeEnabled();
-    // An account excluded from stats never rates (the server refuses it), so its
-    // Rated button is disabled and says why, as in the challenge dialog.
-    const notCounted = isLikelyStatsExcluded();
-    const ratedButton = rated.button('rated');
-    if (ratedButton) {
-      updateStartOptionButtonLabel(
-        ratedButton,
-        t(notCounted ? 'setup.ratedNotCounted' : 'play.rated'),
-      );
-    }
-    const available =
-      !notCounted &&
-      correspondenceRatedAvailable(currentVariant, isCorrespondenceRatedModeEnabled());
+    const available = correspondenceRatedAvailable(
+      currentVariant,
+      isCorrespondenceRatedModeEnabled(),
+    );
     rated.setDisabled('rated', !available);
     rated.select(available ? wantedGameType : 'casual');
   };
@@ -1083,8 +1072,6 @@ export function buildStartForm(
   relabelSides();
   syncRated();
   onRatedModeChange(syncRated);
-  // The form may be drawn from the stored hint before /api/auth/me answers.
-  window.addEventListener(statsExcludedResolvedEvent, syncRated);
 
   const submit = document.createElement('button');
   submit.type = 'submit';

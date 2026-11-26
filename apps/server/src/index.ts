@@ -17,6 +17,7 @@ import { runMigrations } from './migrate.js';
 import { logger, observeHttpHandler } from './obs.js';
 import { type PatronExpirySweeper, startPatronExpirySweeper } from './patron-expiry-sweeper.js';
 import * as persistence from './persistence.js';
+import { lookupStatsExcluded } from './rated-stats-excluded.js';
 import type { RematchOrchestrator } from './rematch.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
 import {
@@ -166,8 +167,8 @@ const rematchOrch: RematchOrchestrator = {
   send,
   buildRoomUrl: (roomId) => `/?room=${encodeURIComponent(roomId)}`,
   accountMayRate: async (userId) =>
-    !persistence.isInitialized() ||
-    (!(await persistence.isUserIdStatsExcluded(userId)) && !(await isUserIdFairPlayMarked(userId))),
+    !persistence.isInitialized() || !(await isUserIdFairPlayMarked(userId)),
+  accountStatsExcluded: lookupStatsExcluded,
   createRoom: (spec) =>
     roomLifecycle.createRoom(
       spec.mode,

@@ -242,25 +242,33 @@ test('rematch carries each player title and flair into the swapped seat', async 
   assert.deepEqual(identities.white, { userId: 'user-b', userHandle: null, userDisplayName: null });
 });
 
-test('a rated rematch with a stats-excluded seat is created casual', async () => {
-  const room = makeFinishedRoom('r-excluded');
-  room.rated = true;
-  room.seatTokens.white = seatToken({ seat: 'white', hash: 'wh', userId: 'user-w' });
-  room.seatTokens.black = seatToken({ seat: 'black', hash: 'bh', userId: 'user-excluded' });
-  const whiteClient = client('white', 'wh');
-  const blackClient = client('black', 'bh');
-  room.clients.add(whiteClient);
-  room.clients.add(blackClient);
+// A rated game is never formed between two stats-excluded accounts; one of
+// them against a counted player stays rated (2026-11-26).
+for (const [blackUser, expectRated] of [
+  ['user-counted', true],
+  ['user-excluded-2', false],
+] as const) {
+  test(`a rated rematch of a stats-excluded account against ${blackUser} is rated: ${expectRated}`, async () => {
+    const room = makeFinishedRoom('r-excluded');
+    room.rated = true;
+    room.seatTokens.white = seatToken({ seat: 'white', hash: 'wh', userId: 'user-excluded' });
+    room.seatTokens.black = seatToken({ seat: 'black', hash: 'bh', userId: blackUser });
+    const whiteClient = client('white', 'wh');
+    const blackClient = client('black', 'bh');
+    room.clients.add(whiteClient);
+    room.clients.add(blackClient);
 
-  const { orch, spy } = makeOrch();
-  orch.accountMayRate = async (userId) => userId !== 'user-excluded';
-  offerRematch(orch, room, whiteClient);
-  offerRematch(orch, room, blackClient);
-  await finalizeRematchIfReady(orch, room);
+    const { orch, spy } = makeOrch();
+    orch.accountMayRate = async () => true;
+    orch.accountStatsExcluded = async (userId) => userId.startsWith('user-excluded');
+    offerRematch(orch, room, whiteClient);
+    offerRematch(orch, room, blackClient);
+    await finalizeRematchIfReady(orch, room);
 
-  assert.equal(spy.createCalls, 1);
-  assert.equal(spy.createRated, false, 'an uncounted account never rates');
-});
+    assert.equal(spy.createCalls, 1);
+    assert.equal(spy.createRated, expectRated);
+  });
+}
 
 test('cancelRematch: clears own offer only', () => {
   const room = makeFinishedRoom('r');

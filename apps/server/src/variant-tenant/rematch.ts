@@ -11,6 +11,7 @@
  */
 
 import type { RoomTimeControl } from '@mistboard/game';
+import { bothStatsExcluded } from '../rated-stats-excluded.js';
 import { createWithPairing } from '../room-pairing.js';
 import { type SeatIdentity, seatDecorationsOf } from '../seat-decorations.js';
 import type {
@@ -67,10 +68,14 @@ export type TenantRematchContext<
   // pre-issued rematch tokens skip; a tenant that persists accounts checks it
   // here. False for either account seat cancels the rematch.
   accountMayPlay?: (userId: string) => Promise<boolean>;
-  // Whether an account may play rated (a stats-excluded account may not). The
+  // Whether an account may play rated (a fair-play mark refuses it). The
   // pre-issued tokens skip the seat gate that refuses it, so a rated game with
   // such a seat rematches casual instead.
   accountMayRate?: (userId: string) => Promise<boolean>;
+  // Whether an account is stats-excluded. Two excluded seats never form a rated
+  // game (rated-stats-excluded.ts), so that pair rematches casual; one excluded
+  // seat against anyone else stays rated.
+  accountStatsExcluded?: (userId: string) => Promise<boolean>;
 };
 
 // Rooms with a finalize in flight. Finalize awaits room creation before it
@@ -283,6 +288,11 @@ async function createRematchRoom<
       if (token.userId !== null && !(await ctx.accountMayRate(token.userId))) rated = false;
     }
   }
+  if (
+    rated &&
+    (await bothStatsExcluded(firstToken.userId, secondToken.userId, ctx.accountStatsExcluded))
+  )
+    rated = false;
   // The new room's pairing is a rematch (#1229), whatever paired the first game.
   const created = await createWithPairing('rematch', () =>
     ctx.createRoom(room.projection.timeControl, rated),

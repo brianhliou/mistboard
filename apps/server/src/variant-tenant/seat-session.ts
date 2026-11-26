@@ -12,7 +12,6 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { clockPolicyKindFor } from '@mistboard/game';
 import {
   isPlayDisabled,
-  isStatsExcluded,
   type RoomSeatTokenRecord,
   type RoomSeatTokenSeat,
   type UserAccount,
@@ -89,6 +88,10 @@ export function assignTenantSeat<
   // synchronous. Defaults to allowed: every non-gated variant, and every test
   // that predates the gate, behaves exactly as before.
   variantAccessGranted = true,
+  // Whether this account and another live seat of the room are both
+  // stats-excluded (rated-stats-excluded.ts), resolved by the caller for the
+  // same reason. Matters only in a rated room; defaults to no.
+  ratedPairsTwoExcluded = false,
 ): TenantSeatAssignment<C> {
   const tokenHash = rawToken ? hashSeatToken(rawToken) : undefined;
   if (tokenHash) {
@@ -174,9 +177,10 @@ export function assignTenantSeat<
   // throws somebody out of a hand they are in the middle of playing.
   if (!variantAccessGranted) return { ok: false, reason: 'variant not granted' };
   if (room.rated && !accountUser) return { ok: false, reason: 'rated requires account' };
-  // A stats-excluded account is not counted, so it takes no seat in a rated
-  // room: the backstop for a stale client that skipped the create/lobby gate.
-  if (room.rated && isStatsExcluded(accountUser)) {
+  // A rated game is never formed between two stats-excluded accounts (operator
+  // vs QA, 2026-11-26): the second one is refused the seat. Against anyone else
+  // an excluded account takes a rated seat like any signed-in account.
+  if (room.rated && ratedPairsTwoExcluded) {
     return { ok: false, reason: 'rated requires counted account' };
   }
   if (room.rated && isFairPlayMarked(accountUser)) {

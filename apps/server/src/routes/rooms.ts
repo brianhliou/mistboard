@@ -172,16 +172,10 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'rated_requires_account' }));
       return true;
     }
-    // A stats-excluded account never rates: an explicit rated request is
-    // refused, and the signed-in default (rated unless asked casual) is casual.
+    // A stats-excluded account creates a rated room like any signed-in account
+    // (2026-11-26); the seat gate refuses a second excluded account.
     if (body.rated === true && isFairPlayMarked(accountUser)) {
       writeJson(response, 403, { error: 'rated_account_marked' });
-      return true;
-    }
-    const statsExcluded = persistence.isStatsExcluded(accountUser);
-    if (body.rated === true && statsExcluded) {
-      response.writeHead(403, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ error: 'rated_requires_counted_account' }));
       return true;
     }
     const rated =
@@ -190,7 +184,6 @@ export async function tryHandle(
         : ratedEnabled() &&
           body.rated !== false &&
           accountUser !== null &&
-          !statsExcluded &&
           !isFairPlayMarked(accountUser);
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });

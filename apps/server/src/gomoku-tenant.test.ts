@@ -574,7 +574,7 @@ async function ratedFriend(body: Record<string, unknown>, account: UserAccount |
   return { status, body: JSON.parse(payload) };
 }
 
-test('rated Gomoku friend rooms require counted accounts and official clocks on both seats', async () => {
+test('rated Gomoku friend rooms require accounts and official clocks on both seats', async () => {
   const prior = process.env.MISTBOARD_RATED_ENABLED;
   process.env.MISTBOARD_RATED_ENABLED = 'true';
   const account = {
@@ -588,10 +588,14 @@ test('rated Gomoku friend rooms require counted accounts and official clocks on 
       status: 401,
       body: { error: 'rated_requires_account' },
     });
-    assert.equal(
-      (await ratedFriend({ timeControl: tc }, { ...account, statsExcludedAt: new Date() })).status,
-      403,
+    // A stats-excluded creator gets a rated room (2026-11-26); only a second
+    // excluded account is refused, at its seat.
+    const excludedCreator = await ratedFriend(
+      { timeControl: tc },
+      { ...account, statsExcludedAt: new Date() },
     );
+    assert.equal(excludedCreator.status, 201);
+    assert.equal(excludedCreator.body.rated, true);
     // An off-menu pace: every preset rates since 10+5 joined on 2026-11-06.
     for (const timeControl of [undefined, { initialMs: 900_000, incrementMs: 10_000 }]) {
       assert.deepEqual(await ratedFriend({ timeControl }, account), {

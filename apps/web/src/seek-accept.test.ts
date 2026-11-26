@@ -109,6 +109,15 @@ describe('accept error copy', () => {
     );
     expect(seekAcceptErrorText('boom', 'public', 'en')).toBe('Could not accept. Try again.');
   });
+
+  // Two accounts excluded from stats never play each other rated (2026-11-26).
+  it('says why a rated seek between two stats-excluded accounts is refused', () => {
+    for (const kind of ['public', 'private'] as const) {
+      expect(seekAcceptErrorText('opponent_rated_requires_counted_account', kind, 'en')).toBe(
+        'Rated games are not played between two accounts excluded from stats.',
+      );
+    }
+  });
 });
 
 describe('/games seek card', () => {

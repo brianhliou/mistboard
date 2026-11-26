@@ -123,7 +123,6 @@ export const ZH_HANS_PLAY = {
   'setup.ratedComingSoon': '计分（即将推出）',
   'setup.ratedSwitchedToLobby': '计分对局只与真人对弈，已为你切换到寻找对手。',
   'setup.ratedSignIn': '计分（需登录）',
-  'setup.ratedNotCounted': '计分（此账号不可用）',
   'setup.ratedUnavailable': '计分（此变体不支持）',
   'setup.createRoom': '创建房间',
   'setup.startGame': '开始对局',
@@ -469,7 +468,7 @@ export const ZH_HANS_PLAY = {
     '本局正在进行中。除就座的双方外，Mistboard 从不向任何人透露实时对局状态。对局结束后，完整的复盘会出现在这里。',
   'live.rejectedRatedAccount':
     '这是一盘计分对局。计分对局会计入双方的等级分，因此双方都需要账号。登录后你会回到这里就座。',
-  'live.rejectedRatedCountedAccount': '这是一盘计分对局，此账号只能下休闲对局。',
+  'live.rejectedRatedCountedAccount': '两个不计入统计的账号之间不下计分对局。',
   'live.rejectedCorrespondenceAccount':
     '这是一盘通信对局。双方都需要账号，这样对局才能在不同设备上找到你，并在轮到你走棋时提醒你。登录后你会回到这里就座。',
   'live.rejectedOrigin': '不允许该浏览器来源打开此房间。',
@@ -921,7 +920,6 @@ export const ZH_HANS_PLAY = {
   'lobby.panelRatedNote': '等级分对局：{clocks}。',
   'lobby.panelRatedCorrespondenceCasual': '通信对局目前只有休闲模式。',
   'lobby.panelRatedSignIn': '登录后可下等级分对局。',
-  'lobby.ratedCasualOnlyAccount': '此账号只能下休闲对局。',
   'lobby.panelOpenGames': '公开对局',
   'lobby.panelStartOne': '发起对局',
   'lobby.panelVersus': '{variant} 对 {opponent}',

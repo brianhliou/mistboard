@@ -1,15 +1,15 @@
 /**
- * A stats-excluded account never plays rated (2026-10-26), against real Postgres.
+ * Rated play for stats-excluded accounts (2026-11-26), against real Postgres.
  *
- * An operator or QA account (users.stats_excluded_at) is not counted, so a game
- * it plays must not move a counted player's rating: on 10-26 a rated xiangqi
- * mahjong game against @brianhliou-dev took a counted opponent from 1500 to
- * 1338. Every server entry point that can start a rated game refuses it with
- * 403 `rated_requires_counted_account` (or the opponent/target form), driven
- * here through the real routes and a real session cookie. Casual stays open.
- * The friend-room and seat gates are pinned in variant-tenant/lobby-rated.test.ts
- * and room-manager.test.ts; the rematch downgrade in rematch.test.ts and
- * jieqi-rematch.test.ts.
+ * An operator or QA account (users.stats_excluded_at) plays rated against real
+ * people like any signed-in account, and its ratings move with its opponent's.
+ * A rated game is never formed between two stats-excluded accounts: where the
+ * second one arrives (the lobby match, a correspondence accept or directed
+ * challenge, the legacy seat) it is refused, driven here through the real
+ * routes and a real session cookie. Where the opponent is unknown (posting a
+ * seek, creating a room) it is open. The tenant seat gate is pinned in
+ * variant-tenant/lobby-rated.test.ts, the rematch downgrade in rematch.test.ts
+ * and jieqi-rematch.test.ts, live invites in routes/live-invites*.test.ts.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -20,27 +20,32 @@ import {
   type AccountSession,
   createAccountSession,
   createUser,
+  findUserByHandle,
   getCorrespondenceSeek,
 } from './persistence.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
+import { ratedSeatPairsTwoExcluded } from './rated-stats-excluded.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle as tryHandleLobby } from './routes/lobby.js';
 import { tryHandle as tryHandleRooms } from './routes/rooms.js';
-import type { Room } from './server-types.js';
+import { assignSeat } from './server-seat-session.js';
+import type { Room, SeatTokenState } from './server-types.js';
+import { roomFixture } from './test-builders.js';
+import { appendTenantEvent } from './variant-tenant/events.js';
 // Side-effect import: registers every tenant, so the lobby and accept routes find xiangqi.
 import './variant-tenant/register-tenants.js';
-import { xiangqiRooms } from './xiangqi-registration.js';
+import { getOrLoadXiangqiRoom, xiangqiRooms } from './xiangqi-registration.js';
+import type { XiangqiEvent } from './xiangqi-runtime.js';
+import { xiangqiTenant } from './xiangqi-tenant.js';
 
 process.env.MISTBOARD_CORRESPONDENCE_ENABLED = 'true';
 process.env.MISTBOARD_RATED_ENABLED = 'true';
-// Rated correspondence is held in prod; the gate must hold even with it on.
 process.env.MISTBOARD_CORRESPONDENCE_RATED_ENABLED = 'true';
 process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
 
 const BLITZ = { initialMs: 180_000, incrementMs: 2_000 };
-const COUNTED_ERROR = 'rated_requires_counted_account';
 
 definePersistenceTests('rated stats-excluded', () => {
   test('fair play: marked rated seek post/accept and live entry refuse; unmark reopens rated', async () => {
@@ -106,58 +111,31 @@ definePersistenceTests('rated stats-excluded', () => {
     );
     assert.equal(accepted.status, 201);
   });
-  test('lobby: an excluded account cannot post a rated seek; casual is open', async () => {
+  test('lobby: an excluded account seeks rated and pairs with a counted one, never another excluded one', async () => {
     const ex = await seedUser('rx-ex', { excluded: true });
-    const ctx = lobbyContext();
-    const rated = await callLobby(ctx, await makeSessionCookie(ex), {
-      gameSpecId: XIANGQI_SPEC_ID,
-      timeControl: BLITZ,
-      rated: true,
-    });
-    assert.equal(rated.status, 403);
-    assert.deepEqual(rated.json, { error: COUNTED_ERROR });
-    assert.equal(ctx.lobbyQueue.length, 0, 'no rated ticket was queued');
-
-    const casual = await callLobby(ctx, await makeSessionCookie(ex), {
-      gameSpecId: XIANGQI_SPEC_ID,
-      timeControl: BLITZ,
-    });
-    assert.equal(casual.status, 202, 'casual seeks are untouched');
-  });
-
-  test('lobby: an excluded account cannot accept a counted player rated seek', async () => {
+    const ex2 = await seedUser('rx-ex2', { excluded: true });
     const counted = await seedUser('rx-counted');
-    const ex = await seedUser('rx-ex2', { excluded: true });
     const ctx = lobbyContext();
-    const waiting = await callLobby(ctx, await makeSessionCookie(counted), {
-      gameSpecId: XIANGQI_SPEC_ID,
-      timeControl: BLITZ,
-      rated: true,
-    });
-    assert.equal(waiting.status, 202, 'the counted rated seek waits');
+    const rated = { gameSpecId: XIANGQI_SPEC_ID, timeControl: BLITZ, rated: true };
+    const waiting = await callLobby(ctx, await makeSessionCookie(ex), rated);
+    assert.equal(waiting.status, 202, 'the excluded rated seek waits');
 
-    const accept = await callLobby(ctx, await makeSessionCookie(ex), {
-      gameSpecId: XIANGQI_SPEC_ID,
-      timeControl: BLITZ,
-      rated: true,
-    });
-    assert.equal(accept.status, 403);
-    assert.deepEqual(accept.json, { error: COUNTED_ERROR });
-    assert.equal(ctx.lobbyQueue.length, 1, 'the counted seek is still waiting');
+    // A second excluded account does not take it; it waits for someone else.
+    const second = await callLobby(ctx, await makeSessionCookie(ex2), rated);
+    assert.equal(second.status, 202);
+    assert.equal(ctx.lobbyQueue.length, 2, 'both excluded seeks are still waiting');
     assert.equal(xiangqiRooms.size, 0, 'no rated room was created');
 
-    // A casual seek from the excluded account never pairs into the rated pool.
-    const casual = await callLobby(ctx, await makeSessionCookie(ex), {
-      gameSpecId: XIANGQI_SPEC_ID,
-      timeControl: BLITZ,
-    });
-    assert.equal(casual.status, 202, 'casual waits on its own, not matched rated');
-    assert.equal(xiangqiRooms.size, 0);
+    // A counted account pairs with the first excluded seek into a rated room.
+    const matched = await callLobby(ctx, await makeSessionCookie(counted), rated);
+    assert.equal(matched.status, 201);
+    const room = xiangqiRooms.get(matched.json.roomId as string);
+    assert.equal(room?.rated, true, 'the excluded vs counted game is rated');
+    assert.equal(ctx.lobbyQueue.length, 1, 'the second excluded seek still waits');
   });
 
-  test('legacy rooms: an excluded account gets a casual room by default and 403 on rated', async () => {
+  test('legacy rooms: an excluded account gets a rated room by default and on request', async () => {
     const ex = await seedUser('rx-legacy', { excluded: true });
-    const counted = await seedUser('rx-legacy-counted');
     const calls: unknown[][] = [];
     const ctx = lobbyContext({
       createRoom: async (...args: unknown[]) => {
@@ -166,41 +144,95 @@ definePersistenceTests('rated stats-excluded', () => {
       },
     } as Partial<HttpApiContext>);
 
-    const refused = await callRooms(ctx, await makeSessionCookie(ex), { mode: 'pvp', rated: true });
-    assert.equal(refused.status, 403);
-    assert.deepEqual(refused.json, { error: COUNTED_ERROR });
-    assert.equal(calls.length, 0);
-
-    const byDefault = await callRooms(ctx, await makeSessionCookie(ex), { mode: 'pvp' });
-    assert.equal(byDefault.status, 201);
-    assert.equal(calls[0]?.[4], false, 'the signed-in default is casual for an excluded account');
-
-    const countedDefault = await callRooms(ctx, await makeSessionCookie(counted), { mode: 'pvp' });
-    assert.equal(countedDefault.status, 201);
-    assert.equal(calls[1]?.[4], true, 'a counted account still defaults to rated');
-  });
-
-  test('correspondence: an excluded account cannot post a rated seek; casual is open', async () => {
-    const ex = await seedUser('rx-cx', { excluded: true });
-    const cookie = await makeSessionCookie(ex);
-    const rated = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
-      gameSpecId: XIANGQI_SPEC_ID,
-      daysPerMove: 3,
+    const requested = await callRooms(ctx, await makeSessionCookie(ex), {
+      mode: 'pvp',
       rated: true,
     });
-    assert.equal(rated.status, 403);
-    assert.equal(rated.json.error, COUNTED_ERROR);
-    const casual = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
-      gameSpecId: XIANGQI_SPEC_ID,
-      daysPerMove: 3,
-    });
-    assert.equal(casual.status, 201);
-    assert.equal((casual.json.seek as { rated: boolean }).rated, false);
+    assert.equal(requested.status, 201);
+    assert.equal(calls[0]?.[4], true);
+    const byDefault = await callRooms(ctx, await makeSessionCookie(ex), { mode: 'pvp' });
+    assert.equal(byDefault.status, 201);
+    assert.equal(calls[1]?.[4], true, 'the signed-in default is rated for an excluded account too');
   });
 
-  test('correspondence: a rated seek accepted by an excluded account is refused', async () => {
+  test('legacy seat: a rated room seats an excluded account beside a counted one, refuses a second excluded one', async () => {
+    await seedUser('rx-seat-a', { excluded: true });
+    await seedUser('rx-seat-b', { excluded: true });
+    await seedUser('rx-seat-c');
+    const exA = await account('rx-seat-a');
+    const exB = await account('rx-seat-b');
+    const counted = await account('rx-seat-c');
+    // The default lookup reads the opponent's flag from the database.
+    const facing = (userId: string) => ({ white: seatHolder(userId) });
+    assert.equal(await ratedSeatPairsTwoExcluded(exB, facing(exA.id)), true);
+    assert.equal(await ratedSeatPairsTwoExcluded(exB, facing(counted.id)), false);
+    assert.equal(await ratedSeatPairsTwoExcluded(counted, facing(exA.id)), false);
+
+    // The second excluded account is refused before anything is written.
+    const room = roomFixture({ id: 'room-rx-seat', rated: true });
+    room.seatTokens.white = seatHolder(exA.id);
+    const ctx = { send() {}, recordPersistenceError() {} } as never;
+    const refused = await assignSeat(ctx, room, 'client-b', undefined, exB);
+    assert.equal(refused.seat, 'spectator');
+    assert.equal(refused.deniedReason, 'rated-requires-counted-account');
+    assert.equal(room.seatTokens.black, undefined, 'no seat was taken');
+  });
+
+  test('correspondence: an excluded seek accepted by a counted account is rated and moves both ratings', async () => {
+    const ex = await seedUser('rx-cx', { excluded: true });
     const counted = await seedUser('rx-cc');
-    const ex = await seedUser('rx-ca', { excluded: true });
+    const posted = await callSeekRoute(
+      'POST',
+      '/api/correspondence/seeks',
+      await makeSessionCookie(ex),
+      {
+        gameSpecId: XIANGQI_SPEC_ID,
+        daysPerMove: 3,
+        preferredColor: 'first',
+        rated: true,
+      },
+    );
+    assert.equal(posted.status, 201);
+    assert.equal((posted.json.seek as { rated: boolean }).rated, true);
+    const seekId = (posted.json.seek as { id: string }).id;
+    const accepted = await callSeekRoute(
+      'POST',
+      `/api/correspondence/seeks/${seekId}/accept`,
+      await makeSessionCookie(counted),
+    );
+    assert.equal(accepted.status, 201);
+    assert.equal(accepted.json.rated, true);
+    const roomId = accepted.json.roomId as string;
+
+    xiangqiRooms.clear();
+    const room = await getOrLoadXiangqiRoom(roomId);
+    assert.ok(room);
+    assert.equal(room.rated, true);
+    await appendTenantEvent(xiangqiTenant, room, move(roomId, 'red', 'b3', 'b4'));
+    await appendTenantEvent(xiangqiTenant, room, move(roomId, 'black', 'b8', 'b7'));
+    await appendTenantEvent(xiangqiTenant, room, {
+      type: 'seat-resigned',
+      at: Date.now(),
+      roomId,
+      color: 'black',
+    });
+    await room.pendingWrites;
+
+    const { rows } = await getPool().query<{ user_id: string; elo_rating: number }>(
+      `SELECT user_id, elo_rating FROM user_ratings
+       WHERE user_id = ANY($1) AND variant = 'xiangqi' AND time_class = 'correspondence'`,
+      [[ex, counted]],
+    );
+    const exRating = rows.find((row) => row.user_id === ex)?.elo_rating;
+    const countedRating = rows.find((row) => row.user_id === counted)?.elo_rating;
+    assert.ok(exRating !== undefined && exRating > 1500, 'the excluded winner gained');
+    assert.ok(countedRating !== undefined && countedRating < 1500, 'the counted resigner lost');
+    xiangqiRooms.clear();
+  });
+
+  test('correspondence: an excluded account accepts a counted rated seek', async () => {
+    const counted = await seedUser('rx-cc2');
+    const ex = await seedUser('rx-ca2', { excluded: true });
     const posted = await callSeekRoute(
       'POST',
       '/api/correspondence/seeks',
@@ -214,14 +246,14 @@ definePersistenceTests('rated stats-excluded', () => {
       `/api/correspondence/seeks/${seekId}/accept`,
       await makeSessionCookie(ex),
     );
-    assert.equal(accept.status, 403);
-    assert.equal(accept.json.error, COUNTED_ERROR);
-    assert.equal(await seekOpen(seekId), true, 'the refused accept took nothing');
+    assert.equal(accept.status, 201);
+    assert.equal(accept.json.rated, true);
+    xiangqiRooms.clear();
   });
 
-  test('correspondence: a rated seek whose creator became excluded cannot be accepted', async () => {
-    const creator = await seedUser('rx-cr');
-    const accepter = await seedUser('rx-ac');
+  test('correspondence: an excluded account cannot accept another excluded rated seek', async () => {
+    const creator = await seedUser('rx-cr', { excluded: true });
+    const accepter = await seedUser('rx-ac', { excluded: true });
     const posted = await callSeekRoute(
       'POST',
       '/api/correspondence/seeks',
@@ -230,8 +262,6 @@ definePersistenceTests('rated stats-excluded', () => {
     );
     assert.equal(posted.status, 201);
     const seekId = (posted.json.seek as { id: string }).id;
-    // A seek posted before the flag was set (or by a stale client) stays unacceptable.
-    await getPool().query('UPDATE users SET stats_excluded_at = now() WHERE id = $1', [creator]);
     const accept = await callSeekRoute(
       'POST',
       `/api/correspondence/seeks/${seekId}/accept`,
@@ -239,29 +269,63 @@ definePersistenceTests('rated stats-excluded', () => {
     );
     assert.equal(accept.status, 409);
     assert.equal(accept.json.error, 'opponent_rated_requires_counted_account');
-    assert.equal(await seekOpen(seekId), true);
+    assert.equal(await seekOpen(seekId), true, 'the refused accept took nothing');
   });
 
-  test('correspondence: a rated challenge cannot name an excluded account', async () => {
-    const counted = await seedUser('rx-ch');
+  test('correspondence: an excluded account cannot challenge another excluded account rated', async () => {
+    await seedUser('rx-ch', { excluded: true });
+    const counted = await seedUser('rx-ch-counted');
     await seedUser('rx-tg', { excluded: true });
-    const cookie = await makeSessionCookie(counted);
-    const rated = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
+    const body = {
       gameSpecId: XIANGQI_SPEC_ID,
       daysPerMove: 3,
       rated: true,
       targetHandle: 'rx-tg',
-    });
+    };
+    const exCookie = await makeSessionCookie(`user-rx-ch`);
+    const rated = await callSeekRoute('POST', '/api/correspondence/seeks', exCookie, body);
     assert.equal(rated.status, 403);
     assert.equal(rated.json.error, 'target_rated_requires_counted_account');
-    const casual = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
-      gameSpecId: XIANGQI_SPEC_ID,
-      daysPerMove: 3,
-      targetHandle: 'rx-tg',
+    const casual = await callSeekRoute('POST', '/api/correspondence/seeks', exCookie, {
+      ...body,
+      rated: false,
     });
-    assert.equal(casual.status, 201, 'a casual challenge to the same account is open');
+    assert.equal(casual.status, 201, 'a casual challenge between them is open');
+    const fromCounted = await callSeekRoute(
+      'POST',
+      '/api/correspondence/seeks',
+      await makeSessionCookie(counted),
+      body,
+    );
+    assert.equal(fromCounted.status, 201, 'a counted account challenges an excluded one rated');
   });
 });
+
+async function account(handle: string) {
+  const user = await findUserByHandle(handle);
+  if (!user) throw new Error(`no account ${handle}`);
+  return user;
+}
+
+function seatHolder(userId: string): SeatTokenState {
+  const now = new Date();
+  return {
+    clientId: `client-${userId}`,
+    deviceId: null,
+    seat: 'white',
+    tokenHash: `hash-${userId}`,
+    userId,
+    userHandle: null,
+    userDisplayName: null,
+    issuedAt: now,
+    lastSeenAt: now,
+    revokedAt: null,
+  };
+}
+
+function move(roomId: string, color: 'red' | 'black', from: string, to: string): XiangqiEvent {
+  return { type: 'move-played', at: Date.now(), roomId, color, move: { from, to } } as XiangqiEvent;
+}
 
 async function seedUser(handle: string, opts: { excluded?: boolean } = {}): Promise<string> {
   const id = `user-${handle}`;

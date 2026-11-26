@@ -451,6 +451,7 @@ test('acceptance rechecks policies, availability, leases and expiry', async (t) 
       h.db.durableBusy.add('sender');
     },
     ratedEligibility: (h) => {
+      h.users.get('sender')!.statsExcludedAt = new Date();
       h.users.get('target')!.statsExcludedAt = new Date();
     },
     markedSender: (h) => {

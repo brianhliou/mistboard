@@ -549,18 +549,21 @@ test('HTTP registered variants retain their live capability, clock and rating ga
   h.advance(LIVE_INVITE_TTL_MS);
   h.heartbeat('target');
   registration.lobby!.supportsRated = true;
+  // Two stats-excluded accounts never form a rated game (2026-11-26).
   h.users.get('target')!.statsExcludedAt = new Date();
+  h.users.get('sender')!.statsExcludedAt = new Date();
   assert.equal(
     (await h.request('sender', 'POST', '', { ...terms, rated: true })).body.error,
     'rated_requires_counted_account',
   );
-  h.users.get('target')!.statsExcludedAt = null;
+  h.users.get('sender')!.statsExcludedAt = null;
   h.users.get('sender')!.fairPlayMarkedAt = new Date();
   assert.equal(
     (await h.request('sender', 'POST', '', { ...terms, rated: true })).body.error,
     'rated_account_marked',
   );
   h.users.get('sender')!.fairPlayMarkedAt = null;
+  // The target is still stats-excluded: against a counted sender it rates.
   const created = await h.request('sender', 'POST', '', { ...terms, rated: true });
   assert.equal(created.status, 201);
   const tenantRoom = {
