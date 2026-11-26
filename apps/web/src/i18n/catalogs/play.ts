@@ -41,6 +41,10 @@ export const EN_PLAY = {
   'setup.challengePlayersFailed': 'Could not load players. Try again.',
   'setup.noPlayersFound': 'No matching players.',
   'setup.sendChallengeTo': 'Send challenge to @{handle}',
+  'setup.playWith': 'Play',
+  'setup.playAnyone': 'Anyone',
+  'setup.hostPlayerLimitShort': 'You have {limit} games going',
+  'setup.hostFullShort': 'Full, try again in a few days',
   'setup.correspondenceAccountExplanation':
     "We save correspondence games to your account and email you when it's your move.",
   'play.findOpponent': 'Find opponent',

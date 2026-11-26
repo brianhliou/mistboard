@@ -40,6 +40,14 @@
 // Correspondence tab; this page shows the same feed.
 
 import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
+import {
+  buildHostPhoto,
+  fetchHostInfo,
+  HOST_NAME,
+  type HostInfo,
+  hostRefusalText,
+  startHostGame,
+} from './correspondence-host.js';
 import './current-games.css';
 import './account-profile.css';
 import './landing-play.css';
@@ -1204,52 +1212,7 @@ function postErrorText(code: string | undefined, limit: number | undefined): str
 // Play the host
 // ---------------------------------------------------------------------------
 
-export type HostInfo = {
-  host: { handle: string; displayName: string };
-  daysPerMove: number;
-  gameSpecIds: string[];
-  limits: { perPlayer: number; total: number };
-  signedIn: boolean;
-  isHost?: boolean;
-  canPlay?: boolean;
-  reason?: 'player_limit_reached' | 'host_full' | null;
-};
-
-// The offer is Brian by name: the card reads his full name and photo, not
-// whatever the host account's display name says.
-const HOST_NAME = 'Brian H. Liou';
-const HOST_PHOTO = '/brand/brian-h-liou.jpg';
-
-/** The host offer, or null while it is off (404) or unreachable. */
-export async function fetchHostInfo(): Promise<HostInfo | null> {
-  try {
-    const res = await fetch('/api/correspondence/host');
-    if (!res.ok) return null;
-    const body = (await res.json()) as Partial<HostInfo> & { enabled?: boolean };
-    if (body.enabled !== true || !body.host || !Array.isArray(body.gameSpecIds)) return null;
-    return body as HostInfo;
-  } catch {
-    return null;
-  }
-}
-
-function hostRefusalText(
-  code: string | undefined,
-  info: HostInfo,
-  limit: number | undefined,
-): string {
-  const name = HOST_NAME;
-  switch (code) {
-    case 'player_limit_reached':
-      return t('correspondence.hostPlayerLimit', { name, limit: limit ?? info.limits.perPlayer });
-    case 'host_full':
-      return t('correspondence.hostFull', { name, limit: limit ?? info.limits.total });
-    case 'server_draining':
-      return t('setup.serverRestartTimeout');
-    default:
-      return t('correspondence.hostCouldNotStart');
-  }
-}
+export { fetchHostInfo, type HostInfo } from './correspondence-host.js';
 
 export type HostCardOptions = {
   // Test seam; defaults to a full navigation.
@@ -1347,41 +1310,26 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
     if (submit.disabled) return;
     submit.disabled = true;
     status.hidden = true;
-    void fetch('/api/correspondence/host', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ gameSpecId: variant.value(), side: side.value() }),
-    })
-      .then(async (res) => {
-        const result = (await res.json().catch(() => null)) as
-          | ({
-              url?: string;
-              error?: string;
-              limit?: number;
-            } & FirstMoveOwedFailure)
-          | null;
-        if (res.ok && result?.url) {
-          navigate(result.url);
-          return;
+    void startHostGame(info, { gameSpecId: variant.value(), side: side.value() }).then(
+      (outcome) => {
+        switch (outcome.kind) {
+          case 'started':
+            navigate(outcome.url);
+            return;
+          case 'sign-in':
+            navigate(loginHrefForCurrentPage());
+            return;
+          case 'first-move-owed':
+            renderFirstMoveOwed(status, outcome.failure);
+            submit.disabled = false;
+            status.classList.add('is-error');
+            return;
+          case 'refused':
+            submit.disabled = outcome.capped;
+            showStatus(outcome.message, true);
         }
-        if (res.status === 401) {
-          navigate(loginHrefForCurrentPage());
-          return;
-        }
-        if (renderFirstMoveOwed(status, result)) {
-          submit.disabled = false;
-          status.classList.add('is-error');
-          return;
-        }
-        // A cap refusal stays refused until a game ends; anything else may pass on retry.
-        const capped = result?.error === 'player_limit_reached' || result?.error === 'host_full';
-        submit.disabled = capped;
-        showStatus(hostRefusalText(result?.error, info, result?.limit), true);
-      })
-      .catch(() => {
-        submit.disabled = false;
-        showStatus(t('correspondence.hostCouldNotStart'), true);
-      });
+      },
+    );
   });
 
   form.append(
@@ -1941,16 +1889,6 @@ function seekColorLabel(gameSpecId: string, color: SeekPreferredColor): string {
   if (color === 'second')
     return t('correspondence.playsColor', { color: secondMoverColorName(gameSpecId) });
   return t('correspondence.eitherColor');
-}
-
-function buildHostPhoto(): HTMLImageElement {
-  const photo = document.createElement('img');
-  photo.className = 'correspondence-host-photo';
-  photo.src = HOST_PHOTO;
-  photo.alt = '';
-  photo.width = 56;
-  photo.height = 56;
-  return photo;
 }
 
 // ---------------------------------------------------------------------------
