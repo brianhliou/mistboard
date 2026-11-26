@@ -1458,8 +1458,13 @@
 /* Frameless viewer: drop the .showcase-widget panel chrome on the homepage so the
    board reads as a bare box matching the daily-puzzle box one band below (the dev
    variant sheet keeps its frame). This used to apply only above 1241px, so on
-   phones and tablets the viewer wore a panel the puzzle never had. */
-.landing-page .landing-board-column #landing-replay {
+   phones and tablets the viewer wore a panel the puzzle never had. No
+   .landing-page here, and the panel's inset goes with its frame: the prerendered
+   shell paints this slot before the page script adds that class, so the shell's
+   panel padding and border (18px) vanished when the script took over and moved
+   everything below the viewer. .landing-board-column is the homepage's alone. */
+.landing-board-column #landing-replay {
+  padding: 0;
   border: none;
   background: none;
   box-shadow: none;
@@ -1805,6 +1810,24 @@
    exact via the cycler's min-height pin). */
 .landing-board-column #landing-replay .watch-replay-skeleton {
   min-height: calc(var(--showcase-widget-size) * 10 / 9);
+}
+
+/* Below the desktop band the seats sit in flow above and below the board, so a
+   mounted xiangqi-family board is its 552:612 board plus two seat rows, and the
+   skeleton takes exactly that box. The TV opens on the site's most recently
+   finished game, so no variant is known before the fetch; this sizes the
+   loading box to the site's main game. Other variants still change the height
+   when they land: the slot itself holds no reserve, so no board ever sits in
+   blank space or shrinks to fit one. */
+@media (max-width: 1240px) {
+  .landing-board-column #landing-replay .watch-replay-skeleton {
+    min-height: calc(
+      var(--showcase-widget-size) *
+      612 / 552 +
+      (var(--landing-board-caption-line) + var(--landing-board-caption-gap)) *
+      2
+    );
+  }
 }
 
 .showcase-widget .watch-replay-skeleton-board {

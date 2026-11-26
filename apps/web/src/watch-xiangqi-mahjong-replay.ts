@@ -281,7 +281,13 @@ export function mountXiangqiMahjongWatchReplay(
     const shown = [...layout.children].filter(
       (child): child is HTMLElement => child instanceof HTMLElement && child.offsetHeight > 0,
     );
-    const rows = shown.reduce((sum, child) => sum + child.offsetHeight, 0) - board.offsetHeight;
+    // The seat rows plus the gaps between the layout's rows (a phone's in-flow
+    // seats sit 2px off the board; uncounted, the table overran its host by them).
+    const rowGap = Number.parseFloat(getComputedStyle(layout).rowGap) || 0;
+    const rows =
+      shown.reduce((sum, child) => sum + child.offsetHeight, 0) -
+      board.offsetHeight +
+      rowGap * Math.max(0, shown.length - 1);
     // A pixel spare, so a rounded box never clips the rack's bottom edge.
     const availH = root.clientHeight - rows - 1;
     if (!table || availW <= 0 || availH <= 0) return;
