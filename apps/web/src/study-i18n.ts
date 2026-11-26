@@ -121,6 +121,30 @@ export function localizedCommentText(
   return isNonEmpty(value) ? value : base;
 }
 
+/** A lesson node's hint or wrong-move text for a locale, falling back to the
+ *  base text. A translation never shows where the base field is empty, so a
+ *  cleared hint stays cleared in every language. READ paths only. */
+export function displayGamebookText(
+  gamebook:
+    | {
+        hint?: string;
+        deviation?: string;
+        i18n?: Record<string, { hint?: string; deviation?: string }>;
+      }
+    | undefined,
+  field: 'hint' | 'deviation',
+  locale: Locale = currentLocale(),
+): string | undefined {
+  const base = gamebook?.[field];
+  if (!isNonEmpty(base)) return undefined;
+  const overlay = gamebook?.i18n;
+  if (!overlay || typeof overlay !== 'object' || Array.isArray(overlay)) return base;
+  const entry = (overlay as Record<string, unknown>)[locale];
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return base;
+  const value = (entry as Record<string, unknown>)[field];
+  return isNonEmpty(value) ? value : base;
+}
+
 /** Resolve a tree node's first comment for display. Returns undefined when the
  *  node carries no comment, so callers keep their existing "no comment" branch.
  *  READ paths only: the annotations editor writes the base text and must keep

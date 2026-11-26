@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  displayGamebookText,
   localizedCommentText,
   localizedStudyDescription,
   localizedStudyName,
@@ -56,5 +57,36 @@ describe('study i18n overlay', () => {
     expect(localizedCommentText('去馬', i18n, 'en')).toBe('takes the horse');
     expect(localizedCommentText('去馬', i18n, 'zh-Hant')).toBe('去馬');
     expect(localizedCommentText('去馬', undefined, 'en')).toBe('去馬');
+  });
+});
+
+describe('lesson hint and wrong-move text', () => {
+  const gamebook = {
+    hint: 'Which chariot can check?',
+    deviation: 'Not mate. The general can still step aside.',
+    i18n: { 'zh-Hant': { hint: '哪一個俥可以將軍？' } },
+  };
+
+  it('shows the reader the translated hint and the base text elsewhere', () => {
+    expect(displayGamebookText(gamebook, 'hint', 'zh-Hant')).toBe('哪一個俥可以將軍？');
+    expect(displayGamebookText(gamebook, 'hint', 'en')).toBe('Which chariot can check?');
+    expect(displayGamebookText(gamebook, 'hint', 'zh-Hans')).toBe('Which chariot can check?');
+  });
+
+  it('falls back per field: an untranslated wrong-move line stays in the base text', () => {
+    expect(displayGamebookText(gamebook, 'deviation', 'zh-Hant')).toBe(
+      'Not mate. The general can still step aside.',
+    );
+  });
+
+  it('never shows a translation for a field the author left empty', () => {
+    const cleared = { i18n: { 'zh-Hant': { hint: '提示', deviation: '走錯了' } } };
+    expect(displayGamebookText(cleared, 'hint', 'zh-Hant')).toBeUndefined();
+    expect(displayGamebookText(undefined, 'deviation', 'zh-Hant')).toBeUndefined();
+  });
+
+  it('ignores a malformed overlay instead of throwing', () => {
+    const bad = { hint: 'Base', i18n: { 'zh-Hant': 'oops' } } as never;
+    expect(displayGamebookText(bad, 'hint', 'zh-Hant')).toBe('Base');
   });
 });

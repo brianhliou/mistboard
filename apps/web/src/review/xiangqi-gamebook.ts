@@ -22,7 +22,7 @@ import {
 } from '../live-finish-badges.js';
 import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
-import { displayComment } from '../study-i18n.js';
+import { displayComment, displayGamebookText } from '../study-i18n.js';
 import {
   animateXiangqiBoardMove,
   createXiangqiInteractiveBoard,
@@ -89,8 +89,8 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     sideToMove: (truth: XiangqiGameState) =>
       truth.status.type === 'playing' ? truth.status.turn : null,
     comment: (node) => displayComment(node.annotations?.comments?.[0]),
-    hint: (node) => node.annotations?.gamebook?.hint,
-    deviation: (node) => node.annotations?.gamebook?.deviation,
+    hint: (node) => displayGamebookText(node.annotations?.gamebook, 'hint'),
+    deviation: (node) => displayGamebookText(node.annotations?.gamebook, 'deviation'),
   });
 
   // The session settles synchronously; the board presents those moves one at a time.
