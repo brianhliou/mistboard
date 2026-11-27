@@ -21,7 +21,9 @@ import {
   BOARD_EXPORT_LIMIT,
   manualXiangqiBroadcastPollForApi,
   manualXiangqiBroadcastSourceImportForApi,
+  ROUND_API_LIMIT,
   resetBoardExportLimiterForTests,
+  resetRoundApiLimiterForTests,
   staleWhileRevalidate,
   tryHandle,
   type XiangqiBroadcastApiPersistence,
@@ -1148,6 +1150,28 @@ test('one address looping over board exports gets a 429 past the budget; another
   assert.equal(await exportStatus('tour-r01-bnext', '203.0.113.9'), 429);
   assert.notEqual(await exportStatus('tour-r01-b0', '203.0.113.10'), 429);
   resetBoardExportLimiterForTests();
+});
+
+test('one address looping over round payloads gets a 429 past the budget; another does not', async () => {
+  resetRoundApiLimiterForTests();
+  const roundStatus = async (roundId: string, remoteAddress: string) => {
+    const response = captureResponse();
+    const path = `/api/xiangqi/broadcasts/some-tour/rounds/${roundId}`;
+    await tryHandle(
+      emptyCtx(),
+      { method: 'GET', headers: {}, socket: { remoteAddress } } as unknown as IncomingMessage,
+      response,
+      path,
+      new URL(`http://test.local${path}`),
+    );
+    return response.statusCode;
+  };
+  for (let index = 0; index < ROUND_API_LIMIT; index += 1) {
+    assert.notEqual(await roundStatus(`r${index}`, '203.0.113.9'), 429);
+  }
+  assert.equal(await roundStatus('rnext', '203.0.113.9'), 429);
+  assert.notEqual(await roundStatus('r0', '203.0.113.10'), 429);
+  resetRoundApiLimiterForTests();
 });
 
 test('admin broadcast ops route requires admin before persistence in production', async () => {

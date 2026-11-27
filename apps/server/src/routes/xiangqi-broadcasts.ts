@@ -1013,6 +1013,19 @@ export function resetBoardExportLimiterForTests(): void {
   boardExportLimiter = createAuthRateLimiter(BOARD_EXPORT_LIMIT, BOARD_EXPORT_WINDOW_MS);
 }
 
+// A round's payload carries every board in it, moves included. A viewer loads
+// one round, then every other round at once for the standings (a dozen or so),
+// and live updates come over the round's event stream, not this route. A loop
+// over every tour's rounds gets a 429 after the first minute's share.
+export const ROUND_API_LIMIT = 120;
+const ROUND_API_WINDOW_MS = 60_000;
+let roundApiLimiter = createAuthRateLimiter(ROUND_API_LIMIT, ROUND_API_WINDOW_MS);
+
+/** Tests only: start every case with an empty bucket. */
+export function resetRoundApiLimiterForTests(): void {
+  roundApiLimiter = createAuthRateLimiter(ROUND_API_LIMIT, ROUND_API_WINDOW_MS);
+}
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -1251,6 +1264,10 @@ export async function tryHandle(
   const roundMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/([^/]+)\/rounds\/([^/]+)$/);
   if (roundMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
+    if (!roundApiLimiter.check(clientIpForRateLimit(request))) {
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
     if (!requirePersistence(response)) return true;
     const payload = await xiangqiBroadcastRoundForApi(
       decodeURIComponent(roundMatch[1]!),
