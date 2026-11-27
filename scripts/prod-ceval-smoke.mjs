@@ -27,11 +27,13 @@
 //           this before the browser run so the failure names the real cause.
 //   pika  - PikaJieQi pthread wasm on /analysis/jieqi. This exercises the
 //           redacted Jieqi FEN, persistent UCI worker, and streaming MultiPV.
+//   abjchess - AB-JChess pthread wasm on /analysis/jieqi?engine=abjchess, the
+//           flagged jieqi backend (#800). Not part of `all` while it is flagged.
 //
 // Each check: load the page, mount the board/panel, toggle the engine on, and
 // wait for a real eval + at least one PV line. Fails on engine console errors.
 //
-// Usage: node scripts/prod-ceval-smoke.mjs [--backend fsf|pikafish|misty|pika|all]
+// Usage: node scripts/prod-ceval-smoke.mjs [--backend fsf|pikafish|misty|pika|abjchess|all]
 //        [--base <url>] [--banqi-room <finished-room-id>]
 // Defaults to prod + all backends; point MISTBOARD_WEB_URL at a local build to
 // smoke locally. MISTBOARD_CEVAL_SMOKE_BACKEND is the env equivalent.
@@ -68,6 +70,11 @@ try {
   }
   if (backend === 'pika' || backend === 'all') {
     await runCheck('pika', () => checkPika(browser));
+  }
+  // Opt-in only while AB-JChess is behind its flag (#800): `all` stays the
+  // default backends.
+  if (backend === 'abjchess') {
+    await runCheck('abjchess', () => checkAbjchess(browser));
   }
 } finally {
   await browser.close();
@@ -435,6 +442,87 @@ async function checkPika(browser) {
   }
 }
 
+// ── AB-JChess wasm on the Jieqi analysis board, behind its flag (#800) ───────
+// ?engine=abjchess turns the flag on for this page load. Proves the engine
+// itself answered rather than the PikaJieQi fallback: the panel names it and
+// shows a single line.
+async function checkAbjchess(browser) {
+  await assertAbjchessAssetHeaders();
+
+  const url = `${baseUrl}/analysis/jieqi?engine=abjchess`;
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  try {
+    const errors = collectErrors(page);
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    if (!response?.ok())
+      throw new Error(`${url} returned HTTP ${response?.status() ?? 'no response'}`);
+    const isolated = await page.evaluate(() => globalThis.crossOriginIsolated === true);
+    if (!isolated) {
+      throw new Error(
+        'Jieqi analysis page is not cross-origin isolated, so AB-JChess pthread wasm is unavailable',
+      );
+    }
+    await page
+      .locator('.jieqi-live-board svg')
+      .first()
+      .waitFor({ state: 'attached', timeout: timeoutMs });
+    await toggleEngineOn(page);
+    await waitForEvalAndLines(page);
+    await waitForBestMoveArrow(page);
+    const result = await readPanel(page);
+    const name = await page.evaluate(
+      () => document.querySelector('.engine-panel__name')?.textContent?.trim() ?? '',
+    );
+    if (name !== 'AB-JChess') {
+      throw new Error(`engine panel names ${name || 'nothing'}, expected AB-JChess (fell back?)`);
+    }
+    if (result.lines !== 1) throw new Error(`AB-JChess showed ${result.lines} lines, expected 1`);
+    assertNoFatalErrors(errors);
+    return { url, engine: 'AB-JChess', ...result };
+  } finally {
+    await page.close();
+  }
+}
+
+function abjchessAssetVersion() {
+  const source = readFileSync(
+    new URL('../apps/web/src/review/engine/abjchess-ceval.ts', import.meta.url),
+    'utf8',
+  );
+  const match = source.match(/ABJCHESS_ENGINE_ASSET_VERSION = '([^']+)'/);
+  if (!match) throw new Error('ABJCHESS_ENGINE_ASSET_VERSION not found in abjchess-ceval.ts');
+  return match[1];
+}
+
+async function assertAbjchessAssetHeaders() {
+  const v = encodeURIComponent(abjchessAssetVersion());
+  const workerUrl = `${baseUrl}/engine/ab-jchess/worker.js?v=${v}`;
+  const worker = await fetch(workerUrl);
+  if (!worker.ok) throw new Error(`${workerUrl} returned HTTP ${worker.status}`);
+  const workerType = worker.headers.get('content-type') ?? '';
+  if (!/javascript/.test(workerType)) {
+    throw new Error(`${workerUrl} content-type is ${workerType || 'missing'}, expected javascript`);
+  }
+  const coep = worker.headers.get('cross-origin-embedder-policy');
+  if (coep !== 'require-corp' && coep !== 'credentialless') {
+    throw new Error(
+      `${workerUrl} is served without a compatible Cross-Origin-Embedder-Policy (got ${coep ?? 'none'})`,
+    );
+  }
+  const wasmUrl = `${baseUrl}/engine/ab-jchess/abjchess.wasm?v=${v}`;
+  const wasm = await fetch(wasmUrl, { method: 'HEAD' });
+  if (!wasm.ok) throw new Error(`${wasmUrl} returned HTTP ${wasm.status}`);
+  const wasmType = wasm.headers.get('content-type') ?? '';
+  if (!wasmType.includes('application/wasm')) {
+    throw new Error(
+      `${wasmUrl} content-type is ${wasmType || 'missing'}, expected application/wasm`,
+    );
+  }
+  const netUrl = `${baseUrl}/engine/ab-jchess/abjchess-20261030.nnue?v=${v}`;
+  const net = await fetch(netUrl, { method: 'HEAD' });
+  if (!net.ok) throw new Error(`${netUrl} returned HTTP ${net.status}`);
+}
+
 // Preflight the exact versioned URLs the client fetches (?v= from
 // MISTY_ASSET_VERSION in misty-ceval.ts, read from source so it always matches
 // the deployed revision). The bare path is a DIFFERENT edge-cache key and can
@@ -710,7 +798,7 @@ function readPanel(page) {
 
 function assertNoFatalErrors(errors) {
   const fatal = errors.filter((message) =>
-    /pthread|SharedArrayBuffer|ceval|engine global missing|failed to load engine|misty|pikajieqi|pikafish|ERR_BLOCKED_BY_RESPONSE|Engine unavailable/i.test(
+    /pthread|SharedArrayBuffer|ceval|engine global missing|failed to load engine|misty|pikajieqi|pikafish|ab-?jchess|ERR_BLOCKED_BY_RESPONSE|Engine unavailable/i.test(
       message,
     ),
   );
@@ -736,7 +824,7 @@ function parseArgs(args) {
       }
     } else {
       throw new Error(
-        `unknown argument: ${arg} (usage: [--backend fsf|pikafish|misty|pika|all] [--base <url>] [--banqi-room <finished-room-id>])`,
+        `unknown argument: ${arg} (usage: [--backend fsf|pikafish|misty|pika|abjchess|all] [--base <url>] [--banqi-room <finished-room-id>])`,
       );
     }
   }
@@ -745,10 +833,11 @@ function parseArgs(args) {
     parsed.backend !== 'pikafish' &&
     parsed.backend !== 'misty' &&
     parsed.backend !== 'pika' &&
+    parsed.backend !== 'abjchess' &&
     parsed.backend !== 'all'
   ) {
     throw new Error(
-      `--backend must be fsf, pikafish, misty, pika, or all (got ${parsed.backend ?? 'nothing'})`,
+      `--backend must be fsf, pikafish, misty, pika, abjchess, or all (got ${parsed.backend ?? 'nothing'})`,
     );
   }
   if (parsed.baseUrl !== null && !parsed.baseUrl) throw new Error('--base requires a value');

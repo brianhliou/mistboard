@@ -7,6 +7,7 @@ import { track } from './analytics.js';
 import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
 import {
+  ABJCHESS_BROWSER_BUILD_URL,
   PIKAFISH_JIEQI_BUILD_URL,
   PIKAFISH_REPO_URL,
   PIKAFISH_SITE_URL,
@@ -693,6 +694,9 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
     linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
+    // Its WebAssembly build and corresponding source (#800). Always listed: the
+    // build ships in every bundle and `?engine=abjchess` runs it with the flag off.
+    linkLine(t('source.abJchessBrowser', {}, locale), ABJCHESS_BROWSER_BUILD_URL),
     // jqe (MIT, devinokeefe/jieqi), credited with a link like AB-JChess, in the same
     // VITE_JQE_ENABLED build that offers it.
     ...(jqeEnabled()

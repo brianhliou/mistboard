@@ -11,6 +11,8 @@
 // lazy — importing the module in a non-isolated page (or a test) does nothing until
 // evaluate()/preloadEngine() is called.
 
+import { abjchessCevalEnabled } from '../../feature-flags.js';
+import { ABJCHESS_ENGINE_NAME, AbJchessWithFallback } from './abjchess-ceval.js';
 // The ceval contract types live in ceval-types.ts (so the Misty backend can share them
 // without a circular import); imported for local use and re-exported below for existing
 // `from './ceval.js'` importers.
@@ -128,6 +130,7 @@ export function cevalSupported(variant?: CevalVariant): boolean {
 /** Human label for the engine backing `variant`. */
 export function cevalEngineName(variant: CevalVariant): string {
   if (variant === 'gomoku') return 'Rapfi';
+  if (variant === 'jieqi' && abjchessCevalEnabled()) return ABJCHESS_ENGINE_NAME;
   return (
     mistyEngineName(variant) ??
     pikafishEngineName(variant) ??
@@ -407,7 +410,11 @@ export function createCeval(
 ): CevalHandle {
   if (isMistyCevalVariant(variant)) return new MistyCeval(variant);
   if (isPikafishCevalVariant(variant)) return new PikafishCeval(variant);
-  if (isPikaJieqiCevalVariant(variant)) return new PikaJieQiCeval(variant);
+  if (isPikaJieqiCevalVariant(variant)) {
+    // AB-JChess behind its flag (#800), with PikaJieQi as the fallback.
+    if (variant === 'jieqi' && abjchessCevalEnabled()) return new AbJchessWithFallback(variant);
+    return new PikaJieQiCeval(variant);
+  }
   switch (variant) {
     case 'gomoku':
       return new RapfiCeval();

@@ -211,6 +211,11 @@
   background: var(--site-panel, var(--site-surface));
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
+/* `display: grid` would override [hidden] (the one-line engine drops the
+   "Multiple lines" row). */
+.engine-panel__setting[hidden] {
+  display: none;
+}
 .engine-panel__setting {
   display: grid;
   grid-template-columns: minmax(92px, auto) 1fr auto;

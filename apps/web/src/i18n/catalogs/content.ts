@@ -327,6 +327,8 @@ export const EN_CONTENT = {
     'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
     "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0, played here as the AB-JChess bot and used to grade jieqi reviews; its neural network is used with the authors' permission.",
+  'source.abJchessBrowser':
+    "AB-JChess by Huorongrong and Laoxu (Kouza), browser build: the engine compiled to WebAssembly for the jieqi analysis board, with its corresponding source, GPL-3.0; its neural network is served with the authors' permission.",
   'source.jqe':
     "jqe by Devin O'Keefe: a jieqi engine with its own neural network, MIT, played here as the jqe bot with the author's permission. The current AB-JChess release is built on its code.",
   'source.katagomo':

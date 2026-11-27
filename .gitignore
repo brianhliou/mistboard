@@ -112,6 +112,10 @@ scripts/.benedict-diagrams.mjs
 # Also ignore any stale network left in a prepared worktree.
 apps/web/public/engine/pikafish/*.nnue
 
+# The AB-JChess jieqi net is fetched from the authors' release and verified
+# before dev/build (fetch-abjchess-browser-net.mjs); it is never committed.
+apps/web/public/engine/ab-jchess/*.nnue
+
 # Rapfi preloaded CC0 networks, verified by fetch-rapfi-net.mjs before dev.
 apps/web/public/engine/rapfi/rapfi-single-simd128.data
 

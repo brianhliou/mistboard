@@ -25,11 +25,12 @@ export function formatMistyEval(cp: number | null, mate: number | null): string 
 }
 
 // Rough logistic map from centipawns to Red win probability, for the gauge fill.
-// The scale constant is a display heuristic, not a calibrated model.
-export function winProbRed(cp: number | null, mate: number | null): number {
+// The default scale is a display heuristic, not a calibrated model; an engine
+// with a fitted curve (winPercentK) passes its own constant `k`.
+export function winProbRed(cp: number | null, mate: number | null, k = 1 / 320): number {
   if (mate != null) return mate > 0 ? 1 : 0;
   if (cp == null) return 0.5;
-  return 1 / (1 + Math.exp(-cp / 320));
+  return 1 / (1 + Math.exp(-cp * k));
 }
 
 // Positional assessment glyph (chess informant symbols, red as the "White" side).

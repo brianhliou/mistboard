@@ -21,6 +21,18 @@ const MIT = /^MIT License/;
 
 /** One row per served engine directory. `source` strings must appear in `notice`. */
 const OFFERS = {
+  'ab-jchess': {
+    license: 'COPYING.txt',
+    text: GPL,
+    notice: 'README.md',
+    source: [
+      'efc83867230a26bbcd4a6c4cf644b69e154b452e',
+      'ab-jchess-wasm-entry.patch',
+      'abjchess-source-efc83867.tar.gz',
+      'LICENSE-jqe-MIT.txt',
+    ],
+    served: ['abjchess-source-efc83867.tar.gz', 'LICENSE-jqe-MIT.txt', 'net.json'],
+  },
   'fairy-stockfish': {
     license: 'COPYING.txt',
     text: GPL,

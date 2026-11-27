@@ -3,6 +3,7 @@ import { isArticleTranslationPublished, translateArticle } from './article-i18n.
 import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
 import { mountCreators } from './creators-page.js';
+import { ABJCHESS_BROWSER_BUILD_URL } from './engine-credits.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import {
   ARTICLE_ROUTE_CLASS,
@@ -296,6 +297,26 @@ describe('static pages', () => {
         expect(root.querySelector('.source-credit-pikafish')).not.toBeNull();
       }
     }
+  });
+
+  it('credits the AB-JChess browser build and its source with the flag on or off (#800)', () => {
+    // `?engine=abjchess` runs the GPL build in any bundle, so its source offer
+    // cannot depend on the build flag.
+    for (const flag of [undefined, 'false', 'true']) {
+      vi.stubEnv('VITE_ABJCHESS_CEVAL_ENABLED', flag);
+      window.history.replaceState(null, '', '/source');
+      const root = document.createElement('main');
+      mountSource(root);
+      const link = root.querySelector(`a[href="${ABJCHESS_BROWSER_BUILD_URL}"]`);
+      expect(link?.textContent, String(flag)).toContain(
+        'AB-JChess by Huorongrong and Laoxu (Kouza)',
+      );
+      expect(link?.textContent).toContain('corresponding source');
+      expect(link?.textContent).toContain('GPL-3.0');
+      expect(link?.textContent).not.toContain('—');
+      expect(root.querySelector('a[href="https://github.com/lxsgx23/AB-JChess"]')).not.toBeNull();
+    }
+    expect(ABJCHESS_BROWSER_BUILD_URL).toMatch(/^\/engine\/ab-jchess\/README\.md\?v=/);
   });
 
   it('names the bot each jieqi engine plays, with its source link, and ranks none of them', () => {

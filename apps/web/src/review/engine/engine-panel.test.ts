@@ -301,6 +301,78 @@ describe('createEnginePanel engine name', () => {
   });
 });
 
+describe('createEnginePanel run-time engine identity (#800)', () => {
+  function mountWith(handle: Partial<ceval.CevalHandle>) {
+    vi.useFakeTimers();
+    vi.spyOn(ceval, 'cevalSupported').mockReturnValue(true);
+    const evaluate = vi.fn(async (request: ceval.CevalRequest) => {
+      const update = {
+        depth: 14,
+        seldepth: 18,
+        nodes: 1000,
+        nps: 1_000_000,
+        lines: [{ multipv: 1, depth: 14, scoreCp: 409, mate: null, pvUci: ['b2b9'] }],
+      };
+      request.onUpdate?.(update);
+      return update;
+    });
+    vi.spyOn(ceval, 'createCeval').mockReturnValue({
+      variant: 'jieqi',
+      preload: async () => {},
+      evaluate,
+      stop: vi.fn(),
+      dispose: vi.fn(),
+      ...handle,
+    });
+    const evalBar = createEvalBar();
+    const setEval = vi.spyOn(evalBar, 'setEval');
+    const panel = createEnginePanel({ variant: 'jieqi', evalBar });
+    return { panel, evaluate, setEval };
+  }
+
+  const multiPvRow = (panel: { el: HTMLElement }) =>
+    panel.el
+      .querySelector<HTMLInputElement>('input[type="range"]')
+      ?.closest<HTMLElement>('.engine-panel__setting');
+
+  it('names the engine the handle reports, hides the lines slider and uses its curve', async () => {
+    const { panel, evaluate, setEval } = mountWith({
+      engineName: 'AB-JChess',
+      winK: 0.00269,
+      maxMultiPv: 1,
+    });
+    try {
+      panel.setPosition([], 'public w - 0 1');
+      panel.setOn(true);
+      await vi.advanceTimersByTimeAsync(151);
+      expect(evaluate).toHaveBeenCalled();
+      expect(panel.el.querySelector('.engine-panel__name')?.textContent).toBe('AB-JChess');
+      expect(multiPvRow(panel)?.hidden).toBe(true);
+      expect(setEval).toHaveBeenLastCalledWith(409, null, 0.00269);
+    } finally {
+      panel.dispose();
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps the static name, the slider and the default curve for a handle that reports none', async () => {
+    const { panel, setEval } = mountWith({});
+    try {
+      panel.setPosition([], 'public w - 0 1');
+      panel.setOn(true);
+      await vi.advanceTimersByTimeAsync(151);
+      expect(panel.el.querySelector('.engine-panel__name')?.textContent).toBe('PikaJieQi');
+      expect(multiPvRow(panel)?.hidden).toBe(false);
+      expect(setEval).toHaveBeenLastCalledWith(409, null, undefined);
+    } finally {
+      panel.dispose();
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('createEnginePanel arrow toggle', () => {
   const checkbox = (panel: { el: HTMLElement }): HTMLInputElement =>
     panel.el.querySelector('.engine-panel__setting-checkbox') as HTMLInputElement;

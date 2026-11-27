@@ -288,6 +288,8 @@ test('isolated engine assets: every vendored engine dir gets COEP, not just fair
   assert.equal(isIsolatedEngineAssetPath('/engine/misty-jungle/engine.wasm'), true);
   assert.equal(isIsolatedEngineAssetPath('/engine/misty-jungle-flip/worker.js'), true);
   assert.equal(isIsolatedEngineAssetPath('/engine/pikafish-jieqi/worker.js'), true);
+  assert.equal(isIsolatedEngineAssetPath('/engine/ab-jchess/worker.js'), true);
+  assert.equal(isIsolatedEngineAssetPath('/engine/ab-jchess/abjchess-20261030.nnue'), true);
 });
 
 // The engine assets are served immutable for a year, which is only true while

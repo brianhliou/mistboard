@@ -50,6 +50,20 @@ describe('eval bar fill', () => {
     expect(Number((ahead + behind).toFixed(0))).toBe(100);
   });
 
+  it("draws an engine's own win curve when the handle passes one, the default otherwise", () => {
+    const bar = createEvalBar();
+    const height = () =>
+      bar.el.querySelector<HTMLElement>('.review-eval-bar__fill')?.style.height ?? '';
+    // AB-JChess's fitted curve (ABJCHESS_20261031_WIN_PCT_K): +409 cp reads 75%,
+    // as on the review chart of its server analysis.
+    bar.setEval(409, null, 0.00269);
+    expect(height()).toBe('75.0%');
+    bar.setEval(409, null);
+    expect(height()).toBe(`${((1 / (1 + Math.exp(-409 / 320))) * 100).toFixed(1)}%`);
+    bar.setEval(null, 3, 0.00269);
+    expect(Number.parseFloat(height())).toBeGreaterThan(90);
+  });
+
   it('reads a mate as decisive rather than merely large', () => {
     const bar = createEvalBar();
     bar.setEval(null, 3);

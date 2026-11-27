@@ -100,7 +100,9 @@ const KNOB_ON_ICON =
 
 export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   const supported = cevalSupported(opts.variant);
-  const engineName = cevalEngineName(opts.variant);
+  // A handle that picks its engine at run time (a flagged engine with a
+  // fallback) renames the panel once it has loaded: syncEngineIdentity.
+  let engineName = cevalEngineName(opts.variant);
   // Mutable so the settings popover can retune them live.
   let multiPv = opts.multiPv ?? 3;
   const effortOptions: readonly CevalEffort[] = cevalSupportsInfinite(opts.variant)
@@ -189,16 +191,17 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   } else {
     showArrowsToggle.checked = opts.showArrows ?? true;
   }
+  const multiPvRow = sliderRow(
+    t('engine.multipleLines'),
+    { min: 1, max: 5, step: 1, value: multiPv },
+    (value) => `${value} / 5`,
+    (value) => {
+      multiPv = value;
+      if (on) evaluateNow();
+    },
+  );
   settings.append(
-    sliderRow(
-      t('engine.multipleLines'),
-      { min: 1, max: 5, step: 1, value: multiPv },
-      (value) => `${value} / 5`,
-      (value) => {
-        multiPv = value;
-        if (on) evaluateNow();
-      },
-    ),
+    multiPvRow,
     sliderRow(
       t('engine.searchEffort'),
       {
@@ -280,7 +283,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       if (firstPlayer) evalLabel.title = t('engine.firstPlayerPerspective');
       else if (opts.variant === 'gomoku') evalLabel.title = formatGomokuEval(cp, mate);
       else evalLabel.removeAttribute('title');
-      opts.evalBar?.setEval(cp, mate);
+      opts.evalBar?.setEval(cp, mate, handle?.winK);
     }
     const status = update.depth
       ? `${t('engine.depth', { depth: update.depth })}${update.nps ? ` · ${formatKnps(update.nps)}` : ''}`
@@ -298,6 +301,19 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       ...update.lines.map((line) => renderLine(line, side, formatMove, opts.variant, firstPlayer)),
     );
     opts.onLines?.(update.lines);
+  }
+
+  // The engine a handle reports after loading: its name, and no "Multiple
+  // lines" row for an engine that reports one line.
+  function syncEngineIdentity(): void {
+    if (!handle) return;
+    if (handle.engineName && handle.engineName !== engineName) {
+      engineName = handle.engineName;
+      const link = nameLabel.querySelector('a');
+      if (link) link.textContent = engineName;
+      else nameLabel.textContent = engineName;
+    }
+    multiPvRow.hidden = handle.maxMultiPv === 1;
   }
 
   function evaluateNow(): void {
@@ -323,6 +339,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
         },
       })
       .then((final) => {
+        syncEngineIdentity();
         // A search that finished with no line at all had no legal move to
         // search: the position is over, though the caller did not say so (a
         // variant without canEvaluatePosition, a mate the rules see only as
@@ -403,9 +420,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
         // Pikafish's CC0 net is about 11 MB; the first open of a xiangqi board is a real
         // download, and a bare "loading…" for ten seconds reads as a hang.
         if (on && generation === searchGeneration)
-          sub.textContent = formatLoadProgress(engineName, progress);
+          sub.textContent = formatLoadProgress(handle?.engineName ?? engineName, progress);
       })
       .then(() => {
+        syncEngineIdentity();
         if (on && generation === searchGeneration) evaluateNow();
       })
       .catch((err: unknown) => {
