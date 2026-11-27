@@ -332,7 +332,7 @@ for (const { surface, flag } of launches) {
           } else if (admitted && safeShell) {
             assert.ok(result.body.includes('Private shell fixture'));
             assert.ok(result.body.includes('<div id="app"></div>'));
-            assert.equal(result.headers['x-robots-tag'], 'noindex');
+            assert.equal(result.headers['x-robots-tag'], 'noindex, follow');
           } else assert.equal(result.body, '{"error":"not_found"}');
         }
       }
