@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { XiangqiBroadcastPlayerTag } from '@mistboard/game';
+import { translateXiangqiEventNameStrict, type XiangqiBroadcastPlayerTag } from '@mistboard/game';
 import {
   FEDERATION_PLAYER_NAMES,
   FEDERATION_PLAYER_TRADITIONAL_NAMES,
@@ -113,6 +113,91 @@ test('translateXiangqiEventName names the 2026 exhibitions and opens', () => {
   assert.equal(
     translateXiangqiEventName('2026年第五届世界象棋公开赛男子团体'),
     "2026 5th World Xiangqi Open Men's Team",
+  );
+});
+
+// The dpxq archive events whose titles kept pinyin on the 2026-11-27 import
+// list ("Shineiyundonghui", "Qitianbeimeiguo"). Where the study page's strict
+// reading gives a name (it refuses an unglossed sponsor such as 陈罗平杯), it
+// agrees with the broadcast title.
+const DPXQ_ARCHIVE_EVENT_NAMES: ReadonlyArray<readonly [string, string]> = [
+  ['2003年第11届亚洲象棋名手邀请赛 男子组', '2003 11th Asian Xiangqi Masters Invitational Men'],
+  ['2003年第11届亚洲象棋名手邀请赛 女子组', '2003 11th Asian Xiangqi Masters Invitational Women'],
+  ['2007年第02届亚洲室内运动会 男子个人', '2007 2nd Asian Indoor Games Men Individual'],
+  ['2007年第02届亚洲室内运动会 男子快棋', '2007 2nd Asian Indoor Games Men Rapid'],
+  ['2007年第02届亚洲室内运动会 男子团体', "2007 2nd Asian Indoor Games Men's Team"],
+  ['2007年第02届亚洲室内运动会 女子个人', '2007 2nd Asian Indoor Games Women Individual'],
+  ['2008年第01届世界智力运动会 男子个人', '2008 1st World Mind Sports Games Men Individual'],
+  ['2008年第01届世界智力运动会 男子快棋', '2008 1st World Mind Sports Games Men Rapid'],
+  ['2008年第01届世界智力运动会 男子团体', "2008 1st World Mind Sports Games Men's Team"],
+  ['2008年第01届世界智力运动会 女子个人', '2008 1st World Mind Sports Games Women Individual'],
+  ['2008年第01届世界智力运动会 女子团体', "2008 1st World Mind Sports Games Women's Team"],
+  [
+    '2009年布条王兵临城下杯第14届亚洲象棋个人赛 男子组',
+    '2009 14th Asian Xiangqi Individual Championship Men',
+  ],
+  [
+    '2009年布条王兵临城下杯第14届亚洲象棋个人赛 女子组',
+    '2009 14th Asian Xiangqi Individual Championship Women',
+  ],
+  ['2009年第03届亚洲室内运动会 男子快棋', '2009 3rd Asian Indoor Games Men Rapid'],
+  ['2009年第03届亚洲室内运动会 男子团体', "2009 3rd Asian Indoor Games Men's Team"],
+  [
+    '2010年第16届广州亚运会象棋比赛 男子组',
+    '2010 16th Guangzhou Asian Games Xiangqi Competition Men',
+  ],
+  [
+    '2010年第16届广州亚运会象棋比赛 女子组',
+    '2010 16th Guangzhou Asian Games Xiangqi Competition Women',
+  ],
+  [
+    '2012年陈罗平杯第17届亚洲象棋锦标赛 女子预赛B组',
+    '2012 Chenluoping Cup 17th Asian Xiangqi Championship Women Preliminary Group B',
+  ],
+  ['2012年第02届世界智力运动会 男子个人', '2012 2nd World Mind Sports Games Men Individual'],
+  ['2019年第一届美洲象棋大师锦标赛', '2019 1st Americas Xiangqi Masters Championship'],
+  [
+    '2019年魔力红杯第16届世界象棋锦标赛 女子决赛',
+    '2019 Molihong Cup 16th World Xiangqi Championship Women Final',
+  ],
+  [
+    '2023年第19届亚运会象棋比赛 男子个人',
+    '2023 19th Asian Games Xiangqi Competition Men Individual',
+  ],
+  ['2023年第19届亚运会象棋比赛 混合团体', '2023 19th Asian Games Xiangqi Competition Mixed Team'],
+  [
+    '2023年第19届亚运会象棋比赛 女子个人',
+    '2023 19th Asian Games Xiangqi Competition Women Individual',
+  ],
+  ['2023年云尚杯第九届北美象棋锦标赛', '2023 Yunshang Cup 9th North American Xiangqi Championship'],
+  [
+    '2024年第四届奇天杯美国象棋团体赛 成人',
+    '2024 4th Qitian Cup US Xiangqi Team Championship Adult',
+  ],
+  [
+    '2025年第一届“北美五羊杯”冠军邀请赛',
+    '2025 1st North American Five Rams Cup Champion Invitational',
+  ],
+  ['2026年第五届“奇天杯”美国象棋团体邀请赛', '2026 5th Qitian Cup US Xiangqi Team Invitational'],
+  // Not flagged on the list, but a run-together sponsor all the same
+  // ("Shilintonggongzhu Cup").
+  [
+    '2023年诗琳通公主杯第21届亚洲象棋锦标赛 男子团体',
+    "2023 Princess Sirindhorn Cup 21st Asian Xiangqi Championship Men's Team",
+  ],
+];
+
+test('dpxq archive event names read as English, with no pinyin left over', () => {
+  for (const [zh, en] of DPXQ_ARCHIVE_EVENT_NAMES) {
+    assert.equal(translateXiangqiEventName(zh), en, zh);
+    const strict = translateXiangqiEventNameStrict(zh);
+    if (strict !== undefined) assert.equal(strict, en, zh);
+  }
+  // The terms themselves are glossed, not romanized: a strict reading with no
+  // sponsor in it accounts for every character.
+  assert.equal(
+    translateXiangqiEventNameStrict('2008年第01届世界智力运动会 女子团体'),
+    "2008 1st World Mind Sports Games Women's Team",
   );
 });
 
