@@ -26,6 +26,7 @@
     "generate:variant-fixtures": "tsx src/generate-variant-fixtures.ts",
     "seed:variant-fixtures": "tsx src/seed-variant-fixtures.ts",
     "import:xiangqi-broadcast": "tsx src/import-xiangqi-broadcast.ts",
+    "import:dpxq-archive": "tsx src/import-dpxq-archive.ts",
     "backfill:xiangqi-broadcast-translations": "tsx src/backfill-xiangqi-broadcast-translations.ts",
     "import:historical-xiangqi": "tsx src/import-historical-xiangqi.ts",
     "import:elephantchess-xiangqi": "tsx src/import-elephantchess-xiangqi.ts",
