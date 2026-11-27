@@ -37,6 +37,23 @@ test('every table route has exactly one server lookup and the reverse', async ()
   assert.throws(() => readPrerenderRoutes(dir), /Invalid/);
 });
 
+// /analysis/jieqi shipped with "Jieqi analysis" as its whole description: the
+// non-xiangqi boards dropped the row's meta and fell back to the page-title key.
+test('a variant board with its own meta keeps it; the rest fall back to the catalog keys', () => {
+  const boards = expandPrerenderRoutes(table, {
+    analysis: ['xiangqi', 'jieqi', 'banqi'],
+    editor: ['xiangqi'],
+  }).filter(({ route }) => route.includes('/analysis/'));
+  const meta = (route) => boards.find((row) => row.route === route)?.metaByLocale;
+  const jieqi = meta('/analysis/jieqi')?.en;
+  assert.equal(jieqi?.title, 'Jieqi Analysis Board | Mistboard');
+  assert.ok((jieqi?.description.length ?? 0) >= 120, jieqi?.description);
+  assert.match(meta('/analysis/xiangqi').en.description, /^Analyse xiangqi/);
+  assert.match(meta('/zh-hans/analysis/xiangqi')['zh-Hans'].title, /象棋/);
+  // Planted: a board with no metaByVariant entry never borrows xiangqi's copy.
+  assert.equal(meta('/analysis/banqi'), undefined);
+});
+
 test('new crawler text must belong to the protected wrapper', () => {
   assert.deepEqual(
     crawlerCopyProblems('<div class="crawler-copy"><h1>About</h1><p>Copy</p></div>'),

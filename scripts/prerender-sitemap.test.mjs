@@ -141,7 +141,7 @@ test('a source snapshot with no git history builds a sitemap with no dates (Rail
   await writeFile(join(dist, 'index.html'), head('/'));
   await writePrerenderSitemap(dist, host, snapshot, [{ path: '/study', alternates: [] }]);
   const records = JSON.parse(await readFile(join(dist, 'prerender-sitemap.json'), 'utf8'));
-  for (const path of ['/', '/games', '/study']) {
+  for (const path of ['/', '/games', '/watch', '/study']) {
     const record = records.find((entry) => entry.path === path);
     assert.ok(record, path);
     assert.equal(record.lastmod, undefined, path);

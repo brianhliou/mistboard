@@ -25,17 +25,25 @@ test('server route meta is long enough to describe the page', () => {
 });
 
 test('explicit prerender metadata meets the same length floors as server route metadata', () => {
+  type LocaleMeta = Record<string, { title: string; description: string }>;
   const routes: Array<{
     route: string;
-    metaByLocale?: Record<string, { title: string; description: string }>;
+    metaByLocale?: LocaleMeta;
+    metaByVariant?: Record<string, LocaleMeta>;
   }> = JSON.parse(
     readFileSync(new URL('../../../config/prerender-routes.json', import.meta.url), 'utf8'),
   );
-  const problems = routes.flatMap(({ route, metaByLocale }) =>
-    Object.entries(metaByLocale ?? {}).flatMap(([locale, meta]) =>
-      seoMetaLengthProblems(`${locale} ${route}`, meta),
+  const localeProblems = (page: string, byLocale: LocaleMeta = {}) =>
+    Object.entries(byLocale).flatMap(([locale, meta]) =>
+      seoMetaLengthProblems(`${locale} ${page}`, meta),
+    );
+  // metaByVariant is a non-xiangqi board's own copy (/analysis/jieqi).
+  const problems = routes.flatMap(({ route, metaByLocale, metaByVariant }) => [
+    ...localeProblems(route, metaByLocale),
+    ...Object.entries(metaByVariant ?? {}).flatMap(([variant, byLocale]) =>
+      localeProblems(route.replace(':variant', variant), byLocale),
     ),
-  );
+  ]);
   assert.deepEqual(problems, []);
 });
 

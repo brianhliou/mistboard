@@ -1177,8 +1177,9 @@ test('serveSpaShellWithRoutePreloads injects hints into the shell head for a kno
     response.body,
     /<link rel="modulepreload" crossorigin href="\/assets\/watch-route-abc\.js"><link rel="modulepreload" crossorigin href="\/assets\/review-shell-def\.js"><\/head>/,
   );
-  // Still the SPA shell: empty mount point, no prerendered markup.
-  assert.match(response.body, /<div id="app"><\/div>/);
+  // Still the SPA shell: the mount point holds only the server's crawler copy,
+  // which the client clears on mount.
+  assert.match(response.body, /<div id="app"><div class="crawler-copy"><main><h1>/);
 });
 
 test('serveSpaShellWithRoutePreloads gives a route with meta its own title and canonical url', async () => {
@@ -1943,8 +1944,8 @@ test('a share-tagged game, invite, challenge or broadcast link serves utm-free H
   const roundPath = '/broadcast/xiangqi/t/round/r';
   const cases = [
     // A game page carries og:url and no canonical link; a round carries both.
-    // A room link gets no rewritten shell at all: the caller serves the static
-    // index.html byte for byte, so nothing can echo a tag.
+    // A room link gets the noindex shell (2026-11-27) and, like a challenge,
+    // no og:url or canonical that could echo a tag.
     {
       pathname: '/game/room-1',
       campaign: 'game',
@@ -1964,7 +1965,7 @@ test('a share-tagged game, invite, challenge or broadcast link serves utm-free H
       campaign: 'invite',
       ogUrl: null,
       canonical: null,
-      rewritten: false,
+      rewritten: true,
     },
     {
       pathname: '/challenge/seek_abc',
@@ -2389,6 +2390,31 @@ test('unknown live-game links serve a real 404 shell, including bad ids and wron
   }
 });
 
+test('a game embed of a real tenant room serves the 200 embed shell, not the 404 page', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  // The banqi-luck article embeds a real banqi room; any tenant prefix reached
+  // the 404 shell through the review route's optional prefix.
+  for (const pathname of ['/embed/game/bq_7e8ce2e7', '/embed/game/xq_card']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      tenantGameStore: {
+        summary: async () => assert.fail('an embed must not read a game for route meta'),
+        events: async () => null,
+        analysis: async () => null,
+      },
+    });
+    assert.equal(response.status, 200, pathname);
+    assert.doesNotMatch(response.body, /Page not found/, pathname);
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow'], pathname);
+  }
+});
+
 test('hidden playtests and failed game reads keep a generic noindex shell', async () => {
   await import('./variant-tenant/register-tenants.js');
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
@@ -2452,13 +2478,9 @@ test('a finished tenant game page gets its pairing as title, the review URL as o
     );
     assert.match(response.body, /<div id="app"><\/div>/);
     // A site-played game page is noindexed like the bare /game/:id (SEO D8,
-    // widened 2026-10-17), and carries no canonical beside the robots tag. The
-    // room URL is the live surface and is left alone.
-    if (pathname === '/jieqi/game/jq_x') {
-      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
-    } else {
-      assert.doesNotMatch(response.body, /noindex/, pathname);
-    }
+    // widened 2026-10-17), and so is its room (2026-11-27): neither carries a
+    // canonical beside the robots tag, and the room keeps its link preview.
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow'], pathname);
     assert.doesNotMatch(response.body, /rel="canonical"/, pathname);
   }
 
@@ -2474,6 +2496,9 @@ test('a finished tenant game page gets its pairing as title, the review URL as o
   });
   assert.doesNotMatch(response.body, /Pikafish/);
   assert.doesNotMatch(response.body, /og\/game\//);
+  // Live or finished, a room is a play surface and stays out of search.
+  assert.deepEqual(robotsTags(response.body), ['noindex, follow']);
+  assert.doesNotMatch(response.body, /rel="canonical"/);
 });
 
 test('the bare analysis and editor routes keep the xiangqi wording and take a FEN too', async () => {
@@ -2902,6 +2927,26 @@ test('the /games database carries its own route meta and sitemap entry', async (
   });
   assert.doesNotMatch(sitemap.body, /<loc>https:\/\/mistboard\.com\/games<\/loc>/); // No build source date in this fixture.
   assert.doesNotMatch(sitemap.body, /<loc>https:\/\/mistboard\.com\/games\/search<\/loc>/); // Existing content gap.
+});
+
+// /watch reached crawlers as an empty shell with no heading at all.
+test('/watch serves a crawler body with its own h1 inside the protected wrapper', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/watch',
+    publicHost: 'https://mistboard.com',
+  });
+  assert.equal(served, true);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.match(/<h1>/g)?.length, 1);
+  assert.match(response.body, /<div class="crawler-copy"><main><h1>Watch live games<\/h1>/);
+  assert.match(response.body, /<a href="\/broadcast\/xiangqi">/);
+  assert.doesNotMatch(response.body, /noindex/);
+  assert.doesNotMatch(response.body, /—/);
 });
 
 test('the /study index carries its own route meta and sitemap entry', async () => {
