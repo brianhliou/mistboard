@@ -960,75 +960,84 @@ const ZH_HANS: Record<string, string> = {
     '下面是 Mistboard 上的一盘棋：红士捉黑车，黑车只有一个空格可走，两颗子就在两格之间来回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已经捉了三次。再捉一次，这个局面就会第三次出现，所以规则禁止这一步，叉号标出它不能再走的那一格。圆点标出它还能走的格子，棋局继续。',
-  // Expanded jieqi rules (2026-11-05).
-  'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
-    '暗子的第一步按所在起始位置的棋子走法行棋，走完便向双方翻明。',
-  'After revealing, it uses its own moves. Advisors can leave the palace and elephants can cross the river.':
-    '翻明后按自身走法行棋。士可以出九宫，象可以过河。',
-  'Checkmate wins. Leaving your opponent with no legal move also wins, even without check.':
-    '将死对手即获胜。让对手无合法着法也获胜，即使没有将军。',
-  'Jieqi, also called Reveal Xiangqi, is xiangqi with shuffled, hidden pieces. You can see where every piece stands and which side it belongs to. Only the generals start face-up. You learn the identity of one of your other pieces by moving it. Red moves first.':
-    '揭棋是在象棋基础上把棋子打乱并盖住的玩法。每枚棋子的位置和所属一方都看得见。开局只有将帅明置，其余己方棋子要走过一步才能得知身份。红方先行。',
-  'Pieces stand on points where the lines meet. Red starts at the bottom of the diagrams and moves toward the top. Black moves toward the bottom. The river divides the board across the middle. Each general stays inside its own palace, the area marked with diagonal lines.':
-    '棋子放在线与线相交的点上。图中红方从下方向上行进，黑方向下行进。河界横贯棋盘中央，将双方隔开。双方将帅都必须留在各自的九宫内，也就是画有斜线的区域。',
-  "Set each general face-up at the centre of its back rank. Shuffle each side's other fifteen pieces separately and deal them face-down onto its remaining starting points. Each side has two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. Neither player knows the hidden identities, including their own. Face-down pieces are often called dark pieces.":
-    '将帅明置于各自底线的中央。双方各自把其余十五枚棋子洗匀，背面朝上放到己方其余起始位置。每方有两士、两象、两马、两车、两炮和五兵。双方都不知道暗子的身份，连自己的也不知道。背面朝上的棋子通常称为暗子。',
-  'The generals are face-up. Every plain disc is a face-down piece, red-brown for Red and green for Black. The deal changes identities, while the starting points stay the same.':
-    '将帅明置。没有字的圆片都是暗子，红棕色代表红方，绿色代表黑方。每次洗牌改变的是棋子身份，起始位置不变。',
-  'The coordinates in these examples name points. Files run from a on the left to i on the right, as Red sees them. Ranks run from 1 at the bottom to 10 at the top. So b1 is a horse starting point beside the left corner; e4 is the central soldier starting point.':
-    '这些例子用坐标表示交叉点。从红方视角看，纵线由左至右标为 a 到 i，横线由下至上标为 1 到 10。因此 b1 是左下角旁的马位，e4 是中央兵的起始位置。',
+  // jieqi rules page, re-cut 2026-11-27: short bolded lists beside before-and-after
+  // boards. Machine-drafted in plain short Chinese, not native-reviewed.
+  'The rules are shorter, set out as lists beside the diagrams, with a new board showing how each face-down piece makes its first move.':
+    '规则改短了，改成配图的要点，并新增一张图，说明每个暗子第一步怎么走。',
+  'Every piece but the general starts face-down and makes its first move as the piece whose point it starts on.':
+    '除将帅外，所有棋子开局都是暗子。暗子第一步按所在位置原本的棋子走。',
+  'That move turns it face-up, and from then on it plays as itself. Advisors may leave the palace and elephants may cross the river.':
+    '走完这一步就翻开，之后按真实身份走。士可以出九宫，象可以过河。',
+  'Checkmate wins, and so does leaving your opponent with no legal move.':
+    '将死对方获胜，让对方无棋可走也获胜。',
+  'Jieqi, also called Reveal Xiangqi, is xiangqi played with the pieces shuffled face-down. You can see where every piece stands and whose it is, but not what it is until it moves. Red moves first.':
+    '揭棋就是把棋子打乱、背面朝上来下的象棋。每个子在哪里、是哪一方的，都看得见；它是什么子，要等它走了才知道。红方先走。',
+  'WHAT YOU SEE': '你看到的',
+  'WHAT EACH POINT MOVES AS': '每个位置怎么走',
+  '**The generals start face-up** in the centre of each back rank.':
+    '**将帅开局是明子**，摆在各自底线正中。',
+  "**Each side's other 15 pieces are shuffled face-down** onto that side's usual starting points. Nobody knows which is which, not even their owner.":
+    '**双方其余 15 个子各自打乱，背面朝上**，摆在本方原来的起始位置。谁也不知道哪个是哪个，自己的也不知道。',
+  '**A face-down piece moves as the piece that starts on its point** in xiangqi, shown on the right. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move.':
+    '**暗子按象棋里这个位置原本的棋子走**，见右图。[象棋规则](/rules/xiangqi#the-pieces)画出了每种走法。',
   'How a face-down piece moves': '暗子怎么走',
-  'A face-down piece moves, attacks, and captures as the piece that normally starts on its point. The corners use chariot moves. Beside them are horse points, then elephant points, then advisor points beside the general. The two pieces set forward behind the soldiers use cannon moves. The front line uses soldier moves. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move on its own board.':
-    '暗子按正常象棋中该起始位置的棋子走法移动、攻击和吃子。两角按车走；向内依次是马位、象位，再是将帅旁的士位。前置于兵线后方的两枚棋子按炮走，最前排按兵走。[象棋规则](/rules/xiangqi#the-pieces)为每种走法分别配有棋盘图解。',
-  'You move and reveal as a single turn. There is no separate turn for flipping a piece in place. Its hidden identity cannot change the path of this first move: the piece on b1 must make a horse move even if it will turn out to be a cannon or an advisor.':
-    '走子和翻子在同一回合完成，不能专用一个回合原地翻子。暗子的真实身份不影响第一步的路线：b1 上的棋子必须按马走，即使翻出来是炮或士。',
-  'Red moves b1 to c3 as a horse, which needs b2 empty. It lands and reveals as an advisor. The horse move from b1 to d2 is blocked by the piece on c1.':
-    '红方按马的走法从 b1 走到 c3，前提是 b2 无子。落定后翻出一枚士。b1 到 d2 的另一条马路则被 c1 上的棋子蹩住了马腿。',
-  'Both players see the identity when the piece lands, and from then on it moves and attacks as that piece.':
-    '棋子落定时，双方都会看见它的身份，此后它便按自身身份移动和攻击。',
-  'A cannon capture can reveal a soldier': '按炮吃子后可能翻出兵',
-  'A cannon captures by jumping over exactly one piece, and a face-down piece on a cannon point does the same. At the start, Red can play b3 to b10 by jumping over the black piece on b8, which stays where it is.':
-    '炮吃子时必须恰好隔一枚棋子，炮位上的暗子也一样。开局时，红方可以从 b3 走到 b10，跳过 b8 上的黑子吃子；b8 上的黑子留在原处。',
-  'The piece makes a cannon capture over b8, then reveals as a soldier. Red learns the captured identity. Black sees its face-down piece leave the board.':
-    '这枚棋子隔着 b8 按炮吃子，随后翻出一枚兵。红方得知被吃暗子的身份，黑方只看见自己的暗子离开棋盘。',
-  'The revealed soldier has already crossed the river, so from b10 it can step sideways, but it cannot go back to b9.':
-    '翻出的兵已经过河，所以可以从 b10 横走，但不能退回 b9。',
-  'Revealed pieces use their own moves': '翻明后按自身走法行棋',
-  'A revealed advisor may leave the palace. A revealed elephant may cross the river. Their movement shapes stay the same: an advisor moves one point diagonally, and an elephant moves two diagonally, with the point between, called the eye, empty. The general always stays inside its own palace.':
-    '翻明的士可以出九宫，翻明的象可以过河。走法形状不变：士斜走一点，象斜走两点，中间的象眼必须无子。将帅始终不能离开己方九宫。',
-  'After the b1 to c3 reveal and a Black reply, the advisor can step from c3 to d4. It can continue playing outside the palace.':
-    'b1 到 c3 翻出士，黑方应一手后，这枚士可以从 c3 走到 d4。它可以继续在九宫外行棋。',
-  'A different deal puts an elephant under a4. Red moves it to a5 as a soldier. After Black replies, the elephant can capture on c7 across the river because b6, its eye, is clear.':
-    '另一种暗子布局在 a4 放了一枚象。红方先按兵的走法把它走到 a5。黑方应一手后，这枚象可以过河吃掉 c7 上的棋子，因为象眼 b6 无子。',
-  'A soldier follows its river rule from wherever it reveals, so a corner reveal can leave you with a soldier far behind your front line.':
-    '兵无论在哪里翻明，都按所在位置遵守过河规则，所以角位翻出的兵可能远远落在己方前线后面。',
-  'Red can slide the dark piece from a1 to a3 as a chariot. Here it reveals as a soldier. It will have to advance as a soldier on later turns; its own piece on a4 currently blocks it.':
-    '红方可以按车的走法把 a1 的暗子直走到 a3。这里翻出的是兵。后续回合它必须按兵的走法前进，目前 a4 上的己方棋子挡住了它。',
-  'If a piece is captured face-down, only its capturer learns its identity. Its former owner and spectators see a dark piece leave the board and nothing else. The capturer can then rule that identity out among the pieces still hidden. If the piece had already revealed, everyone already knew what was taken. The piece that made the capture reveals to both players either way.':
-    '暗子被吃时，只有吃子方得知它的身份。原主人和观众只能看见一枚暗子离开棋盘，得不到其他信息。吃子方由此可以在其余暗子中排除这一身份。如果被吃的棋子已经翻明，大家本来就知道吃掉了什么。无论哪种情况，执行吃子的棋子都会向双方翻明。',
+  'MOVES AS A HORSE': '按马走',
+  'TURNS OVER: AN ADVISOR': '翻开：是士',
+  '**Its first move is its point’s move.** The piece on a horse point makes a horse move, whatever it turns out to be.':
+    '**第一步按所在位置走。**马位上的暗子走马步，不管翻出来是什么。',
+  '**It turns face-up where it lands**, for both players to see. Moving and turning over is one turn; you cannot flip a piece in place.':
+    '**走到哪里就在哪里翻开**，双方都看得见。走子和翻开是同一步，不能原地翻子。',
+  'CAPTURES AS A CANNON': '按炮吃子',
+  'TURNS OVER: A SOLDIER': '翻开：是兵',
+  '**Captures work the same way.** A piece on a cannon point captures by jumping one piece, as a cannon does.':
+    '**吃子也一样。**炮位上的暗子要隔一个子吃，和炮一样。',
+  'Revealed pieces use their own moves': '翻开后按自己的走法',
+  'ADVISOR OUT OF THE PALACE': '士出九宫',
+  'ELEPHANT ACROSS THE RIVER': '象过河',
+  '**Advisors may leave the palace**, still one point diagonally.':
+    '**士可以出九宫**，仍然斜走一步。',
+  '**Elephants may cross the river**, still two points diagonally, blocked when the point between them is taken.':
+    '**象可以过河**，仍然走田字，塞象眼就不能走。',
+  '**The general never leaves its palace.**': '**将帅始终不出九宫。**',
+  'MOVES AS A CHARIOT': '按车走',
+  'A SOLDIER FROM THE CORNER': '角上翻出兵',
+  '**A soldier keeps its river rule wherever it turns over.** This one moved from the corner as a chariot, and now it can only step forward.':
+    '**兵不管在哪里翻出，都照样守过河的规矩。**这个子从角上按车走出来，翻出是兵，现在只能往前走。',
+  '**Only the capturer learns what a face-down piece was.** Its owner and spectators see a dark piece leave the board.':
+    '**暗子被吃，只有吃子的一方知道它是什么。**它的主人和观众只看到一个暗子离开棋盘。',
+  '**A face-down piece that captures turns over** for both players, as on any move.':
+    '**暗子吃子后也会翻开**，双方都看得见，和平常走子一样。',
   'Check, checkmate, and draws': '将军、将死与和棋',
-  'A general is in check when an enemy piece attacks its point. A face-down enemy piece attacks using its starting-point role. A piece that has just moved attacks using its revealed identity, so you must look again after every reveal.':
-    '敌子攻击将帅所在的点时，就是将军。敌方暗子按起始位置的身份攻击，刚走过一步的棋子则按翻明后的身份攻击，所以每次翻子后都要重新看清局面。',
-  'You must answer check on your turn, and a move that leaves your own general attacked is illegal. The generals also cannot face each other along a clear file. Any piece, including a face-down one, can block that file.':
-    '被将军时，轮到你必须应将；走完后仍让己方将帅受攻击的着法不合法。将帅也不能在同一条无子阻隔的纵线上照面。任何棋子都可以隔开这条线，暗子也可以。',
-  'Position or event': '局面或事件',
-  'Result on Mistboard': 'Mistboard 的判定',
-  'The player to move is in check and has no legal move.': '轮到行棋的一方被将军，且无合法着法。',
-  'Checkmate. That player loses.': '将死，该方判负。',
-  'The player to move has no legal move, even without check.':
-    '轮到行棋的一方无合法着法，即使没有被将军。',
-  'Stalemate. That player loses.': '困毙，该方判负。',
-  '80 plies pass without a capture.': '连续 80 个半回合没有吃子。',
-  'Draw. A ply is one move by one player, so this is 40 moves by each side. Revealing a piece alone does not reset the count.':
-    '和棋。半回合指一方走一步，所以相当于双方各走 40 步。单纯翻子不会重置计数。',
-  'The same position with the same side to move occurs for the third time.':
-    '同一局面第三次出现，且轮到同一方行棋。',
-  'A player who checked on every one of their turns in the repeating cycle loses. If nobody gave check in the cycle and only one player chased on every one of their turns, that player loses. Anything else is a draw.':
-    '重复循环中，每一步都将军的一方判负。若循环中没有任何将军，且只有一方每一步都捉子，则该方判负。其余情况判和。',
-  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
-    '捉子是指新攻击对方的一个棋子，而且每次攻击的都是同一个。将帅和兵卒不算捉子，将帅以及未过河的兵卒也不算被捉。攻击有保护的棋子不算捉子，攻击能反吃回来的同种棋子也不算。马或炮攻击车，或士、象攻击车、马、炮，即使对方有保护也算捉子。在这次更新之前开始的对局仍按旧规则：只有长将判负，无吃子判和要到双方各走 60 步。',
-  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.':
-    'jqe 执红对 AB-JChess，选自双方十月的 600 盘对抗。这张棋盘的黑方在下。红方在前 11 回合吃掉六枚棋子，但黑方有两枚暗子在第 11 和第 13 回合翻出车，局势转向黑方。第 17 回合双方各失误一次。第 23 回合红方翻开帅旁的棋子，翻出的是兵，黑方的双车在第 25 回合将死红方。标记和变着是 AB-JChess 对这盘棋的解读，翻子旁的骰子评估这次翻子的运气。',
+  '**A face-down piece never gives check.** No starting point reaches the enemy palace. The move that turns it over can check, as the piece it turns out to be.':
+    '**暗子不会将军。**没有哪个起始位置能攻到对方九宫。但翻开的那一步可以将军，按翻出的棋子算。',
+  '**Answer every check.** A move that leaves your general attacked is illegal.':
+    '**被将军必须应将。**走完后己方将帅仍被攻击，这步棋不合法。',
+  '**The generals may not face each other** on an open file. Any piece blocks it, face-down ones included.':
+    '**将帅不能照面**：同一条直线上中间要有子隔开，暗子也算。',
+  'You have no legal move and are in check': '你无棋可走，且被将军',
+  'Checkmate: you lose.': '将死：你输。',
+  'You have no legal move and are not in check': '你无棋可走，但没被将军',
+  'Stalemate: you lose too.': '困毙：你也输。',
+  '80 plies (40 moves each) pass without a capture': '连续 80 个半回合（双方各 40 步）没有吃子',
+  'Draw. A reveal alone does not reset the count.': '和棋。只翻子不吃子，不会重新计数。',
+  'The same position, with the same side to move, comes a third time':
+    '同一局面第三次出现，且轮到同一方走',
+  'Whoever checked on every turn of the cycle loses. Otherwise, if one player alone chased on every turn, that player loses. Anything else is a draw.':
+    '循环中每步都将军（长将）的一方判负。否则，若只有一方每步都捉子（长捉），该方判负。其余情况判和。',
+  'What counts as a chase': '什么算捉子',
+  '**A chase newly attacks an enemy piece**, the same piece every time.':
+    '**捉子就是新攻击对方一个子**，而且每次都是同一个。',
+  '**It does not count against a protected piece**, or against a piece of the same kind that could take back.':
+    '**攻击有保护的子不算捉**，攻击能吃回来的同种子也不算。',
+  '**Except:** a horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected.':
+    '**例外：**马、炮攻击车，或士、象攻击车、马、炮，即使对方有保护也算捉。',
+  '**Generals and soldiers never chase.** A general, or a soldier that has not crossed the river, cannot be chased.':
+    '**将帅和兵卒不算捉子。**将帅和没过河的兵卒也不算被捉。',
+  'Older games': '旧对局',
+  'A game started under the older rule keeps it: only perpetual check lost, and the no-capture draw came after 60 moves each.':
+    '按旧规则开始的对局仍用旧规则：只有长将判负，双方各走 60 步没有吃子才判和。',
+  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks are AB-JChess’s grades, and the die beside a turned-over piece grades its luck.':
+    'jqe 执红对 AB-JChess，选自双方十月的 600 盘对抗。这张棋盘黑方在下。红方前 11 回合吃掉六个子，但黑方有两个暗子在第 11 和第 13 回合翻出车。第 23 回合，红方翻开帅旁的子，翻出的是兵，黑方双车在第 25 回合将死红方。标记是 AB-JChess 的评分，翻子旁的骰子评的是这次翻子的运气。',
   'Jieqi: jqe against AB-JChess, Black mates on move 25':
     '揭棋：jqe 对 AB-JChess，黑方第 25 回合将死',
   'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
@@ -1036,29 +1045,26 @@ const ZH_HANS: Record<string, string> = {
   'Can I look at or flip my own face-down pieces without moving them?':
     '可以不走子，先看或翻开自己的暗子吗？',
   'No. You learn a piece only when it moves, and a reveal is always part of a legal move.':
-    '不可以。棋子走动时才会得知它的身份，翻子必须伴随合法着法。',
+    '不可以。棋子走了才知道是什么，翻子一定连着一步合法的走子。',
   'Both, yes. After revealing, a piece plays by its identity anywhere on the board. Advisors still step one point diagonally and elephants still move two, blocked at the eye.':
-    '都可以。翻明后，棋子在棋盘任何位置都按真实身份行棋。士仍然斜走一点，象仍然走田字，象眼有子就不能走。',
+    '都可以。翻开后，棋子在棋盘任何地方都按真实身份走。士仍然斜走一步，象仍然走田字，塞象眼就不能走。',
   'Is stalemate a draw in jieqi?': '揭棋困毙算和棋吗？',
   'No. The player with no legal move loses, even when their general is not in check.':
-    '不算。没有合法着法的一方判负，即使将帅没有被将军。',
+    '不算。无棋可走的一方判负，即使将帅没有被将军。',
   'Here. Play a bot starts a game at the level you choose; Play a friend makes an invite link. No account is needed, and finished games get a move-by-move review.':
     '就在这里。“与电脑对弈”按你选的等级开局；“和朋友下”生成邀请链接。无需账号，结束的对局可以逐步复盘。',
-  'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
-    '八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
+  'Play it here in English with no account. The bots never see your face-down pieces, every finished game gets a move-by-move review, and above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
+    '在这里下揭棋无需账号。电脑永远看不到你的暗子，每盘结束的对局都有逐步复盘；八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
+  'About jieqi': '关于揭棋',
+  "**It began in Guangzhou in the 1980s,** by [Chinese Wikipedia's account](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B), when two brothers brought the hidden pieces of a military board game into xiangqi. It spread through Guangdong, Hong Kong and Macau.":
+    '**揭棋起源于 1980 年代的广州。** 据[中文维基百科](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B)记载，两兄弟把海陆空棋的暗子玩法带进了象棋。之后它在广东、香港和澳门流行开来。',
+  '**The first tournament with standard rules was in Hong Kong in May 2011**, with more than 60 players. The first online one followed in 2014.':
+    '**第一场统一规则的比赛于 2011 年 5 月在香港举行**，有 60 多名棋手参加。第一场网上比赛在 2014 年。',
+  "**Today it is a built-in mode in China's biggest xiangqi apps**, and it is spreading in Vietnam, where it is called Cờ úp.":
+    '**如今，中国最大的几款象棋应用都内置了揭棋模式**，它在越南也在流行，越南叫 Cờ úp。',
   'Play a bot': '与电脑对弈',
-  'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.':
-    '示例对局换成了新的一盘，每步棋都由 AB-JChess 评分，并评估了每次翻子的运气。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想学揭棋的玩家，无论是否下过象棋。',
-  'START: RED AT THE BOTTOM': '开局：红方在下',
-  'BEFORE: HORSE POINT b1': '翻前：b1 马位',
-  'AFTER: ADVISOR ON c3': '翻后：c3 士',
-  'BEFORE: CANNON POINT b3': '翻前：b3 炮位',
-  'AFTER: SOLDIER ON b10': '翻后：b10 兵',
-  'REVEALED ADVISOR: c3 TO d4': '明士：c3 到 d4',
-  'REVEALED ELEPHANT: a5 TO c7': '明象：a5 到 c7',
-  'CORNER REVEAL: SOLDIER ON a3': '角位翻子：a3 兵',
 
   // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
   'Gomoku Rules': '五子棋规则',
@@ -8332,75 +8338,84 @@ const ZH_HANT: Record<string, string> = {
     '下面是 Mistboard 上的一盤棋：紅士捉黑車，黑車只有一個空格可走，兩顆子就在兩格之間來回走。',
   'The advisor has chased three times. Its next chase would bring this position round a third time, so the rule removes it, and the cross marks the step it can no longer take. The dots mark the steps it still has, and the game goes on.':
     '士已經捉了三次。再捉一次，這個局面就會第三次出現，所以規則禁止這一步，叉號標出它不能再走的那一格。圓點標出它還能走的格子，棋局繼續。',
-  // Expanded jieqi rules (2026-11-05). After the spread, or Simplified overwrites it.
-  'A face-down piece makes its first move using the role of its starting point, then reveals to both players.':
-    '暗子的第一步按所在起始位置的棋子走法行棋，走完便向雙方翻明。',
-  'After revealing, it uses its own moves. Advisors can leave the palace and elephants can cross the river.':
-    '翻明後按自身走法行棋。士可以出九宮，象可以過河。',
-  'Checkmate wins. Leaving your opponent with no legal move also wins, even without check.':
-    '將死對手即獲勝。讓對手無合法著法也獲勝，即使沒有將軍。',
-  'Jieqi, also called Reveal Xiangqi, is xiangqi with shuffled, hidden pieces. You can see where every piece stands and which side it belongs to. Only the generals start face-up. You learn the identity of one of your other pieces by moving it. Red moves first.':
-    '揭棋是在象棋基礎上把棋子打亂並蓋住的玩法。每枚棋子的位置和所屬一方都看得見。開局只有將帥明置，其餘己方棋子要走過一步才能得知身分。紅方先行。',
-  'Pieces stand on points where the lines meet. Red starts at the bottom of the diagrams and moves toward the top. Black moves toward the bottom. The river divides the board across the middle. Each general stays inside its own palace, the area marked with diagonal lines.':
-    '棋子放在線與線相交的點上。圖中紅方從下方向上行進，黑方向下行進。河界橫貫棋盤中央，將雙方隔開。雙方將帥都必須留在各自的九宮內，也就是畫有斜線的區域。',
-  "Set each general face-up at the centre of its back rank. Shuffle each side's other fifteen pieces separately and deal them face-down onto its remaining starting points. Each side has two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. Neither player knows the hidden identities, including their own. Face-down pieces are often called dark pieces.":
-    '將帥明置於各自底線的中央。雙方各自把其餘十五枚棋子洗勻，背面朝上放到己方其餘起始位置。每方有兩士、兩象、兩馬、兩車、兩砲和五兵。雙方都不知道暗子的身分，連自己的也不知道。背面朝上的棋子通常稱為暗子。',
-  'The generals are face-up. Every plain disc is a face-down piece, red-brown for Red and green for Black. The deal changes identities, while the starting points stay the same.':
-    '將帥明置。沒有字的圓片都是暗子，紅棕色代表紅方，綠色代表黑方。每次洗牌改變的是棋子身分，起始位置不變。',
-  'The coordinates in these examples name points. Files run from a on the left to i on the right, as Red sees them. Ranks run from 1 at the bottom to 10 at the top. So b1 is a horse starting point beside the left corner; e4 is the central soldier starting point.':
-    '這些例子用座標表示交叉點。從紅方視角看，縱線由左至右標為 a 到 i，橫線由下至上標為 1 到 10。因此 b1 是左下角旁的馬位，e4 是中央兵的起始位置。',
+  // jieqi rules page, re-cut 2026-11-27. After the spread, or Simplified overwrites it.
+  // Machine-drafted in plain short Chinese, not native-reviewed.
+  'The rules are shorter, set out as lists beside the diagrams, with a new board showing how each face-down piece makes its first move.':
+    '規則改短了，改成配圖的重點，並新增一張圖，說明每顆暗子第一步怎麼走。',
+  'Every piece but the general starts face-down and makes its first move as the piece whose point it starts on.':
+    '除將帥外，所有棋子開局都是暗子。暗子第一步按所在位置原本的棋子走。',
+  'That move turns it face-up, and from then on it plays as itself. Advisors may leave the palace and elephants may cross the river.':
+    '走完這一步就翻開，之後按真實身分走。士可以出九宮，象可以過河。',
+  'Checkmate wins, and so does leaving your opponent with no legal move.':
+    '將死對方獲勝，讓對方無棋可走也獲勝。',
+  'Jieqi, also called Reveal Xiangqi, is xiangqi played with the pieces shuffled face-down. You can see where every piece stands and whose it is, but not what it is until it moves. Red moves first.':
+    '揭棋就是把棋子打亂、背面朝上來下的象棋。每顆子在哪裡、是哪一方的，都看得見；它是什麼子，要等它走了才知道。紅方先走。',
+  'WHAT YOU SEE': '你看到的',
+  'WHAT EACH POINT MOVES AS': '每個位置怎麼走',
+  '**The generals start face-up** in the centre of each back rank.':
+    '**將帥開局是明子**，擺在各自底線正中。',
+  "**Each side's other 15 pieces are shuffled face-down** onto that side's usual starting points. Nobody knows which is which, not even their owner.":
+    '**雙方其餘 15 顆子各自打亂，背面朝上**，擺在本方原來的起始位置。誰也不知道哪顆是哪顆，自己的也不知道。',
+  '**A face-down piece moves as the piece that starts on its point** in xiangqi, shown on the right. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move.':
+    '**暗子按象棋裡這個位置原本的棋子走**，見右圖。[象棋規則](/rules/xiangqi#the-pieces)畫出了每種走法。',
   'How a face-down piece moves': '暗子怎麼走',
-  'A face-down piece moves, attacks, and captures as the piece that normally starts on its point. The corners use chariot moves. Beside them are horse points, then elephant points, then advisor points beside the general. The two pieces set forward behind the soldiers use cannon moves. The front line uses soldier moves. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move on its own board.':
-    '暗子按正常象棋中該起始位置的棋子走法移動、攻擊和吃子。兩角按車走；向內依次是馬位、象位，再是將帥旁的士位。前置於兵線後方的兩枚棋子按砲走，最前排按兵走。[象棋規則](/rules/xiangqi#the-pieces)為每種走法分別配有棋盤圖解。',
-  'You move and reveal as a single turn. There is no separate turn for flipping a piece in place. Its hidden identity cannot change the path of this first move: the piece on b1 must make a horse move even if it will turn out to be a cannon or an advisor.':
-    '走子和翻子在同一回合完成，不能專用一個回合原地翻子。暗子的真實身分不影響第一步的路線：b1 上的棋子必須按馬走，即使翻出來是砲或士。',
-  'Red moves b1 to c3 as a horse, which needs b2 empty. It lands and reveals as an advisor. The horse move from b1 to d2 is blocked by the piece on c1.':
-    '紅方按馬的走法從 b1 走到 c3，前提是 b2 無子。落定後翻出一枚士。b1 到 d2 的另一條馬路則被 c1 上的棋子蹩住了馬腿。',
-  'Both players see the identity when the piece lands, and from then on it moves and attacks as that piece.':
-    '棋子落定時，雙方都會看見它的身分，此後它便按自身身分移動和攻擊。',
-  'A cannon capture can reveal a soldier': '按砲吃子後可能翻出兵',
-  'A cannon captures by jumping over exactly one piece, and a face-down piece on a cannon point does the same. At the start, Red can play b3 to b10 by jumping over the black piece on b8, which stays where it is.':
-    '砲吃子時必須恰好隔一枚棋子，砲位上的暗子也一樣。開局時，紅方可以從 b3 走到 b10，跳過 b8 上的黑子吃子；b8 上的黑子留在原處。',
-  'The piece makes a cannon capture over b8, then reveals as a soldier. Red learns the captured identity. Black sees its face-down piece leave the board.':
-    '這枚棋子隔著 b8 按砲吃子，隨後翻出一枚兵。紅方得知被吃暗子的身分，黑方只看見自己的暗子離開棋盤。',
-  'The revealed soldier has already crossed the river, so from b10 it can step sideways, but it cannot go back to b9.':
-    '翻出的兵已經過河，所以可以從 b10 橫走，但不能退回 b9。',
-  'Revealed pieces use their own moves': '翻明後按自身走法行棋',
-  'A revealed advisor may leave the palace. A revealed elephant may cross the river. Their movement shapes stay the same: an advisor moves one point diagonally, and an elephant moves two diagonally, with the point between, called the eye, empty. The general always stays inside its own palace.':
-    '翻明的士可以出九宮，翻明的象可以過河。走法形狀不變：士斜走一點，象斜走兩點，中間的象眼必須無子。將帥始終不能離開己方九宮。',
-  'After the b1 to c3 reveal and a Black reply, the advisor can step from c3 to d4. It can continue playing outside the palace.':
-    'b1 到 c3 翻出士，黑方應一手後，這枚士可以從 c3 走到 d4。它可以繼續在九宮外行棋。',
-  'A different deal puts an elephant under a4. Red moves it to a5 as a soldier. After Black replies, the elephant can capture on c7 across the river because b6, its eye, is clear.':
-    '另一種暗子佈局在 a4 放了一枚象。紅方先按兵的走法把它走到 a5。黑方應一手後，這枚象可以過河吃掉 c7 上的棋子，因為象眼 b6 無子。',
-  'A soldier follows its river rule from wherever it reveals, so a corner reveal can leave you with a soldier far behind your front line.':
-    '兵無論在哪裡翻明，都按所在位置遵守過河規則，所以角位翻出的兵可能遠遠落在己方前線後面。',
-  'Red can slide the dark piece from a1 to a3 as a chariot. Here it reveals as a soldier. It will have to advance as a soldier on later turns; its own piece on a4 currently blocks it.':
-    '紅方可以按車的走法把 a1 的暗子直走到 a3。這裡翻出的是兵。後續回合它必須按兵的走法前進，目前 a4 上的己方棋子擋住了它。',
-  'If a piece is captured face-down, only its capturer learns its identity. Its former owner and spectators see a dark piece leave the board and nothing else. The capturer can then rule that identity out among the pieces still hidden. If the piece had already revealed, everyone already knew what was taken. The piece that made the capture reveals to both players either way.':
-    '暗子被吃時，只有吃子方得知它的身分。原主人和觀眾只能看見一枚暗子離開棋盤，得不到其他資訊。吃子方由此可以在其餘暗子中排除這一身分。如果被吃的棋子已經翻明，大家本來就知道吃掉了什麼。無論哪種情況，執行吃子的棋子都會向雙方翻明。',
+  'MOVES AS A HORSE': '按馬走',
+  'TURNS OVER: AN ADVISOR': '翻開：是士',
+  '**Its first move is its point’s move.** The piece on a horse point makes a horse move, whatever it turns out to be.':
+    '**第一步按所在位置走。**馬位上的暗子走馬步，不管翻出來是什麼。',
+  '**It turns face-up where it lands**, for both players to see. Moving and turning over is one turn; you cannot flip a piece in place.':
+    '**走到哪裡就在哪裡翻開**，雙方都看得見。走子和翻開是同一步，不能原地翻子。',
+  'CAPTURES AS A CANNON': '按砲吃子',
+  'TURNS OVER: A SOLDIER': '翻開：是兵',
+  '**Captures work the same way.** A piece on a cannon point captures by jumping one piece, as a cannon does.':
+    '**吃子也一樣。**砲位上的暗子要隔一顆子吃，和砲一樣。',
+  'Revealed pieces use their own moves': '翻開後按自己的走法',
+  'ADVISOR OUT OF THE PALACE': '士出九宮',
+  'ELEPHANT ACROSS THE RIVER': '象過河',
+  '**Advisors may leave the palace**, still one point diagonally.':
+    '**士可以出九宮**，仍然斜走一步。',
+  '**Elephants may cross the river**, still two points diagonally, blocked when the point between them is taken.':
+    '**象可以過河**，仍然走田字，塞象眼就不能走。',
+  '**The general never leaves its palace.**': '**將帥始終不出九宮。**',
+  'MOVES AS A CHARIOT': '按車走',
+  'A SOLDIER FROM THE CORNER': '角上翻出兵',
+  '**A soldier keeps its river rule wherever it turns over.** This one moved from the corner as a chariot, and now it can only step forward.':
+    '**兵不管在哪裡翻出，都照樣守過河的規矩。**這顆子從角上按車走出來，翻出是兵，現在只能往前走。',
+  '**Only the capturer learns what a face-down piece was.** Its owner and spectators see a dark piece leave the board.':
+    '**暗子被吃，只有吃子的一方知道它是什麼。**它的主人和觀眾只看到一顆暗子離開棋盤。',
+  '**A face-down piece that captures turns over** for both players, as on any move.':
+    '**暗子吃子後也會翻開**，雙方都看得見，和平常走子一樣。',
   'Check, checkmate, and draws': '將軍、將死與和棋',
-  'A general is in check when an enemy piece attacks its point. A face-down enemy piece attacks using its starting-point role. A piece that has just moved attacks using its revealed identity, so you must look again after every reveal.':
-    '敵子攻擊將帥所在的點時，就是將軍。敵方暗子按起始位置的身分攻擊，剛走過一步的棋子則按翻明後的身分攻擊，所以每次翻子後都要重新看清局面。',
-  'You must answer check on your turn, and a move that leaves your own general attacked is illegal. The generals also cannot face each other along a clear file. Any piece, including a face-down one, can block that file.':
-    '被將軍時，輪到你必須應將；走完後仍讓己方將帥受攻擊的著法不合法。將帥也不能在同一條無子阻隔的縱線上照面。任何棋子都可以隔開這條線，暗子也可以。',
-  'Position or event': '局面或事件',
-  'Result on Mistboard': 'Mistboard 的判定',
-  'The player to move is in check and has no legal move.': '輪到行棋的一方被將軍，且無合法著法。',
-  'Checkmate. That player loses.': '將死，該方判負。',
-  'The player to move has no legal move, even without check.':
-    '輪到行棋的一方無合法著法，即使沒有被將軍。',
-  'Stalemate. That player loses.': '困斃，該方判負。',
-  '80 plies pass without a capture.': '連續 80 個半回合沒有吃子。',
-  'Draw. A ply is one move by one player, so this is 40 moves by each side. Revealing a piece alone does not reset the count.':
-    '和棋。半回合指一方走一步，所以相當於雙方各走 40 步。單純翻子不會重設計數。',
-  'The same position with the same side to move occurs for the third time.':
-    '同一局面第三次出現，且輪到同一方行棋。',
-  'A player who checked on every one of their turns in the repeating cycle loses. If nobody gave check in the cycle and only one player chased on every one of their turns, that player loses. Anything else is a draw.':
-    '重複循環中，每一步都將軍的一方判負。若循環中沒有任何將軍，且只有一方每一步都捉子，則該方判負。其餘情況判和。',
-  'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.':
-    '捉子是指新攻擊對方的一個棋子，而且每次攻擊的都是同一個。將帥和兵卒不算捉子，將帥以及未過河的兵卒也不算被捉。攻擊有保護的棋子不算捉子，攻擊能反吃回來的同種棋子也不算。馬或炮攻擊車，或士、象攻擊車、馬、炮，即使對方有保護也算捉子。在這次更新之前開始的對局仍按舊規則：只有長將判負，無吃子判和要到雙方各走 60 步。',
-  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.':
-    'jqe 執紅對 AB-JChess，選自雙方十月的 600 盤對抗。這張棋盤的黑方在下。紅方在前 11 回合吃掉六枚棋子，但黑方有兩枚暗子在第 11 和第 13 回合翻出車，局勢轉向黑方。第 17 回合雙方各失誤一次。第 23 回合紅方翻開帥旁的棋子，翻出的是兵，黑方的雙車在第 25 回合將死紅方。標記和變著是 AB-JChess 對這盤棋的解讀，翻子旁的骰子評估這次翻子的運氣。',
+  '**A face-down piece never gives check.** No starting point reaches the enemy palace. The move that turns it over can check, as the piece it turns out to be.':
+    '**暗子不會將軍。**沒有哪個起始位置能攻到對方九宮。但翻開的那一步可以將軍，按翻出的棋子算。',
+  '**Answer every check.** A move that leaves your general attacked is illegal.':
+    '**被將軍必須應將。**走完後己方將帥仍被攻擊，這步棋不合法。',
+  '**The generals may not face each other** on an open file. Any piece blocks it, face-down ones included.':
+    '**將帥不能照面**：同一條直線上中間要有子隔開，暗子也算。',
+  'You have no legal move and are in check': '你無棋可走，且被將軍',
+  'Checkmate: you lose.': '將死：你輸。',
+  'You have no legal move and are not in check': '你無棋可走，但沒被將軍',
+  'Stalemate: you lose too.': '困斃：你也輸。',
+  '80 plies (40 moves each) pass without a capture': '連續 80 個半回合（雙方各 40 步）沒有吃子',
+  'Draw. A reveal alone does not reset the count.': '和棋。只翻子不吃子，不會重新計數。',
+  'The same position, with the same side to move, comes a third time':
+    '同一局面第三次出現，且輪到同一方走',
+  'Whoever checked on every turn of the cycle loses. Otherwise, if one player alone chased on every turn, that player loses. Anything else is a draw.':
+    '循環中每步都將軍（長將）的一方判負。否則，若只有一方每步都捉子（長捉），該方判負。其餘情況判和。',
+  'What counts as a chase': '什麼算捉子',
+  '**A chase newly attacks an enemy piece**, the same piece every time.':
+    '**捉子就是新攻擊對方一顆子**，而且每次都是同一顆。',
+  '**It does not count against a protected piece**, or against a piece of the same kind that could take back.':
+    '**攻擊有保護的子不算捉**，攻擊能吃回來的同種子也不算。',
+  '**Except:** a horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected.':
+    '**例外：**馬、砲攻擊車，或士、象攻擊車、馬、砲，即使對方有保護也算捉。',
+  '**Generals and soldiers never chase.** A general, or a soldier that has not crossed the river, cannot be chased.':
+    '**將帥和兵卒不算捉子。**將帥和沒過河的兵卒也不算被捉。',
+  'Older games': '舊對局',
+  'A game started under the older rule keeps it: only perpetual check lost, and the no-capture draw came after 60 moves each.':
+    '按舊規則開始的對局仍用舊規則：只有長將判負，雙方各走 60 步沒有吃子才判和。',
+  'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks are AB-JChess’s grades, and the die beside a turned-over piece grades its luck.':
+    'jqe 執紅對 AB-JChess，選自雙方十月的 600 盤對抗。這張棋盤黑方在下。紅方前 11 回合吃掉六顆子，但黑方有兩顆暗子在第 11 和第 13 回合翻出車。第 23 回合，紅方翻開帥旁的子，翻出的是兵，黑方雙車在第 25 回合將死紅方。標記是 AB-JChess 的評分，翻子旁的骰子評的是這次翻子的運氣。',
   'Jieqi: jqe against AB-JChess, Black mates on move 25':
     '揭棋：jqe 對 AB-JChess，黑方第 25 回合將死',
   'For more good games, [the match write-up](/blog/ab-jchess-vs-jqe) goes through six more, and [Fourteen wins against our jieqi bot](/blog/jieqi-bot-wins) shows how players have beaten it.':
@@ -8408,29 +8423,26 @@ const ZH_HANT: Record<string, string> = {
   'Can I look at or flip my own face-down pieces without moving them?':
     '可以不走子，先看或翻開自己的暗子嗎？',
   'No. You learn a piece only when it moves, and a reveal is always part of a legal move.':
-    '不可以。棋子走動時才會得知它的身分，翻子必須伴隨合法著法。',
+    '不可以。棋子走了才知道是什麼，翻子一定連著一步合法的走子。',
   'Both, yes. After revealing, a piece plays by its identity anywhere on the board. Advisors still step one point diagonally and elephants still move two, blocked at the eye.':
-    '都可以。翻明後，棋子在棋盤任何位置都按真實身分行棋。士仍然斜走一點，象仍然走田字，象眼有子就不能走。',
+    '都可以。翻開後，棋子在棋盤任何地方都按真實身分走。士仍然斜走一步，象仍然走田字，塞象眼就不能走。',
   'Is stalemate a draw in jieqi?': '揭棋困斃算和棋嗎？',
   'No. The player with no legal move loses, even when their general is not in check.':
-    '不算。沒有合法著法的一方判負，即使將帥沒有被將軍。',
+    '不算。無棋可走的一方判負，即使將帥沒有被將軍。',
   'Here. Play a bot starts a game at the level you choose; Play a friend makes an invite link. No account is needed, and finished games get a move-by-move review.':
     '就在這裡。「與電腦對弈」按你選的等級開局；「和朋友下」產生邀請連結。無需帳號，結束的對局可以逐步覆盤。',
-  'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
-    '八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
+  'Play it here in English with no account. The bots never see your face-down pieces, every finished game gets a move-by-move review, and above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
+    '在這裡下揭棋無需帳號。電腦永遠看不到你的暗子，每盤結束的對局都有逐步覆盤；八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
+  'About jieqi': '關於揭棋',
+  "**It began in Guangzhou in the 1980s,** by [Chinese Wikipedia's account](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B), when two brothers brought the hidden pieces of a military board game into xiangqi. It spread through Guangdong, Hong Kong and Macau.":
+    '**揭棋起源於 1980 年代的廣州。** 據[中文維基百科](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B)記載，兩兄弟把海陸空棋的暗子玩法帶進了象棋。之後它在廣東、香港和澳門流行開來。',
+  '**The first tournament with standard rules was in Hong Kong in May 2011**, with more than 60 players. The first online one followed in 2014.':
+    '**第一場統一規則的比賽於 2011 年 5 月在香港舉行**，有 60 多名棋手參加。第一場網上比賽在 2014 年。',
+  "**Today it is a built-in mode in China's biggest xiangqi apps**, and it is spreading in Vietnam, where it is called Cờ úp.":
+    '**如今，中國最大的幾款象棋應用都內建了揭棋模式**，它在越南也在流行，越南叫 Cờ úp。',
   'Play a bot': '與電腦對弈',
-  'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.':
-    '示例對局換成了新的一盤，每步棋都由 AB-JChess 評分，並評估了每次翻子的運氣。',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想學揭棋的玩家，無論是否下過象棋。',
-  'START: RED AT THE BOTTOM': '開局：紅方在下',
-  'BEFORE: HORSE POINT b1': '翻前：b1 馬位',
-  'AFTER: ADVISOR ON c3': '翻後：c3 士',
-  'BEFORE: CANNON POINT b3': '翻前：b3 砲位',
-  'AFTER: SOLDIER ON b10': '翻後：b10 兵',
-  'REVEALED ADVISOR: c3 TO d4': '明士：c3 到 d4',
-  'REVEALED ELEPHANT: a5 TO c7': '明象：a5 到 c7',
-  'CORNER REVEAL: SOLDIER ON a3': '角位翻子：a3 兵',
 
   // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
   'Gomoku Rules': '五子棋規則',

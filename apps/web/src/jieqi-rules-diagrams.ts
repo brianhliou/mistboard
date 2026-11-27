@@ -12,13 +12,24 @@ import {
   type XiangqiPlayerView,
 } from '@mistboard/game';
 import {
+  activeXiangqiPieceSet,
   XQ_BOARD_H,
   XQ_BOARD_W,
+  XQ_START,
   xqBoardSvg,
+  xqCoord,
+  xqPieceDrawSize,
+  xqPieceSize,
+  xqPoint,
   xqStaticView,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import {
+  boardLastMoveMarkersSvg,
+  boardLastMovePiece,
+  boardLastMoveStyleAttr,
+} from './board-lastmove.js';
 import { JIEQI_SAMPLE_GAME } from './jieqi-sample-game.js';
 
 // Move an elephant into a soldier point without changing either side's set.
@@ -64,9 +75,32 @@ export function jieqiRulesStates(deal: JieqiDeal, line: string): JieqiGameState[
   return states;
 }
 
+// The live boards' last-move marks: a wash on the point the piece left and a
+// band around the piece where it landed, drawn under the pieces.
+function lastMoveUnderlay(move: JieqiMove, x: number): string {
+  const at = (square: JieqiSquare) => {
+    const { file, rank } = xqCoord(square);
+    return xqPoint(file, rank, 'red', x, 28);
+  };
+  const size = xqPieceSize();
+  return `<g ${boardLastMoveStyleAttr(size)}>${boardLastMoveMarkersSvg(
+    { from: at(move.from), to: at(move.to) },
+    size,
+    'under',
+    boardLastMovePiece(xqPieceDrawSize(), activeXiangqiPieceSet),
+  )}</g>`;
+}
+
 // The existing article diagram toolkit draws the public board. A hidden role
 // never enters its drawing state, even as an unused value behind a piece back.
-function panel(state: JieqiGameState, label: string, x: number, move?: JieqiMove): string {
+// A board before a move shows it as an arrow; the board after it carries the
+// live boards' last-move marks.
+function panel(
+  state: JieqiGameState,
+  label: string,
+  x: number,
+  move?: { arrow?: JieqiMove; last?: JieqiMove },
+): string {
   const board: XiangqiPlayerView['board'] = {};
   for (const [point, piece] of Object.entries(getJieqiPublicView(state).board)) {
     if (!piece) continue;
@@ -86,35 +120,74 @@ function panel(state: JieqiGameState, label: string, x: number, move?: JieqiMove
     label,
     perspective: 'red',
     shroudedStyle: 'back',
-    arrows: move ? [move] : [],
+    arrows: move?.arrow ? [move.arrow] : [],
+    underlay: move?.last ? lastMoveUnderlay(move.last, x) : '',
   });
 }
 
+// The deal as both players see it, beside the xiangqi start: the piece drawn on
+// each point is the move a face-down piece there makes first.
+export function jieqiRulesStartPair(seeLabel: string, rolesLabel: string): () => string {
+  return () => {
+    const [start] = jieqiRulesStates(JIEQI_RULES_LINES.start.deal, '');
+    return xqSvg(
+      XQ_BOARD_W * 2 + 28,
+      XQ_BOARD_H + 52,
+      [
+        panel(start, seeLabel, 0),
+        xqBoardSvg({
+          state: XQ_START,
+          x: XQ_BOARD_W + 28,
+          y: 0,
+          label: rolesLabel,
+          perspective: 'red',
+        }),
+      ].join(''),
+    );
+  };
+}
+
+function lastOf(example: keyof typeof JIEQI_RULES_LINES): JieqiGameState[] {
+  const { deal, moves } = JIEQI_RULES_LINES[example];
+  return jieqiRulesStates(deal, moves);
+}
+
+/** A face-down piece's move: the board before it with the arrow, and after it. */
 export function jieqiRulesDiagram(
   example: keyof typeof JIEQI_RULES_LINES,
   beforeLabel: string,
-  afterLabel?: string,
+  afterLabel: string,
 ): () => string {
   return () => {
-    const { deal, moves } = JIEQI_RULES_LINES[example];
-    const states = jieqiRulesStates(deal, moves);
+    const states = lastOf(example);
     const last = states[states.length - 1];
     const move = last.lastMove;
-    if (afterLabel) {
-      return xqSvg(
-        XQ_BOARD_W * 2 + 28,
-        XQ_BOARD_H + 52,
-        [
-          panel(states[states.length - 2], beforeLabel, 0, move),
-          panel(last, afterLabel, XQ_BOARD_W + 28, move),
-        ].join(''),
-      );
-    }
     return xqSvg(
-      XQ_BOARD_W,
+      XQ_BOARD_W * 2 + 28,
       XQ_BOARD_H + 52,
-      panel(last, beforeLabel, 0, move),
-      example === 'start' ? 'xq-article-svg--hero' : '',
+      [
+        panel(states[states.length - 2], beforeLabel, 0, { arrow: move }),
+        panel(last, afterLabel, XQ_BOARD_W + 28, { last: move }),
+      ].join(''),
     );
   };
+}
+
+/** Two lines side by side, each board after its last move, at the size of a pair. */
+export function jieqiRulesAfterPair(
+  left: [keyof typeof JIEQI_RULES_LINES, string],
+  right: [keyof typeof JIEQI_RULES_LINES, string],
+): () => string {
+  return () =>
+    xqSvg(
+      XQ_BOARD_W * 2 + 28,
+      XQ_BOARD_H + 52,
+      [left, right]
+        .map(([example, label], index) => {
+          const states = lastOf(example);
+          const last = states[states.length - 1];
+          return panel(last, label, index * (XQ_BOARD_W + 28), { last: last.lastMove });
+        })
+        .join(''),
+    );
 }
