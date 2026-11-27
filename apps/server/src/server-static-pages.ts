@@ -851,6 +851,8 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
 const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
   '/games':
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
+  '/watch':
+    '<main><h1>Watch live games</h1><p>Watch xiangqi (Chinese chess) and variant games on Mistboard as they are played, move by move with both clocks: people against people, people against the bots, and engine matches.</p><ul><li><a href="/games">Current games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
 
 const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;

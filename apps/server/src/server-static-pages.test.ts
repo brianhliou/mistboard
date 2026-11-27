@@ -1174,8 +1174,9 @@ test('serveSpaShellWithRoutePreloads injects hints into the shell head for a kno
     response.body,
     /<link rel="modulepreload" crossorigin href="\/assets\/watch-route-abc\.js"><link rel="modulepreload" crossorigin href="\/assets\/review-shell-def\.js"><\/head>/,
   );
-  // Still the SPA shell: empty mount point, no prerendered markup.
-  assert.match(response.body, /<div id="app"><\/div>/);
+  // Still the SPA shell: the mount point holds only the server's crawler copy,
+  // which the client clears on mount.
+  assert.match(response.body, /<div id="app"><div class="crawler-copy"><main><h1>/);
 });
 
 test('serveSpaShellWithRoutePreloads gives a route with meta its own title and canonical url', async () => {
@@ -2891,6 +2892,26 @@ test('the /games database carries its own route meta and sitemap entry', async (
   });
   assert.doesNotMatch(sitemap.body, /<loc>https:\/\/mistboard\.com\/games<\/loc>/); // No build source date in this fixture.
   assert.doesNotMatch(sitemap.body, /<loc>https:\/\/mistboard\.com\/games\/search<\/loc>/); // Existing content gap.
+});
+
+// /watch reached crawlers as an empty shell with no heading at all.
+test('/watch serves a crawler body with its own h1 inside the protected wrapper', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/watch',
+    publicHost: 'https://mistboard.com',
+  });
+  assert.equal(served, true);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.match(/<h1>/g)?.length, 1);
+  assert.match(response.body, /<div class="crawler-copy"><main><h1>Watch live games<\/h1>/);
+  assert.match(response.body, /<a href="\/broadcast\/xiangqi">/);
+  assert.doesNotMatch(response.body, /noindex/);
+  assert.doesNotMatch(response.body, /—/);
 });
 
 test('the /study index carries its own route meta and sitemap entry', async () => {
