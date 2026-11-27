@@ -34,7 +34,7 @@ export function isDpxqBroadcastBoard(
 // The same test in SQL, for a query that joins `boards` and `tours`. COALESCE
 // keeps a board with no source URL in the result: NOT (NULL) would drop it.
 const HTTP_DPXQ = String.raw`'^https?://([a-z0-9-]+\.)*dpxq\.com(:[0-9]+)?([/?#]|$)'`;
-const DISCOVER_DPXQ = String.raw`'^mistboard-discover://dpxq(-|[/?#]|$)'`;
+const DISCOVER_DPXQ = `'^mistboard-discover://dpxq(-|[/?#]|$)'`;
 
 export const DPXQ_BROADCAST_BOARD_SQL = `COALESCE(
       boards.source_url ~* ${HTTP_DPXQ}

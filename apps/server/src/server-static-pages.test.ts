@@ -7,7 +7,10 @@ import test from 'node:test';
 import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { parseArticleSchedule, resetArticleScheduleCache } from './article-schedule.js';
-import { broadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
+import {
+  broadcastDiscoveryFixture,
+  broadcastSourceFixture,
+} from './broadcast-discovery-test-support.js';
 import { broadcastPageFor } from './broadcast-pages.js';
 import type { TenantGameCardStore } from './og-game-tenant.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
@@ -1797,6 +1800,38 @@ test('unlisted event, round and both live/finished board HTML keeps its content 
     assert.ok(response.body.includes(hidden.name), pathname);
     assert.match(response.body, /<main><p>/, pathname);
   }
+});
+
+test('a board relayed from dpxq is served with noindex, follow in the meta tag and the header', async () => {
+  const { byKey, sources } = broadcastSourceFixture();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-dpxq-broadcast-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf8');
+  const serve = async (pathname: string) => {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      playerPage: async () => null,
+      gameMeta: async () => null,
+      broadcastPage: (path) => broadcastPageFor(path, sources),
+    });
+    return response;
+  };
+  // Planted: one dpxq board by its own URL, one by its tour's discovery URL.
+  for (const key of ['dpxqBoard', 'dpxqTour'] as const) {
+    const response = await serve(`/broadcast/xiangqi/board/${byKey[key].board.id}`);
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow'], key);
+    assert.equal(response.headers['x-robots-tag'], 'noindex, follow', key);
+    assert.match(response.body, /<main>/, key);
+    const event = await serve(`/broadcast/xiangqi/${byKey[key].tour.slug}`);
+    assert.ok(!robotsTags(event.body).some((tag) => tag.includes('noindex')), key);
+    assert.equal(event.headers['x-robots-tag'], undefined, key);
+  }
+  const control = await serve(`/broadcast/xiangqi/board/${byKey.elsewhere.board.id}`);
+  assert.ok(!robotsTags(control.body).some((tag) => tag.includes('noindex')));
+  assert.equal(control.headers['x-robots-tag'], undefined);
 });
 
 // Until 2026-10-17 every URL of sitemap-broadcasts.xml served the empty shell:

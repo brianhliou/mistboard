@@ -28,6 +28,7 @@ import type {
 import { cachedPlayers, playerHref } from './player-pages.js';
 import { escapeHtml } from './study-page-body.js';
 import { roundNumberFromRoundId } from './xiangqi-broadcast-discovery.js';
+import { isDpxqBroadcastBoard } from './xiangqi-broadcast-source-origin.js';
 
 export type BroadcastPageMeta = {
   title: string;
@@ -510,7 +511,9 @@ export async function broadcastPageFor(
           ...(share?.imagePath ? { imagePath: share.imagePath } : {}),
         },
         body: renderBoardBody(board, tour, round, slugOf(await slugs), locale),
-        noindex: !tour?.listed,
+        // A board relayed from dpxq.com opens by link but stays out of the
+        // index; its event and round pages are indexed as usual.
+        noindex: !tour?.listed || isDpxqBroadcastBoard(board, tour),
       };
     }
   }

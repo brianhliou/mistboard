@@ -1301,7 +1301,11 @@ export async function serveSpaShellWithRoutePreloads(params: {
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
   params.response.writeHead(200, {
     'content-type': 'text/html; charset=utf-8',
-    ...(nofollow ? { 'x-robots-tag': 'noindex, nofollow' } : {}),
+    ...(nofollow
+      ? { 'x-robots-tag': 'noindex, nofollow' }
+      : noindex
+        ? { 'x-robots-tag': 'noindex, follow' }
+        : {}),
   });
   params.response.end(html);
   return true;

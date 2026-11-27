@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { XIANGQI_BROADCAST_SCHEMA } from '@mistboard/game';
-import { broadcastDiscoveryFixture } from './broadcast-discovery-test-support.js';
+import {
+  broadcastDiscoveryFixture,
+  broadcastSourceFixture,
+} from './broadcast-discovery-test-support.js';
 import {
   type BroadcastPageSources,
   broadcastPageFor,
@@ -139,6 +142,26 @@ function sources(over: Partial<BroadcastPageSources> = {}): BroadcastPageSources
 const links = (html: string): string[] =>
   [...html.matchAll(/<a href="([^"]+)"/g)].map((m) => m[1]!);
 const h1 = (html: string): string | undefined => /<h1>(.*?)<\/h1>/.exec(html)?.[1];
+
+test('a board relayed from dpxq keeps its content with noindex; its event and round stay indexed', async () => {
+  const { byKey, sources } = broadcastSourceFixture();
+  // Planted: one dpxq board by its own URL, one by its tour's discovery URL.
+  for (const key of ['dpxqBoard', 'dpxqTour'] as const) {
+    const { tour, round, board } = byKey[key];
+    const page = await broadcastPageFor(`/broadcast/xiangqi/board/${board.id}`, sources);
+    assert.equal(page?.noindex, true, key);
+    assert.ok(page?.body && page.meta, key);
+    for (const path of [
+      `/broadcast/xiangqi/${tour.slug}`,
+      `/broadcast/xiangqi/${tour.slug}/round/${round.id}`,
+    ]) {
+      assert.equal((await broadcastPageFor(path, sources))?.noindex, false, path);
+    }
+  }
+  const elsewhere = byKey.elsewhere.board;
+  const control = await broadcastPageFor(`/broadcast/xiangqi/board/${elsewhere.id}`, sources);
+  assert.equal(control?.noindex, false);
+});
 
 test('parseBroadcastRoute: index, tour, round and board; section pages are not tours', () => {
   assert.deepEqual(parseBroadcastRoute('/broadcast/xiangqi'), { kind: 'index' });
