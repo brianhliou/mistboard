@@ -6,8 +6,13 @@ import {
   GAMES_SEARCH_DEFAULT_MIN_PLIES,
   type GameSpecId,
 } from '@mistboard/game';
-import { seedBroadcastDiscoveryFixture } from '../broadcast-discovery-test-support.js';
+import {
+  seedBroadcastDiscoveryFixture,
+  seedBroadcastSourceFixture,
+} from '../broadcast-discovery-test-support.js';
+import { getPool } from '../persistence-db.js';
 import { definePersistenceTests } from '../persistence-test-support.js';
+import { getXiangqiBroadcastBoard } from '../persistence-xiangqi-broadcasts.js';
 import type { HttpApiContext } from './lib.js';
 // The searchable variants derive from the tenant registry (via the watch
 // channels), so the registrations must be populated, as index.ts does.
@@ -29,33 +34,45 @@ import {
   tryHandle,
 } from './historical-xiangqi-games.js';
 
+async function searchBroadcasts(query = ''): Promise<{ status: number; body: string }> {
+  let status = 0;
+  let body = '';
+  const response = {
+    writeHead(code: number) {
+      status = code;
+    },
+    end(chunk: string) {
+      body = chunk;
+    },
+  } as unknown as ServerResponse;
+  const url = new URL(
+    `http://test.local/api/historical-xiangqi/games?source=broadcast&plyMin=0${query}`,
+  );
+  assert.equal(
+    await tryHandle(
+      {} as HttpApiContext,
+      { method: 'GET', headers: {}, socket: {} } as unknown as IncomingMessage,
+      response,
+      url.pathname,
+      url,
+    ),
+    true,
+  );
+  return { status, body };
+}
+
 definePersistenceTests('historical search broadcast discovery', () => {
   test('broadcast search totals and filtered results omit unlisted boards', async () => {
     const { tours, boards } = await seedBroadcastDiscoveryFixture();
+    // The fixture's events were found by dpxq discovery, which the search
+    // leaves out; this case is about listing, so relay the listed one elsewhere.
+    await getPool().query('UPDATE xiangqi_broadcast_tours SET source_url = $2 WHERE slug = $1', [
+      tours[0]!.slug,
+      'https://vietnamchess.vn/databank/xqbase-vietnamchess',
+    ]);
     for (const event of ['', tours[1]!.name]) {
-      let status = 0;
-      let body = '';
-      const response = {
-        writeHead(code: number) {
-          status = code;
-        },
-        end(chunk: string) {
-          body = chunk;
-        },
-      } as unknown as ServerResponse;
-      const url = new URL(
-        'http://test.local/api/historical-xiangqi/games?source=broadcast&plyMin=0',
-      );
-      if (event) url.searchParams.set('event', event);
-      assert.equal(
-        await tryHandle(
-          {} as HttpApiContext,
-          { method: 'GET' } as IncomingMessage,
-          response,
-          url.pathname,
-          url,
-        ),
-        true,
+      const { status, body } = await searchBroadcasts(
+        event ? `&event=${encodeURIComponent(event)}` : '',
       );
       assert.equal(status, 200);
       const page = JSON.parse(body);
@@ -65,6 +82,23 @@ definePersistenceTests('historical search broadcast discovery', () => {
         event ? [] : [boards[0]!.id],
       );
       assert.ok(!body.includes(tours[1]!.slug));
+    }
+  });
+
+  test('boards relayed from dpxq are left out of the search and still open by id', async () => {
+    const { byKey } = await seedBroadcastSourceFixture();
+    const { status, body } = await searchBroadcasts();
+    assert.equal(status, 200);
+    const page = JSON.parse(body);
+    assert.equal(page.total, 1);
+    assert.deepEqual(
+      page.games.map((game: { id: string }) => game.id),
+      [byKey.elsewhere.board.id],
+    );
+    // Planted: one dpxq board by its own URL, one by its tour's discovery URL.
+    for (const key of ['dpxqBoard', 'dpxqTour'] as const) {
+      assert.ok(!body.includes(byKey[key].board.id), key);
+      assert.equal((await getXiangqiBroadcastBoard(byKey[key].board.id))?.id, byKey[key].board.id);
     }
   });
 });

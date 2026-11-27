@@ -544,6 +544,9 @@ async function queryBroadcastXiangqiGames(
     playedTo: filters.playedTo,
     plyMin: filters.plyMin,
     plyMax: filters.plyMax,
+    // Boards relayed from dpxq.com open from their event and round pages but
+    // are not listed in the search.
+    excludeDpxq: true,
     offset,
     limit,
   });
