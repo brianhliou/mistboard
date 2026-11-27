@@ -60,11 +60,11 @@ export const xiangqiArticle: Article = {
           {
             kind: 'list',
             items: [
-              '**Pieces stand on points**, the crossings of the lines: 9 files and 10 ranks.',
+              '**Pieces stand on points**, where the lines cross. The board has 9 files and 10 ranks.',
               "**The river splits the board in half.** Elephants never cross it; soldiers gain a sideways step once they do.",
-              "**The palace is the 3 by 3 box** on each side's back ranks, marked with diagonals. The general and advisors never leave it.",
+              "**The palace is the 3 by 3 box** marked with diagonals on each side's back ranks. The general and advisors never leave it.",
               '**Each side has 16 pieces:** one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.',
-              '**The back rank holds, edge to edge:** chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. The cannons stand two ranks ahead on the b and h files, and the soldiers one rank further on the a, c, e, g and i files.',
+              '**The back rank holds, from edge to edge,** a chariot, horse, elephant, advisor, general, advisor, elephant, horse and chariot. The cannons stand two ranks ahead on the b and h files, and the soldiers one rank further on the a, c, e, g and i files.',
             ],
           },
         ],
@@ -73,10 +73,8 @@ export const xiangqiArticle: Article = {
         heading: 'The pieces',
         blocks: [
           {
-            kind: 'list',
-            items: [
-              '**A piece captures by landing on an enemy piece.** No piece moves through an occupied point, except the cannon when it captures.',
-            ],
+            kind: 'paragraph',
+            text: '**A piece captures by landing on an enemy piece.** No piece moves through an occupied point, except the cannon when it captures.',
           },
           { kind: 'sub-heading', text: 'General' },
           {
@@ -84,20 +82,16 @@ export const xiangqiArticle: Article = {
             svg: XQ_PRIMER_GENERAL_BOARD,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**One point along a line, inside its palace.**',
-            ],
+            kind: 'paragraph',
+            text: '**The general moves one point along a line** and never leaves its palace.',
           },
           {
             kind: 'raw-svg',
             svg: XQ_PRIMER_FACING_PAIR,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**The generals may never face each other** on a file with nothing between them. A move that opens that file is illegal, so a general guards the file in front of it like a chariot.',
-            ],
+            kind: 'paragraph',
+            text: '**The generals may never face each other** on a file with nothing between them. A move that opens that file is illegal, so a general guards the file in front of it like a chariot.',
           },
           { kind: 'sub-heading', text: 'Advisor' },
           {
@@ -105,10 +99,8 @@ export const xiangqiArticle: Article = {
             svg: XQ_PRIMER_ADVISOR_BOARD,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**One point diagonally, inside its palace.** It has only five points to stand on.',
-            ],
+            kind: 'paragraph',
+            text: '**The advisor moves one point diagonally** and never leaves its palace, so it has only five points to stand on.',
           },
           { kind: 'sub-heading', text: 'Elephant' },
           {
@@ -116,11 +108,8 @@ export const xiangqiArticle: Article = {
             svg: XQ_PRIMER_ELEPHANT_PAIR,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**Exactly two points diagonally, never across the river.** It has seven points on its own half.',
-              "**A piece on the point between blocks it.** That point is the elephant's eye.",
-            ],
+            kind: 'paragraph',
+            text: "**The elephant moves exactly two points diagonally** and never crosses the river, so it has seven points on its own half. A piece on the point in between blocks the move; that point is called the elephant's eye.",
           },
           { kind: 'sub-heading', text: 'Horse' },
           {
@@ -128,20 +117,16 @@ export const xiangqiArticle: Article = {
             svg: xiangqiRulesDiagram('horse', 'A HORSE MOVE', 'THE HORSE ON C3'),
           },
           {
-            kind: 'list',
-            items: [
-              '**One point along a line, then one diagonally outward.** It moves like a chess knight (the closest chess piece) but does not jump.',
-            ],
+            kind: 'paragraph',
+            text: '**The horse moves one point along a line, then one point diagonally outward.** It moves like a chess knight, but it cannot jump.',
           },
           {
             kind: 'raw-svg',
             svg: XQ_PRIMER_HORSE_PAIR,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              "**A piece on the first point blocks that move.** That point is the horse's leg. From its starting point, the elephant beside it blocks the horse's way toward the centre.",
-            ],
+            kind: 'paragraph',
+            text: "**A piece on the first point blocks that move.** That point is called the horse's leg. At the start, the elephant beside each horse blocks its way toward the centre.",
           },
           { kind: 'sub-heading', text: 'Chariot' },
           {
@@ -149,10 +134,8 @@ export const xiangqiArticle: Article = {
             svg: XQ_PRIMER_CHARIOT_BOARD,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**Any distance along a line**, like a chess rook. It is the strongest piece on the board.',
-            ],
+            kind: 'paragraph',
+            text: '**The chariot moves any distance along a line**, like a chess rook. It is the strongest piece on the board.',
           },
           { kind: 'sub-heading', text: 'Cannon' },
           {
@@ -160,20 +143,16 @@ export const xiangqiArticle: Article = {
             svg: XQ_PRIMER_CANNON_PAIR,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**Moves like a chariot when it is not capturing.**',
-            ],
+            kind: 'paragraph',
+            text: '**The cannon moves like a chariot when it is not capturing.**',
           },
           {
             kind: 'raw-svg',
             svg: xiangqiRulesDiagram('cannon', 'CAPTURES BY JUMPING', 'THE CANNON TAKES A HORSE'),
           },
           {
-            kind: 'list',
-            items: [
-              '**To capture, it jumps exactly one piece**, of either colour, and lands on the enemy piece beyond. The piece it jumps is the screen. Here the cannon jumps the black cannon and takes the horse behind it.',
-            ],
+            kind: 'paragraph',
+            text: '**To capture, the cannon jumps exactly one piece**, of either colour, and lands on the enemy piece beyond it. The piece it jumps is called the screen. Here the red cannon jumps the black cannon and takes the horse behind it.',
           },
           { kind: 'sub-heading', text: 'Soldier' },
           {
@@ -181,12 +160,8 @@ export const xiangqiArticle: Article = {
             svg: XQ_PRIMER_SOLDIER_PAIR,
           } as ArticleBlock,
           {
-            kind: 'list',
-            items: [
-              '**One point straight forward, never backward.** It captures the same way it moves.',
-              '**Across the river it may also step one point sideways.** On the last rank it can only step sideways.',
-              '**It never promotes.**',
-            ],
+            kind: 'paragraph',
+            text: '**The soldier moves one point straight forward and never backward**, and it captures the same way. Once it crosses the river it may also step one point sideways, and on the last rank it can only step sideways. It never promotes.',
           },
         ],
       },
@@ -194,11 +169,8 @@ export const xiangqiArticle: Article = {
         heading: 'Check, checkmate, and draws',
         blocks: [
           {
-            kind: 'list',
-            items: [
-              '**Answer every check.** A move that leaves your own general attacked is illegal.',
-              '**A general can help mate from the far end of an open file**, because the enemy general may not step onto that file.',
-            ],
+            kind: 'paragraph',
+            text: '**Answer every check.** A move that leaves your own general attacked is illegal. A general can help mate from the far end of an open file, because the enemy general may not step onto that file.',
           },
           {
             kind: 'table',
@@ -228,7 +200,7 @@ export const xiangqiArticle: Article = {
             kind: 'list',
             items: [
               '**Stalemate loses** for the player who cannot move. It is no escape from a lost game.',
-              '**Perpetual check loses** for the side giving it, instead of drawing.',
+              '**Perpetual check loses** for the side giving it, where chess would call it a draw.',
               '**The generals may not face each other**, so a piece standing between them may be pinned there.',
               '**A piece between an enemy cannon and your general** is a screen: the cannon then gives check.',
               '**Horses and elephants can be blocked.** Check the leg and the eye before you plan a move.',
@@ -248,8 +220,8 @@ export const xiangqiArticle: Article = {
           {
             kind: 'list',
             items: [
-              '**Algebraic, the default here outside Chinese:** files a to i from Red\'s left, ranks 1 to 10 from Red\'s side. The central cannon opening is **Che3**.',
-              "**WXF:** files numbered from each player's right. The same move is **C2.5**, cannon on file 2 traverses to file 5.",
+              '**Algebraic notation is the default here outside Chinese.** Files run a to i from Red\'s left and ranks 1 to 10 from Red\'s side, so the central cannon opening is **Che3**.',
+              "**WXF notation** numbers the files from each player's right. The same move is **C2.5**: the cannon on file 2 moves across to file 5.",
               '**Chinese notation** writes the WXF form in characters. The move list setting switches between all three.',
             ],
           },
@@ -288,7 +260,7 @@ export const xiangqiArticle: Article = {
               {
                 question: 'How does each piece move in xiangqi?',
                 answer:
-                  'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is taken. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.',
+                  'The general moves one point along a line and the advisor one point diagonally, both inside the palace. The elephant moves two points diagonally and never crosses the river. The horse moves one point along a line, then one diagonally outward, and is blocked if the first point is taken. The chariot moves any distance along a line. The cannon moves like a chariot but captures by jumping exactly one piece. The soldier moves one point forward, and sideways too once it has crossed the river.',
               },
               {
                 question: 'How big is a xiangqi board, and how many pieces are there?',
