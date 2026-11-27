@@ -108,7 +108,7 @@ describe('Pikafish ceval dispatch', () => {
     expect(pikafishEngineName('fortressxiangqi')).toBeNull();
     expect(cevalEngineName('xiangqi')).toBe('Pikafish');
     expect(cevalEngineName('fortressxiangqi')).toBe('Fairy-Stockfish');
-    expect(cevalEngineName('jieqi')).toBe('PikaJieQi');
+    expect(cevalEngineName('jieqi')).toBe('AB-JChess');
   });
 
   it('constructs the dedicated backend without loading a worker', () => {

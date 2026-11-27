@@ -362,7 +362,9 @@ describe('createEnginePanel run-time engine identity (#800)', () => {
       panel.setPosition([], 'public w - 0 1');
       panel.setOn(true);
       await vi.advanceTimersByTimeAsync(151);
-      expect(panel.el.querySelector('.engine-panel__name')?.textContent).toBe('PikaJieQi');
+      expect(panel.el.querySelector('.engine-panel__name')?.textContent).toBe(
+        ceval.cevalEngineName('jieqi'),
+      );
       expect(multiPvRow(panel)?.hidden).toBe(false);
       expect(setEval).toHaveBeenLastCalledWith(409, null, undefined);
     } finally {

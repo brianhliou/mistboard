@@ -1,6 +1,6 @@
 // Client-side Jieqi analysis on AB-JChess (by Huorongrong and Laoxu (Kouza)),
 // the engine the server grades jieqi games with, compiled to WebAssembly (#800).
-// Behind abjchessCevalEnabled(); PikaJieQi stays the default and the fallback.
+// The jieqi default since 2026-11-27 (abjchessCevalEnabled()); PikaJieQi is the fallback.
 //
 // One persistent UCI session in a dedicated worker. The build is the pthreads
 // one (public/engine/ab-jchess/README.md): the jieqi panel already requires

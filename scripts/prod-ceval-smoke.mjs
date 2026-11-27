@@ -25,10 +25,11 @@
 //           Chrome blocks the load (net::ERR_BLOCKED_BY_RESPONSE) - the exact
 //           class that broke FSF on 2026-07-06. A header preflight asserts
 //           this before the browser run so the failure names the real cause.
-//   pika  - PikaJieQi pthread wasm on /analysis/jieqi. This exercises the
-//           redacted Jieqi FEN, persistent UCI worker, and streaming MultiPV.
-//   abjchess - AB-JChess pthread wasm on /analysis/jieqi?engine=abjchess, the
-//           flagged jieqi backend (#800). Not part of `all` while it is flagged.
+//   pika  - PikaJieQi pthread wasm on /analysis/jieqi?engine=pikajieqi, the
+//           jieqi fallback. This exercises the redacted Jieqi FEN, persistent
+//           UCI worker, and streaming MultiPV.
+//   abjchess - AB-JChess pthread wasm on /analysis/jieqi, the default jieqi
+//           backend since 2026-11-27 (#800).
 //
 // Each check: load the page, mount the board/panel, toggle the engine on, and
 // wait for a real eval + at least one PV line. Fails on engine console errors.
@@ -71,9 +72,7 @@ try {
   if (backend === 'pika' || backend === 'all') {
     await runCheck('pika', () => checkPika(browser));
   }
-  // Opt-in only while AB-JChess is behind its flag (#800): `all` stays the
-  // default backends.
-  if (backend === 'abjchess') {
+  if (backend === 'abjchess' || backend === 'all') {
     await runCheck('abjchess', () => checkAbjchess(browser));
   }
 } finally {
@@ -408,7 +407,7 @@ async function discoverFinishedBanqiGame() {
 async function checkPika(browser) {
   await assertPikaAssetHeaders();
 
-  const url = `${baseUrl}/analysis/jieqi`;
+  const url = `${baseUrl}/analysis/jieqi?engine=pikajieqi`;
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   try {
     const errors = collectErrors(page);
@@ -442,10 +441,10 @@ async function checkPika(browser) {
   }
 }
 
-// ── AB-JChess wasm on the Jieqi analysis board, behind its flag (#800) ───────
-// ?engine=abjchess turns the flag on for this page load. Proves the engine
-// itself answered rather than the PikaJieQi fallback: the panel names it and
-// shows a single line.
+// ── AB-JChess wasm on the Jieqi analysis board (#800) ───────
+// ?engine=abjchess forces it on even in a build that switched it off. Proves
+// the engine itself answered rather than the PikaJieQi fallback: the panel
+// names it and shows a single line.
 async function checkAbjchess(browser) {
   await assertAbjchessAssetHeaders();
 
@@ -486,11 +485,11 @@ async function checkAbjchess(browser) {
 
 function abjchessAssetVersion() {
   const source = readFileSync(
-    new URL('../apps/web/src/review/engine/abjchess-ceval.ts', import.meta.url),
+    new URL('../apps/web/src/engine-credits.ts', import.meta.url),
     'utf8',
   );
   const match = source.match(/ABJCHESS_ENGINE_ASSET_VERSION = '([^']+)'/);
-  if (!match) throw new Error('ABJCHESS_ENGINE_ASSET_VERSION not found in abjchess-ceval.ts');
+  if (!match) throw new Error('ABJCHESS_ENGINE_ASSET_VERSION not found in engine-credits.ts');
   return match[1];
 }
 

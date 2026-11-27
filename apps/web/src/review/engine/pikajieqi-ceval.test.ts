@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cevalEngineName, cevalSupported, createCeval } from './ceval.js';
 import { isPikaJieqiCevalVariant, PikaJieQiCeval, pikaJieqiEngineName } from './pikajieqi-ceval.js';
 
@@ -75,10 +75,16 @@ class FakeWorker {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   FakeWorker.latest = null;
 });
 
 describe('PikaJieQi ceval dispatch', () => {
+  // AB-JChess is the jieqi default (#800); these cover the build that turns it off.
+  beforeEach(() => {
+    vi.stubEnv('VITE_ABJCHESS_CEVAL_ENABLED', 'false');
+  });
+
   it('claims only the jieqi variant', () => {
     expect(isPikaJieqiCevalVariant('jieqi')).toBe(true);
     expect(isPikaJieqiCevalVariant('xiangqi')).toBe(false);

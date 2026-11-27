@@ -644,7 +644,7 @@ describe('AB-JChess flag', () => {
   it('leaves PikaJieQi in place and fetches nothing from /engine/ab-jchess/ with the flag off', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    for (const flag of [undefined, 'false']) {
+    for (const flag of ['false']) {
       vi.stubEnv('VITE_ABJCHESS_CEVAL_ENABLED', flag);
       const { cevalEngineName, createCeval } = await load();
       expect(cevalEngineName('jieqi')).toBe('PikaJieQi');
@@ -659,19 +659,22 @@ describe('AB-JChess flag', () => {
     for (const url of Object.values(ABJCHESS_ASSET_URLS)) expect(urls).not.toContain(url);
   });
 
-  it('uses AB-JChess for jieqi with the flag on, and only for jieqi', async () => {
-    vi.stubEnv('VITE_ABJCHESS_CEVAL_ENABLED', 'true');
-    const { cevalEngineName, createCeval } = await load();
-    expect(cevalEngineName('jieqi')).toBe(ABJCHESS_ENGINE_NAME);
-    expect(cevalEngineName('xiangqi')).not.toBe(ABJCHESS_ENGINE_NAME);
-    const handle = createCeval('jieqi');
-    expect(handle.constructor.name).toBe('AbJchessWithFallback');
-    handle.dispose();
+  it('uses AB-JChess for jieqi by default and with the flag on, and only for jieqi', async () => {
+    for (const flag of [undefined, '', 'true']) {
+      vi.stubEnv('VITE_ABJCHESS_CEVAL_ENABLED', flag);
+      const { cevalEngineName, createCeval } = await load();
+      expect(cevalEngineName('jieqi'), String(flag)).toBe(ABJCHESS_ENGINE_NAME);
+      expect(cevalEngineName('xiangqi')).not.toBe(ABJCHESS_ENGINE_NAME);
+      const handle = createCeval('jieqi');
+      expect(handle.constructor.name).toBe('AbJchessWithFallback');
+      handle.dispose();
+    }
     // Constructing the handle loads nothing; the worker starts on preload.
     expect(FakeWorker.all).toEqual([]);
   });
 
   it('follows ?engine= over the build flag', async () => {
+    vi.stubEnv('VITE_ABJCHESS_CEVAL_ENABLED', 'false');
     window.history.replaceState(null, '', '/review/x?engine=abjchess');
     let mod = await load();
     expect(mod.cevalEngineName('jieqi')).toBe(ABJCHESS_ENGINE_NAME);
