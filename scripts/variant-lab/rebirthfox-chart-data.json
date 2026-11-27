@@ -1,0 +1,777 @@
+{
+  "_about": "Chart data for the four rebirthfox studies, as applied to prod on 2026-11-23: each chapter scoreSeries (study:edit series op) and, for banqi and jieqi, the per-move decisions for scripts/study-chapter-decisions.mjs. Values are exactly mainline plies + 1. Read by rebirthfox-annotated-studies.ts.",
+  "fog": {
+    "scoreSeries": {
+      "side": "red",
+      "series": [
+        {
+          "name": "Engine",
+          "color": "a",
+          "values": [
+            0.5193, 0.4505, 0.5349, 0.4541, 0.6794, 0.5523, 0.6714, 0.5668, 0.5785, 0.4917, 0.5404,
+            0.1422, 0.1378, 0.145, 0.1431, 0.1391, 0.1396, 0.0976, 0.0954, 0.0834, 0.0904, 0.0814,
+            0.0793, 0.0812, 0.0871, 0.0741, 0.0728, 0.0708, 0.0566, 0.0461, 0.0464, 0.0524, 0.0458,
+            0.0498, 0.0508, 0.0514, 0.0545, 0.0494, 0.0503, 0.0487, 0.0466, 0.0057, 0.0492, 0.0009,
+            0.0013, 0.0013, 0.0362, 0, 0
+          ]
+        }
+      ]
+    }
+  },
+  "jieqi": {
+    "scoreSeries": {
+      "side": "red",
+      "series": [
+        {
+          "name": "Engine",
+          "color": "a",
+          "values": [
+            0.5423, 0.5013, 0.5067, 0.4511, 0.5235, 0.5509, 0.7237, 0.6926, 0.7746, 0.7296, 0.6932,
+            0.5529, 0.5476, 0.5081, 0.6282, 0.627, 0.5128, 0.5336, 0.5774, 0.5356, 0.6332, 0.5329,
+            0.6338, 0.6263, 0.656, 0.6536, 0.7359, 0.7798, 0.4246, 0.4187, 0.4718, 0.4765, 0.5622,
+            0.5898, 0.5976, 0.4457, 0.5, 0.4987, 0.5892, 0.5013, 0.5924, 0.5, 0.502, 0.4524, 0.8851,
+            0.884, 0.9, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364,
+            0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9364, 0.9954, 1
+          ]
+        }
+      ]
+    },
+    "decisions": {
+      "engineId": "jieqi AB-JChess-20261031@efc83867",
+      "source": "offline reanalysis, 20M nodes a position",
+      "decisions": [
+        {
+          "ply": 1,
+          "mover": "red",
+          "playedWin": 53,
+          "realizedWin": 50.1
+        },
+        {
+          "ply": 2,
+          "mover": "black",
+          "playedWin": 47.6,
+          "realizedWin": 49.3
+        },
+        {
+          "ply": 3,
+          "mover": "red",
+          "playedWin": 50.5,
+          "realizedWin": 45.1
+        },
+        {
+          "ply": 4,
+          "mover": "black",
+          "playedWin": 54.9,
+          "realizedWin": 47.6
+        },
+        {
+          "ply": 5,
+          "mover": "red",
+          "playedWin": 51.5,
+          "realizedWin": 55.1
+        },
+        {
+          "ply": 6,
+          "mover": "black",
+          "playedWin": 39,
+          "realizedWin": 27.6
+        },
+        {
+          "ply": 8,
+          "mover": "black",
+          "playedWin": 28.7,
+          "realizedWin": 22.5
+        },
+        {
+          "ply": 9,
+          "mover": "red",
+          "playedWin": 77.1,
+          "realizedWin": 73
+        },
+        {
+          "ply": 10,
+          "mover": "black",
+          "playedWin": 27,
+          "realizedWin": 30.7
+        },
+        {
+          "ply": 11,
+          "mover": "red",
+          "playedWin": 68,
+          "realizedWin": 55.3
+        },
+        {
+          "ply": 13,
+          "mover": "red",
+          "playedWin": 54.8,
+          "realizedWin": 50.8
+        },
+        {
+          "ply": 14,
+          "mover": "black",
+          "playedWin": 43.5,
+          "realizedWin": 37.2
+        },
+        {
+          "ply": 16,
+          "mover": "black",
+          "playedWin": 36.8,
+          "realizedWin": 48.7
+        },
+        {
+          "ply": 17,
+          "mover": "red",
+          "playedWin": 51.3,
+          "realizedWin": 53.4
+        },
+        {
+          "ply": 18,
+          "mover": "black",
+          "playedWin": 45.2,
+          "realizedWin": 42.3
+        },
+        {
+          "ply": 20,
+          "mover": "black",
+          "playedWin": 45.5,
+          "realizedWin": 36.7
+        },
+        {
+          "ply": 27,
+          "mover": "red",
+          "playedWin": 73.6,
+          "realizedWin": 78
+        },
+        {
+          "ply": 28,
+          "mover": "black",
+          "playedWin": 20.4,
+          "realizedWin": 57.5
+        },
+        {
+          "ply": 33,
+          "mover": "red",
+          "playedWin": 53,
+          "realizedWin": 59
+        },
+        {
+          "ply": 35,
+          "mover": "red",
+          "playedWin": 59.8,
+          "realizedWin": 44.6
+        },
+        {
+          "ply": 39,
+          "mover": "red",
+          "playedWin": 58.9,
+          "realizedWin": 50.1
+        },
+        {
+          "ply": 47,
+          "mover": "red",
+          "playedWin": 90,
+          "realizedWin": 93.6
+        },
+        {
+          "ply": 64,
+          "mover": "black",
+          "playedWin": 6.4,
+          "realizedWin": 0.5
+        }
+      ]
+    }
+  },
+  "banqi": {
+    "scoreSeries": {
+      "side": "black",
+      "series": [
+        {
+          "name": "Engine",
+          "color": "a",
+          "values": [
+            0.491, 0.494, 0.4885, 0.469, 0.5125, 0.4895, 0.494, 0.47, 0.488, 0.4835, 0.5345, 0.511,
+            0.5545, 0.493, 0.513, 0.362, 0.3945, 0.3365, 0.4195, 0.338, 0.3115, 0.2865, 0.3485,
+            0.171, 0.1625, 0.165, 0.157, 0.1005, 0.1005, 0.0625, 0.0745, 0.0715, 0.077, 0.033,
+            0.0315, 0.027, 0.026, 0.025, 0.0255, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025,
+            0.025, 0.025, 0.025
+          ]
+        }
+      ]
+    },
+    "decisions": {
+      "engineId": "banqi 0.3.0@45f0fdea",
+      "source": "offline reanalysis, 5M nodes a position",
+      "decisions": [
+        {
+          "ply": 1,
+          "mover": "red",
+          "playedWin": 49.1,
+          "realizedWin": 49.4,
+          "bestWin": 49.1,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "e1e1",
+              "win": 49.1
+            },
+            {
+              "move": "f2f2",
+              "win": 49.1,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 2,
+          "mover": "black",
+          "playedWin": 50.1,
+          "realizedWin": 51.2,
+          "bestWin": 50.6,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "c1c1",
+              "win": 50.6
+            },
+            {
+              "move": "h2h2",
+              "win": 50.1,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 3,
+          "mover": "red",
+          "playedWin": 47.2,
+          "realizedWin": 46.9,
+          "bestWin": 48.9,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 48.9
+            },
+            {
+              "move": "g1g1",
+              "win": 47.2,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 4,
+          "mover": "black",
+          "playedWin": 53.1,
+          "realizedWin": 48.8,
+          "bestWin": 53.1,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "h0h0",
+              "win": 53.1,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 5,
+          "mover": "red",
+          "playedWin": 46,
+          "realizedWin": 49,
+          "bestWin": 51.2,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 51.2
+            },
+            {
+              "move": "g0g0",
+              "win": 46,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 6,
+          "mover": "black",
+          "playedWin": 48.6,
+          "realizedWin": 50.6,
+          "bestWin": 51,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "a2a2",
+              "win": 51
+            },
+            {
+              "move": "e1e1",
+              "win": 48.6,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 7,
+          "mover": "red",
+          "playedWin": 47.6,
+          "realizedWin": 47,
+          "bestWin": 49.4,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "h3h3",
+              "win": 49.4
+            },
+            {
+              "move": "b1b1",
+              "win": 47.6,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 8,
+          "mover": "black",
+          "playedWin": 50.3,
+          "realizedWin": 51.2,
+          "bestWin": 53,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "b2b2",
+              "win": 53
+            },
+            {
+              "move": "d2d2",
+              "win": 50.3,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 9,
+          "mover": "red",
+          "playedWin": 47.1,
+          "realizedWin": 48.4,
+          "bestWin": 48.8,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "h3h3",
+              "win": 48.8
+            },
+            {
+              "move": "a2a2",
+              "win": 47.1,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 10,
+          "mover": "black",
+          "playedWin": 48.2,
+          "realizedWin": 46.6,
+          "bestWin": 51.6,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "b0b0",
+              "win": 51.6
+            },
+            {
+              "move": "d0d0",
+              "win": 48.2,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 11,
+          "mover": "red",
+          "playedWin": 49.3,
+          "realizedWin": 51.1,
+          "bestWin": 53.4,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "e2e2",
+              "win": 53.4
+            },
+            {
+              "move": "b0b0",
+              "win": 49.3,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 12,
+          "mover": "black",
+          "playedWin": 47.6,
+          "realizedWin": 44.5,
+          "bestWin": 48.9,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "c1c1",
+              "win": 48.9
+            },
+            {
+              "move": "d1d1",
+              "win": 47.6,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 13,
+          "mover": "red",
+          "playedWin": 51.1,
+          "realizedWin": 49.3,
+          "bestWin": 55.5,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "e2e2",
+              "win": 55.5
+            },
+            {
+              "move": "c1c1",
+              "win": 51.1,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 14,
+          "mover": "black",
+          "playedWin": 49.1,
+          "realizedWin": 48.7,
+          "bestWin": 50.7,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "c1e1",
+              "win": 50.7
+            },
+            {
+              "move": "c3c3",
+              "win": 49.1,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 15,
+          "mover": "red",
+          "playedWin": 48,
+          "realizedWin": 36.2,
+          "bestWin": 51.3,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "e2e2",
+              "win": 51.3
+            },
+            {
+              "move": "e0e0",
+              "win": 48,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 17,
+          "mover": "red",
+          "playedWin": 39.5,
+          "realizedWin": 33.7,
+          "bestWin": 39.5,
+          "playedRank": 1,
+          "candidates": [
+            {
+              "move": "f0f0",
+              "win": 39.5,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 18,
+          "mover": "black",
+          "playedWin": 64.9,
+          "realizedWin": 58.1,
+          "bestWin": 66.3,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "c1e1",
+              "win": 66.3
+            },
+            {
+              "move": "e3e3",
+              "win": 64.9,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 19,
+          "mover": "red",
+          "playedWin": 38.5,
+          "realizedWin": 33.8,
+          "bestWin": 41.9,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "f1f1",
+              "win": 41.9
+            },
+            {
+              "move": "f3f3",
+              "win": 38.5,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 23,
+          "mover": "red",
+          "playedWin": 17.8,
+          "realizedWin": 17.1,
+          "bestWin": 34.9,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "f0f2",
+              "win": 34.9
+            },
+            {
+              "move": "h1h1",
+              "win": 17.8,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 29,
+          "mover": "red",
+          "playedWin": 6.7,
+          "realizedWin": 6.2,
+          "bestWin": 10,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "f1f1",
+              "win": 10
+            },
+            {
+              "move": "d3d3",
+              "win": 6.7,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 33,
+          "mover": "red",
+          "playedWin": 7.6,
+          "realizedWin": 3.3,
+          "bestWin": 7.7,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "d3d2",
+              "win": 7.7
+            },
+            {
+              "move": "e2e2",
+              "win": 7.6,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 35,
+          "mover": "red",
+          "playedWin": 2.9,
+          "realizedWin": 2.7,
+          "bestWin": 3.1,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "h3h3",
+              "win": 3.1
+            },
+            {
+              "move": "c0c0",
+              "win": 2.9,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 36,
+          "mover": "black",
+          "playedWin": 97.3,
+          "realizedWin": 97.4,
+          "bestWin": 97.3,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "b3b3",
+              "win": 97.3
+            },
+            {
+              "move": "g3g3",
+              "win": 97.3,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 37,
+          "mover": "red",
+          "playedWin": 2.6,
+          "realizedWin": 2.5,
+          "bestWin": 2.6,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "f1f1",
+              "win": 2.6
+            },
+            {
+              "move": "a0a0",
+              "win": 2.6,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 39,
+          "mover": "red",
+          "playedWin": 2.5,
+          "realizedWin": 2.5,
+          "bestWin": 2.6,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 2.6
+            },
+            {
+              "move": "a1a1",
+              "win": 2.5,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 41,
+          "mover": "red",
+          "playedWin": 2.5,
+          "realizedWin": 2.5,
+          "bestWin": 2.5,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 2.5
+            },
+            {
+              "move": "b2b2",
+              "win": 2.5,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 42,
+          "mover": "black",
+          "playedWin": 97.5,
+          "realizedWin": 97.5,
+          "bestWin": 97.5,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "d2e2",
+              "win": 97.5
+            },
+            {
+              "move": "b3b3",
+              "win": 97.5,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 45,
+          "mover": "red",
+          "playedWin": 2.5,
+          "realizedWin": 2.5,
+          "bestWin": 2.5,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "g2g2",
+              "win": 2.5
+            },
+            {
+              "move": "a3a3",
+              "win": 2.5,
+              "played": true
+            }
+          ]
+        },
+        {
+          "ply": 47,
+          "mover": "red",
+          "playedWin": 2.5,
+          "realizedWin": 2.5,
+          "bestWin": 2.5,
+          "playedRank": null,
+          "candidates": [
+            {
+              "move": "b3a3",
+              "win": 2.5
+            },
+            {
+              "move": "f1f1",
+              "win": 2.5,
+              "played": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "duck": {
+    "scoreSeries": {
+      "side": "red",
+      "series": [
+        {
+          "name": "Engine",
+          "color": "a",
+          "values": [
+            0.5695, 0.5274, 0.5023, 0.4812, 0.4812, 0.4736, 0.4593, 0.4706, 0.5064, 0.5527, 0.5786,
+            0.557, 0.6139, 0.6267, 0.5703, 0.5643, 0.5546, 0.5022, 0.4788, 0.4927, 0.6525, 0.6616,
+            0.6303, 0.6285, 0.4858, 0.4745, 0.4666, 0.4707, 0.4822, 0.4384, 0.5502, 0.5725, 0.5411,
+            0.4839, 0.3082, 0.3401, 0.4783, 0.4824, 0.3742, 0.3476, 0.4204, 0.4796, 0.5756, 0.5855,
+            0.513, 0.5721, 0.5518, 0.5586, 0.5691, 0.5467, 0.5552, 0.5465, 0.5375, 0.5242, 0.5032,
+            0.4931, 0.5217, 0.5281, 0.466, 0.4343, 0.4651, 0.4972, 0.5037, 0.517, 0.5552, 0.5364,
+            0.4578, 0.4665, 0.4899, 0.4931, 0.5439, 0.5614, 0.5476, 0.537, 0.517, 0.517, 0.5243,
+            0.5151, 0.511, 0.534, 0.5522, 0.565, 0.5577, 0.5371, 0.5573, 0.5683, 0.5513, 0.5136,
+            0.5172, 0.5604, 0.568, 0.5487, 0.5243, 0.5644, 0.595, 0.571, 0.5639, 0.612, 0.6398,
+            0.6629, 0.6954, 0.7014, 0.6646, 0.6402, 0.707, 0.7692, 0.7612, 0.7651, 0.7823, 0.7826,
+            0.8493, 0.8505, 0.7979, 0.8007, 0.8684, 0.8845, 0.831, 0.8348, 0.8595, 0.8834, 0.8812,
+            0.926, 0.929, 0.9465, 0.9863, 0.9868, 0.9868, 0.9868, 0.9762, 0.9765, 0.9989, 0.9991,
+            0.9991, 0.9991, 0.9991, 0.9992, 0.9994, 0.9997
+          ]
+        }
+      ]
+    }
+  }
+}
