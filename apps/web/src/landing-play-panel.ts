@@ -75,11 +75,7 @@ import {
 } from './rated-flag.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
 import { buildCorrespondenceListDeadlineNotice, buildSeekAcceptAction } from './seek-accept.js';
-import {
-  isLikelySignedIn,
-  isLikelyStatsExcluded,
-  statsExcludedResolvedEvent,
-} from './signed-in-state.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import {
   setThreeKingdomsBanqiEngineOptions,
   threeKingdomsBanqiEngineOptions,
@@ -418,14 +414,10 @@ export function buildPlayPanel(
   const stored = readStored();
   const signedIn = isLikelySignedIn();
   let ratedAvailable = isRatedModeEnabled();
-  // An account excluded from stats never plays rated (the server refuses it);
-  // the Rated switch is greyed out with the reason instead of failing on click.
-  let ratedBlocked = isLikelyStatsExcluded();
   // Your move is never the opening tab: it exists only once the games load,
   // so opening on it would swap the panel's content after first paint.
   let tab: PanelTab = stored.tab === 'person' ? 'person' : 'computer';
-  let mode: PersonMode =
-    stored.mode === 'rated' && signedIn && ratedAvailable && !ratedBlocked ? 'rated' : 'casual';
+  let mode: PersonMode = stored.mode === 'rated' && signedIn && ratedAvailable ? 'rated' : 'casual';
   let openRequests: OpenLobbyRequest[] = [];
   let corrSeeks: LobbyCorrespondenceSeek[] = [];
   let playingBySpec: Record<string, number> = {};
@@ -833,9 +825,7 @@ export function buildPlayPanel(
   };
 
   const visibleRequests = (): OpenLobbyRequest[] =>
-    othersRequests().filter(
-      (r) => r.rated === false || (signedIn && ratedAvailable && !ratedBlocked),
-    );
+    othersRequests().filter((r) => r.rated === false || (signedIn && ratedAvailable));
 
   const renderFeatures = (): void => {
     const rows: HTMLElement[] = [];
@@ -1046,35 +1036,28 @@ export function buildPlayPanel(
   const renderMode = (): void => {
     casualBtn.classList.toggle('is-active', mode === 'casual');
     ratedBtn.classList.toggle('is-active', mode === 'rated');
-    ratedBtn.disabled = ratedBlocked;
-    // Why Rated is out of reach, in plain words: a guest gets the sign-in link
-    // under the bar (and the reason on Rated's title); a stats-excluded account
-    // (the owner's and QA's) is told it plays casual only.
-    const ratedBlockedNote = t('lobby.ratedCasualOnlyAccount', {}, locale);
-    const ratedSignInNote = t('lobby.panelRatedSignIn', {}, locale);
-    if (ratedBlocked) ratedBtn.title = ratedBlockedNote;
-    else if (!signedIn) ratedBtn.title = ratedSignInNote;
+    // Why Rated is out of reach for a guest: the sign-in link under the bar,
+    // and the reason on Rated's title.
+    if (!signedIn) ratedBtn.title = t('lobby.panelRatedSignIn', {}, locale);
     else ratedBtn.removeAttribute('title');
     note.textContent = !ratedAvailable
       ? ''
-      : ratedBlocked
-        ? ratedBlockedNote
-        : !signedIn
-          ? ''
-          : mode === 'rated'
-            ? [
-                t(
-                  'lobby.panelRatedNote',
-                  { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
-                  locale,
-                ),
-                // Days per move leave the tiles in Rated while rated
-                // correspondence is held; say why instead of dropping them silently.
-                ...(isCorrespondenceRatedModeEnabled()
-                  ? []
-                  : [t('lobby.panelRatedCorrespondenceCasual', {}, locale)]),
-              ].join(locale === 'en' ? ' ' : '')
-            : '';
+      : !signedIn
+        ? ''
+        : mode === 'rated'
+          ? [
+              t(
+                'lobby.panelRatedNote',
+                { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
+                locale,
+              ),
+              // Days per move leave the tiles in Rated while rated
+              // correspondence is held; say why instead of dropping them silently.
+              ...(isCorrespondenceRatedModeEnabled()
+                ? []
+                : [t('lobby.panelRatedCorrespondenceCasual', {}, locale)]),
+            ].join(locale === 'en' ? ' ' : '')
+          : '';
   };
   casualBtn.addEventListener('click', () => {
     if (mode === 'casual') return;
@@ -1085,7 +1068,6 @@ export function buildPlayPanel(
     renderPerson();
   });
   ratedBtn.addEventListener('click', () => {
-    if (ratedBlocked) return;
     if (!signedIn) {
       window.location.href = loginHrefForCurrentPage(locale, 'rated-toggle');
       return;
@@ -1448,28 +1430,12 @@ export function buildPlayPanel(
   const stopRatedSync = onRatedModeChange(() => {
     stopRatedSync();
     ratedAvailable = isRatedModeEnabled();
-    if (readStored().mode === 'rated' && signedIn && ratedAvailable && !ratedBlocked && !searching)
-      mode = 'rated';
+    if (readStored().mode === 'rated' && signedIn && ratedAvailable && !searching) mode = 'rated';
     if (!ratedAvailable) mode = 'casual';
     renderModeSlot();
     renderFeatures();
     renderPerson();
   });
-
-  // The hint can be stale (a flag set since the last load): account-nav's
-  // /api/auth/me answer settles it.
-  window.addEventListener(
-    statsExcludedResolvedEvent,
-    () => {
-      const blocked = isLikelyStatsExcluded();
-      if (blocked === ratedBlocked) return;
-      ratedBlocked = blocked;
-      if (ratedBlocked && mode === 'rated' && !searching) mode = 'casual';
-      renderFeatures();
-      renderPerson();
-    },
-    { once: true },
-  );
 
   if (options.hydrate !== false) {
     const refreshLobby = async (): Promise<void> => {

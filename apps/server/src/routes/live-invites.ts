@@ -96,7 +96,8 @@ export async function liveInviteTermsError(
     if (spec.id !== 'dark-chess' && !tenant?.lobby?.supportsRated)
       return 'rated_unsupported_surface';
     if (!isAllowedRatedTimeControl(terms.timeControl)) return 'rated_time_control_unsupported';
-    if (persistence.isStatsExcluded(sender) || persistence.isStatsExcluded(target))
+    // Two stats-excluded accounts never form a rated game (2026-11-26).
+    if (persistence.isStatsExcluded(sender) && persistence.isStatsExcluded(target))
       return 'rated_requires_counted_account';
     if (isFairPlayMarked(sender) || isFairPlayMarked(target)) return 'rated_account_marked';
   }

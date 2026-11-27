@@ -44,6 +44,7 @@ import { xiangqiMahjongTenant } from '../xiangqi-mahjong-tenant.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
 import { buildTenantGameSummary } from './events.js';
 import './register-tenants.js';
+import { ratedSeatPairsTwoExcluded } from '../rated-stats-excluded.js';
 import {
   lobbyOffersRated,
   registeredVariantTenants,
@@ -404,11 +405,12 @@ test('friend rooms: a guest is refused either seat of a rated Jieqi friend room'
   );
 });
 
-// ── Stats-excluded accounts never rate (2026-10-26) ─────────────────────────
+// ── Stats-excluded accounts rate against real people (2026-11-26) ───────────
 //
-// An operator or QA account (users.stats_excluded_at) is not counted, so a game
-// it plays must not move a counted player's rating: a rated XMJ friend game on
-// 10-26 took an opponent from 1500 to 1338. Casual play is untouched.
+// An operator or QA account (users.stats_excluded_at) plays rated like any
+// signed-in account; a rated game is never formed between two of them. A
+// friend room's opponent is unknown at creation, so creation is open, and the
+// second excluded account is refused its seat (rated-stats-excluded.ts).
 
 const EXCLUDED = {
   ...ACCOUNT,
@@ -417,7 +419,13 @@ const EXCLUDED = {
   statsExcludedAt: new Date('2026-09-25T00:00:00Z'),
 } as UserAccount;
 
-test('friend rooms: a stats-excluded creator is refused a rated friend room on every rated variant', async () => {
+const EXCLUDED_TWO = {
+  ...EXCLUDED,
+  id: 'user-excluded-2',
+  handle: 'excluded-2',
+} as UserAccount;
+
+test('friend rooms: a stats-excluded creator gets a rated friend room on every rated variant', async () => {
   const rated = routingTenants().filter((registration) => registration.lobby?.supportsRated);
   assert.ok(
     rated.some((registration) => registration.gameSpecId === xiangqiMahjongTenant.gameSpecId),
@@ -426,30 +434,51 @@ test('friend rooms: a stats-excluded creator is refused a rated friend room on e
   await withRatedOn(async () => {
     for (const registration of rated) {
       await withTenantEnabled(registration, async () => {
-        const refused = await createFriendRoom(
+        const created = await createFriendRoom(
           registration,
           { mode: 'pvp', rated: true, timeControl: BLITZ },
           EXCLUDED,
         );
-        assert.equal(refused.status, 403, `${registration.kind}: ${JSON.stringify(refused.json)}`);
-        assert.deepEqual(
-          refused.json,
-          { error: 'rated_requires_counted_account' },
-          registration.kind,
-        );
-        const casual = await createFriendRoom(
-          registration,
-          { mode: 'pvp', rated: false, timeControl: BLITZ },
-          EXCLUDED,
-        );
-        assert.equal(casual.status, 201, `${registration.kind}: casual stays open`);
-        assert.equal(casual.json.rated, false, registration.kind);
+        assert.equal(created.status, 201, `${registration.kind}: ${JSON.stringify(created.json)}`);
+        assert.equal(created.json.rated, true, registration.kind);
       });
     }
   });
 });
 
-test('friend rooms: a stats-excluded account is refused either seat of a rated room, not a casual one', async () => {
+test('ratedSeatPairsTwoExcluded: only a second excluded account in another live seat pairs', async () => {
+  const excludedIds = new Set(['user-excluded', 'user-excluded-2']);
+  const lookup = async (userId: string) => excludedIds.has(userId);
+  const seat = (userId: string | null, revokedAt: Date | null = null) => ({ userId, revokedAt });
+  // An excluded joiner facing another excluded account.
+  assert.equal(
+    await ratedSeatPairsTwoExcluded(EXCLUDED_TWO, { red: seat('user-excluded') }, lookup),
+    true,
+  );
+  // Facing a counted account, a guest seat, its own seat, a revoked seat, or nobody.
+  for (const seatTokens of [
+    { red: seat('user-counted') },
+    { red: seat(null) },
+    { red: seat('user-excluded-2') },
+    { red: seat('user-excluded', new Date()) },
+    {},
+  ]) {
+    assert.equal(await ratedSeatPairsTwoExcluded(EXCLUDED_TWO, seatTokens, lookup), false);
+  }
+  // A counted joiner never pairs two excluded accounts, and costs no lookup.
+  let lookups = 0;
+  const counting = async (userId: string) => {
+    lookups += 1;
+    return lookup(userId);
+  };
+  assert.equal(
+    await ratedSeatPairsTwoExcluded(ACCOUNT, { red: seat('user-excluded') }, counting),
+    false,
+  );
+  assert.equal(lookups, 0);
+});
+
+test('friend rooms: an excluded account takes a rated seat beside a counted one; a second excluded one is refused', async () => {
   for (const tenant of [jieqiTenant, xiangqiMahjongTenant] as unknown as AnyTenant[]) {
     const registration = routingTenants().find(
       (candidate) => candidate.gameSpecId === tenant.gameSpecId,
@@ -466,29 +495,43 @@ test('friend rooms: a stats-excluded account is refused either seat of a rated r
         const room = registration.rooms.get(
           created.json.roomId as string,
         ) as unknown as TenantSeatRoom<string>;
-        // First seat: the excluded account arrives before the creator.
-        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-first', undefined, EXCLUDED), {
-          ok: false,
-          reason: 'rated requires counted account',
-        });
         assert.ok(assignTenantSeat(tenant, room, 'creator', undefined, ACCOUNT).ok, tenant.kind);
-        // Second seat: the excluded account accepts the creator's rated link.
-        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-second', undefined, EXCLUDED), {
-          ok: false,
-          reason: 'rated requires counted account',
-        });
-
-        const casual = await createFriendRoom(
-          registration,
-          { mode: 'pvp', rated: false, timeControl: BLITZ },
-          ACCOUNT,
-        );
-        const casualRoom = registration.rooms.get(
-          casual.json.roomId as string,
-        ) as unknown as TenantSeatRoom<string>;
+        // Beside a counted account the excluded account seats, and the room stays rated.
         assert.ok(
-          assignTenantSeat(tenant, casualRoom, 'excluded-casual', undefined, EXCLUDED).ok,
-          `${tenant.kind}: a casual seat stays open to an excluded account`,
+          assignTenantSeat(tenant, room, 'excluded', undefined, EXCLUDED, null, true, false).ok,
+          `${tenant.kind}: an excluded account rates against a counted one`,
+        );
+        assert.equal(room.rated, true, tenant.kind);
+
+        // A rated room an excluded account already sits in refuses a second one.
+        const pair = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        const pairRoom = registration.rooms.get(
+          pair.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        assert.ok(assignTenantSeat(tenant, pairRoom, 'excluded-first', undefined, EXCLUDED).ok);
+        const excludedIds = new Set([EXCLUDED.id, EXCLUDED_TWO.id]);
+        const twoExcluded = await ratedSeatPairsTwoExcluded(
+          EXCLUDED_TWO,
+          pairRoom.seatTokens,
+          async (userId) => excludedIds.has(userId),
+        );
+        assert.equal(twoExcluded, true, tenant.kind);
+        assert.deepEqual(
+          assignTenantSeat(
+            tenant,
+            pairRoom,
+            'excluded-second',
+            undefined,
+            EXCLUDED_TWO,
+            null,
+            true,
+            twoExcluded,
+          ),
+          { ok: false, reason: 'rated requires counted account' },
         );
       }),
     );

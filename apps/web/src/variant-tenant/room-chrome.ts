@@ -80,8 +80,8 @@ import {
   type TenantWebClock,
 } from './clock-projection.js';
 
-// Server seat gate (apps/server variant-tenant/seat-session.ts): an account
-// excluded from stats takes no seat in a rated room, and signing in will not help.
+// Server seat gate (apps/server variant-tenant/seat-session.ts): a rated room
+// refuses a second account excluded from stats, and signing in will not help.
 const RATED_COUNTED_REASON = 'rated requires counted account';
 
 export type { TenantWebClock } from './clock-projection.js';
@@ -1239,7 +1239,8 @@ export function createTenantRoomChrome<C extends string>(
       const gated = accountGatedRejection();
       if (gated === 'rated') return t('live.rejectedRatedAccount');
       if (gated === 'correspondence') return t('live.rejectedCorrespondenceAccount');
-      // A stats-excluded account: signing in will not help, so no CTA.
+      // Both seats would be stats-excluded accounts: signing in will not help,
+      // so no CTA.
       if (ctx.closeReason() === RATED_COUNTED_REASON) return t('live.rejectedRatedCountedAccount');
       if (liveGameRejection())
         return t(tenant.liveGameRejectedBody ?? 'live.roomLiveGameSeatedOnly');

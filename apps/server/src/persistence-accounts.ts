@@ -180,11 +180,17 @@ export function isPlayDisabled(user: Pick<UserAccount, 'playDisabledAt'> | null)
   return user?.playDisabledAt != null;
 }
 
-// Stats exclusion as a rated gate (2026-10-26). An account flagged
-// stats_excluded_at is operating or testing the site, so its games are not
-// counted, and an uncounted account must never move a counted player's rating.
-// Every rated entry point (lobby, friend rooms, seats, rematch, correspondence)
-// refuses it; casual play is untouched.
+// Stats exclusion. An account flagged stats_excluded_at is operating or testing
+// the site (the owner, QA), so the stats code leaves out its games, except a PvP
+// game against a real account or guest (persistence-counted-games.ts).
+//
+// Rated play (2026-11-26, replacing the 2026-10-26 rule that refused it outright):
+// an excluded account posts, accepts and plays rated like any signed-in account,
+// because its games against real people are real games. The one refusal is a
+// rated game whose BOTH seats are stats-excluded accounts (operator vs QA):
+// where the opponent is not known yet (a lobby seek, a friend room, a public
+// correspondence seek) the post is allowed, and the second excluded account is
+// refused when it would accept or take the seat (rated-stats-excluded.ts).
 export function isStatsExcluded(user: Pick<UserAccount, 'statsExcludedAt'> | null): boolean {
   return user?.statsExcludedAt != null;
 }

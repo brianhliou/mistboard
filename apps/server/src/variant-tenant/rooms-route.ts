@@ -93,10 +93,6 @@ export function gateRatedRoomRequest(args: {
   }
   if (!ratedEnabled()) return { ok: false, status: 403, error: 'rated_disabled' };
   if (!args.accountUser) return { ok: false, status: 401, error: 'rated_requires_account' };
-  // A stats-excluded account (operator, QA) is not counted, so it never rates.
-  if (persistence.isStatsExcluded(args.accountUser)) {
-    return { ok: false, status: 403, error: 'rated_requires_counted_account' };
-  }
   if (isFairPlayMarked(args.accountUser)) {
     return { ok: false, status: 403, error: 'rated_account_marked' };
   }

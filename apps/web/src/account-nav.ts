@@ -19,11 +19,9 @@ import {
   readSignedInHint,
   setResolvedAdmin,
   setResolvedSignedIn,
-  setResolvedStatsExcluded,
   setResolvedVariantGrants,
   writeAdminHint,
   writeSignedInHint,
-  writeStatsExcludedHint,
   writeVariantGrantsHint,
 } from './signed-in-state.js';
 import {
@@ -105,7 +103,6 @@ async function primeAccountNav(): Promise<void> {
   const user = await loadCurrentUser();
   writeSignedInHint(user !== null);
   writeAdminHint(user?.accountRole === 'admin');
-  writeStatsExcludedHint(user?.statsExcluded === true);
   writeVariantGrantsHint(user?.variantGrants ?? []);
   writeCachedUser(user);
   if (user) mountAccountNavs();
@@ -123,11 +120,9 @@ export function setAccountNavUser(user: AuthUser | null): void {
   userPromise = Promise.resolve(user);
   setResolvedSignedIn(user !== null);
   setResolvedAdmin(user?.accountRole === 'admin');
-  setResolvedStatsExcluded(user?.statsExcluded === true);
   setResolvedVariantGrants(user?.variantGrants ?? []);
   writeSignedInHint(user !== null);
   writeAdminHint(user?.accountRole === 'admin');
-  writeStatsExcludedHint(user?.statsExcluded === true);
   writeVariantGrantsHint(user?.variantGrants ?? []);
   writeCachedUser(user);
 
@@ -499,7 +494,6 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       setLiveInviteUser(user?.id ?? null);
       setResolvedSignedIn(user !== null);
       setResolvedAdmin(user?.accountRole === 'admin');
-      setResolvedStatsExcluded(user?.statsExcluded === true);
       setResolvedVariantGrants(user?.variantGrants ?? []);
       // Canonical per-load auth resolution: identify so PostHog persons map to
       // DB accounts. Idempotent for returning users.
@@ -518,7 +512,6 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       setLiveInviteUser(null);
       setResolvedSignedIn(false);
       setResolvedAdmin(false);
-      setResolvedStatsExcluded(false);
       setResolvedVariantGrants([]);
       return null;
     });
@@ -543,7 +536,6 @@ function invalidateAccountCache(): void {
   cachedUser = undefined;
   setResolvedSignedIn(undefined);
   setResolvedAdmin(undefined);
-  setResolvedStatsExcluded(undefined);
   setResolvedVariantGrants(undefined);
   userPromise = null;
 }

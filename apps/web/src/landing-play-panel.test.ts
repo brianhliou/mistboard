@@ -28,11 +28,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { openLobbySeekCount, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import {
-  setResolvedAdmin,
-  setResolvedSignedIn,
-  setResolvedStatsExcluded,
-} from './signed-in-state.js';
+import { setResolvedAdmin, setResolvedSignedIn } from './signed-in-state.js';
 import { setThreeKingdomsBanqiEngineOptions } from './three-kingdoms-banqi-access.js';
 import { ENGINE_OFFER_AFTER_MS } from './web-utils.js';
 
@@ -141,7 +137,6 @@ describe('homepage play panel', () => {
     vi.unstubAllEnvs();
     vi.useRealTimers();
     setRatedModeEnabled(false);
-    setResolvedStatsExcluded(undefined);
     setThreeKingdomsBanqiEngineOptions([]);
     window.history.replaceState(null, '', '/');
   });
@@ -1415,20 +1410,19 @@ describe('homepage play panel', () => {
       'Sign in for rated games and days per move',
     );
     expect(guest.querySelector<HTMLAnchorElement>('.pp-signin')?.hidden).toBe(false);
-    // A signed-in counted account in Casual sees nothing.
+    // A signed-in account in Casual sees nothing, in every locale. An account
+    // excluded from stats is no different (2026-11-26): it plays rated too.
     setResolvedSignedIn(true);
     const member = buildPlayPanel('en', { hydrate: false });
     expect(note(member)).toBe('');
     expect(member.querySelector<HTMLAnchorElement>('.pp-signin')?.hidden).toBe(true);
-    // A stats-excluded account plays casual only.
-    setResolvedStatsExcluded(true);
-    const excluded = buildPlayPanel('en', { hydrate: false });
-    expect(note(excluded)).toBe('This account plays casual games only.');
-    expect(note(buildPlayPanel('zh-Hans', { hydrate: false }))).toBe('此账号只能下休闲对局。');
-    expect(note(buildPlayPanel('zh-Hant', { hydrate: false }))).toBe('此帳號只能下休閒對局。');
-    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
-      expect(note(buildPlayPanel(locale, { hydrate: false }))).not.toMatch(/counted|计入|計入|—/);
+    for (const locale of ['zh-Hans', 'zh-Hant'] as const) {
+      expect(note(buildPlayPanel(locale, { hydrate: false }))).toBe('');
     }
+    const rated = [...member.querySelectorAll<HTMLButtonElement>('.pp-mode-btn')].find(
+      (el) => el.textContent === 'Rated',
+    );
+    expect(rated?.disabled).toBe(false);
   });
 
   it('shows Casual/Rated once /api/server-status turns rated on after the panel is built', () => {

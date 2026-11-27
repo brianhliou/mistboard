@@ -123,7 +123,6 @@ export const ZH_HANT_PLAY = {
   'setup.ratedComingSoon': '計分（即將推出）',
   'setup.ratedSwitchedToLobby': '計分對局只與真人對弈，已為你切換到尋找對手。',
   'setup.ratedSignIn': '計分（需登入）',
-  'setup.ratedNotCounted': '計分（此帳號不可用）',
   'setup.ratedUnavailable': '計分（此變體不支援）',
   'setup.createRoom': '建立房間',
   'setup.startGame': '開始對局',
@@ -469,7 +468,7 @@ export const ZH_HANT_PLAY = {
     '本局正在進行中。除就座的雙方外，Mistboard 從不向任何人透露即時對局狀態。對局結束後，完整的覆盤會出現在這裡。',
   'live.rejectedRatedAccount':
     '這是一盤計分對局。計分對局會計入雙方的等級分，因此雙方都需要帳號。登入後你會回到這裡就座。',
-  'live.rejectedRatedCountedAccount': '這是一盤計分對局，此帳號只能下休閒對局。',
+  'live.rejectedRatedCountedAccount': '兩個不計入統計的帳號之間不下計分對局。',
   'live.rejectedCorrespondenceAccount':
     '這是一盤通信對局。雙方都需要帳號，這樣對局才能在不同裝置上找到你，並在輪到你走棋時提醒你。登入後你會回到這裡就座。',
   'live.rejectedOrigin': '不允許該瀏覽器來源開啟此房間。',
@@ -920,7 +919,6 @@ export const ZH_HANT_PLAY = {
   'lobby.panelRatedNote': '等級分對局：{clocks}。',
   'lobby.panelRatedCorrespondenceCasual': '通信對局目前只有休閒模式。',
   'lobby.panelRatedSignIn': '登入後可下等級分對局。',
-  'lobby.ratedCasualOnlyAccount': '此帳號只能下休閒對局。',
   'lobby.panelOpenGames': '公開對局',
   'lobby.panelStartOne': '發起對局',
   'lobby.panelVersus': '{variant} 對 {opponent}',

@@ -72,6 +72,19 @@ export function isSeekGoneError(code: string | null | undefined): boolean {
   return code != null && GONE_ERRORS.has(code);
 }
 
+// The refusals of a rated game whose two players would both be accounts
+// excluded from stats (the server's rated-stats-excluded.ts): at accept, the
+// seek's creator is one too; at a directed challenge, its target is.
+const RATED_PAIR_NOT_COUNTED_ERRORS = new Set([
+  'rated_requires_counted_account',
+  'opponent_rated_requires_counted_account',
+  'target_rated_requires_counted_account',
+]);
+
+export function isRatedPairNotCountedError(code: string | null | undefined): boolean {
+  return code != null && RATED_PAIR_NOT_COUNTED_ERRORS.has(code);
+}
+
 // The line shown when an accept fails. A public seek reads the same whether it
 // was taken, withdrawn or expired (the accepter cannot tell and does not care);
 // a private challenge keeps its own words.
@@ -80,6 +93,7 @@ export function seekAcceptErrorText(
   visibility: SeekVisibility = 'public',
   locale: Locale = currentLocale(),
 ): string {
+  if (isRatedPairNotCountedError(code)) return t('live.rejectedRatedCountedAccount', {}, locale);
   if (!isSeekGoneError(code)) return t('challenge.couldNotAccept', {}, locale);
   if (visibility === 'public') return t('challenge.seekClosed', {}, locale);
   return code === 'challenge_expired'

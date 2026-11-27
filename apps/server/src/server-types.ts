@@ -155,6 +155,9 @@ export type LobbyTicket = {
   lastPolledAt: number;
   gameSpecId: GameSpecId;
   rated: boolean;
+  // The seeker is a stats-excluded account. Two such seekers never pair in a
+  // rated bucket (rated-stats-excluded.ts); each waits for someone else.
+  statsExcluded?: boolean;
   region: string | null;
   matchedAt: number | null;
   roomId: string | null;

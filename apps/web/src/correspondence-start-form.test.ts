@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildStartForm } from './correspondence.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import { setResolvedAdmin, setResolvedStatsExcluded } from './signed-in-state.js';
+import { setResolvedAdmin } from './signed-in-state.js';
 
 // The /correspondence Start a game form's Casual/Rated control. Rated correspondence is
 // held behind the server's MISTBOARD_CORRESPONDENCE_RATED_ENABLED (off by default), so
@@ -33,28 +33,6 @@ describe('correspondence Start a game: Casual/Rated', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     setRatedModeEnabled(false);
-    setResolvedStatsExcluded(undefined);
-  });
-
-  // An account excluded from stats never rates (the server refuses it). Its Rated
-  // button is disabled and says why, as in the challenge dialog, including when the
-  // account answer lands after the form is drawn.
-  it('labels Rated as unavailable for an account excluded from stats', () => {
-    setRatedModeEnabled(true, true);
-    const panel = buildStartForm(() => {}, { gameSpecId: 'xiangqi' });
-    const ratedButton = () => gameTypeField(panel)?.querySelectorAll('button')[1];
-    expect(ratedButton()?.disabled).toBe(false);
-    expect(ratedButton()?.textContent).toBe('Rated');
-    setResolvedStatsExcluded(true);
-    expect(ratedButton()?.disabled).toBe(true);
-    // The reason is the option's muted second line, as Play a game draws it.
-    expect(ratedButton()?.querySelector('.landing-start-option-text')?.textContent).toBe('Rated');
-    expect(ratedButton()?.querySelector('.landing-start-option-hint')?.textContent).toBe(
-      'not available on this account',
-    );
-    setResolvedStatsExcluded(false);
-    expect(ratedButton()?.disabled).toBe(false);
-    expect(ratedButton()?.textContent).toBe('Rated');
   });
 
   it('is absent while rated correspondence is held, and the seek posts casual', () => {

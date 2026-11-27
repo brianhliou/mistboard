@@ -588,10 +588,8 @@ export async function createSeekResult(
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
-    // A stats-excluded account (operator, QA) is not counted, so it never rates.
-    if (persistence.isStatsExcluded(user)) {
-      return { status: 403, body: { error: 'rated_requires_counted_account' } };
-    }
+    // A stats-excluded account posts a rated seek like anyone (2026-11-26); a
+    // second excluded account is refused at the accept below.
   }
 
   // Challenge dimensions. A target forces a private, directed seek; otherwise
@@ -632,8 +630,13 @@ export async function createSeekResult(
     if (rated && (await isUserIdFairPlayMarked(targetUserId))) {
       return { status: 403, body: { error: 'rated_account_marked' } };
     }
-    // A rated challenge to an uncounted account could never become a rated game.
-    if (rated && (await persistence.isUserIdStatsExcluded(targetUserId))) {
+    // Two stats-excluded accounts never form a rated game, so a rated challenge
+    // from one to another could never be accepted.
+    if (
+      rated &&
+      persistence.isStatsExcluded(user) &&
+      (await persistence.isUserIdStatsExcluded(targetUserId))
+    ) {
       return { status: 403, body: { error: 'target_rated_requires_counted_account' } };
     }
   }
@@ -852,11 +855,13 @@ export async function acceptSeekResult(
     if (await persistence.isUserIdPlayDisabled(seek.creatorUserId)) {
       return { status: 409, body: { error: 'opponent_play_disabled' } };
     }
-    // Neither side of a rated game may be a stats-excluded (uncounted) account.
-    if (persistence.isStatsExcluded(user)) {
-      return { status: 403, body: { error: 'rated_requires_counted_account' } };
-    }
-    if (await persistence.isUserIdStatsExcluded(seek.creatorUserId)) {
+    // A rated game is never formed between two stats-excluded accounts: the
+    // second one is refused here. Against anyone else an excluded account
+    // accepts like any signed-in account.
+    if (
+      persistence.isStatsExcluded(user) &&
+      (await persistence.isUserIdStatsExcluded(seek.creatorUserId))
+    ) {
       return { status: 409, body: { error: 'opponent_rated_requires_counted_account' } };
     }
   }

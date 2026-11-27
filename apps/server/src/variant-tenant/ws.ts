@@ -22,6 +22,7 @@ import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
 import { mayPlayVariant } from '../persistence.js';
 import { refreshSeatChampions } from '../persistence-leaderboards.js';
+import { ratedSeatPairsTwoExcluded } from '../rated-stats-excluded.js';
 import {
   adminDebugTokenFromProtocolHeader,
   canObserveRoom,
@@ -277,6 +278,10 @@ export function createTenantWsRuntime<
     // Allowlist-gated variants (139) ask the grant table before handing out a
     // seat. Non-gated specs short-circuit to true without a query.
     const variantAccessGranted = await mayPlayVariant(accountUser, tenant.gameSpecId);
+    // Two stats-excluded accounts never form a rated game; a counted account
+    // skips the lookup.
+    const ratedPairsTwoExcluded =
+      room.rated && (await ratedSeatPairsTwoExcluded(accountUser, room.seatTokens));
     const assignSeat = () =>
       assignTenantSeat(
         tenant,
@@ -286,6 +291,7 @@ export function createTenantWsRuntime<
         accountUser,
         deviceId,
         variantAccessGranted,
+        ratedPairsTwoExcluded,
       );
     type SeatAssignment = Extract<ReturnType<typeof assignSeat>, { ok: true }>;
     // A refused seat closes the socket (or admits a spectator) and yields null.

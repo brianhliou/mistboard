@@ -13,7 +13,7 @@ import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from '
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { isCorrespondenceRatedModeEnabled } from './rated-flag.js';
-import { isLikelyStatsExcluded } from './signed-in-state.js';
+import { isRatedPairNotCountedError } from './seek-accept.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 
 // A small modal to send a directed correspondence challenge to a specific player
@@ -117,11 +117,8 @@ export function openChallengeDialog(opts: {
     opt.textContent = t(key, {}, locale);
     rated.append(opt);
   }
-  // An account excluded from stats never rates (the server refuses it), so its
-  // Rated option is disabled and says why.
-  const notCounted = isLikelyStatsExcluded();
   const ratedAvailable = (): boolean =>
-    !notCounted && correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
+    correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
   // Opens on the player's last pick, Casual until they make one
   // (correspondence-game-type.ts); a forced Casual is not saved.
   let wantedGameType: CorrespondenceGameType = storedCorrespondenceGameType();
@@ -132,10 +129,7 @@ export function openChallengeDialog(opts: {
   const syncRated = (): void => {
     const available = ratedAvailable();
     const ratedOption = rated.options[1];
-    if (ratedOption) {
-      ratedOption.disabled = !available;
-      if (notCounted) ratedOption.textContent = t('setup.ratedNotCounted', {}, locale);
-    }
+    if (ratedOption) ratedOption.disabled = !available;
     rated.value = available ? wantedGameType : 'casual';
   };
   syncRated();
@@ -245,5 +239,6 @@ function challengeErrorText(
   if (status === 401) return t('challenge.errorSignIn', {}, locale);
   if (code === 'seek_limit_reached') return t('challenge.errorLimit', {}, locale);
   if (code === 'challenge_blocked') return t('challenge.errorBlocked', { name }, locale);
+  if (isRatedPairNotCountedError(code)) return t('live.rejectedRatedCountedAccount', {}, locale);
   return t('challenge.errorGeneric', {}, locale);
 }
