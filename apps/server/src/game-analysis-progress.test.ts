@@ -15,10 +15,13 @@ import {
 } from './banqi-analysis.js';
 import {
   ANALYSIS_ACCOUNT_PENDING_CAP,
+  type AnalysisJobTiming,
   analysisJobStatusBody,
   enqueueAnalysisJob,
   findPendingAnalysisJob,
   getAnalysisJob,
+  resetAnalysisJobsForTests,
+  setAnalysisJobTelemetryForTests,
 } from './game-analysis-jobs.js';
 import type { AnalysisProgress, AnalysisProgressStore } from './game-analysis-kernel.js';
 import { type SweepPlyEval, sweepPlyEvals } from './game-analysis-sweep.js';
@@ -246,4 +249,66 @@ test('job lifecycle: pending -> done with the result envelope; coalescing lookup
   assert.equal(job.status, 'done');
   assert.deepEqual(analysisJobStatusBody(job), { status: 'done', result: { decisions: [1] } });
   assert.equal(findPendingAnalysisJob('lifetest', 'room-1', 'decisions'), null);
+});
+
+// ── Per-job timing (#1244) ────────────────────────────────────────────────────
+
+test('timing: a job queued behind another waits exactly the first job run time', async () => {
+  await resetAnalysisJobsForTests();
+  let clock = 1_000;
+  const records: AnalysisJobTiming[] = [];
+  const restore = setAnalysisJobTelemetryForTests({
+    now: () => clock,
+    record: (_accountId, timing) => records.push(timing),
+  });
+  try {
+    const first = enqueueAnalysisJob({
+      variant: 'timing-banqi',
+      roomId: 'room-a',
+      kind: 'decisions',
+      accountId: 'acct-timing-1',
+      total: 158,
+      run: async () => {
+        clock += 720_000;
+        return { decisions: [] };
+      },
+    });
+    const second = enqueueAnalysisJob({
+      variant: 'timing-xiangqi',
+      roomId: 'room-b',
+      kind: 'analysis',
+      accountId: 'acct-timing-2',
+      total: 81,
+      run: async () => {
+        clock += 4_000;
+        throw new Error('engine died');
+      },
+    });
+    assert.ok(first.ok && second.ok);
+    for (let i = 0; i < 200 && records.length < 2; i += 1) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    assert.equal(records.length, 2);
+    const [a, b] = records as [AnalysisJobTiming, AnalysisJobTiming];
+    assert.deepEqual(a, {
+      variant: 'timing-banqi',
+      kind: 'decisions',
+      lane: 'local',
+      plies: 157,
+      queueLengthAtEnqueue: 0,
+      waitMs: 0,
+      runMs: 720_000,
+      outcome: 'ok',
+      error: null,
+    });
+    assert.equal(b.queueLengthAtEnqueue, 1);
+    assert.equal(b.waitMs, a.runMs, 'the second job waits the whole of the first job run');
+    assert.equal(b.runMs, 4_000);
+    assert.equal(b.plies, 80);
+    assert.equal(b.outcome, 'failed');
+    assert.equal(b.error, 'analysis_failed');
+  } finally {
+    restore();
+    await resetAnalysisJobsForTests();
+  }
 });
