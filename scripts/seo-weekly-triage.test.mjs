@@ -14,6 +14,7 @@ import {
   movers,
   newKeys,
   opportunities,
+  pageKey,
   parseTsv,
   renderMarkdown,
   shortPage,
@@ -118,6 +119,36 @@ test('movers ranks gains and losses by impressions, clicks weighted 10x', () => 
     [['jieqi', -45, -2]],
   );
   assert.equal(gainers.find((r) => r.key === '皮卡魚').prev.position, null);
+});
+
+// GSC reports a jump link as its own page row, so one page split into two
+// half-sized rows in the movers and opportunities tables.
+test('page rows that differ only by #fragment fold into one page', () => {
+  const page = 'https://mistboard.com/rules/jieqi';
+  const p = byWindow(
+    parseTsv(
+      windowsFixture('page', [
+        ['last28', page, 3, 100, '4.0'],
+        ['last28', `${page}#reveal`, 1, 300, '8.0'],
+        ['last28', 'https://mistboard.com/rules/banqi?x=1', 2, 50, '5.0'],
+      ]),
+    ),
+    'page',
+    pageKey,
+  ).get('last28');
+  assert.deepEqual([...p.keys()], [page, 'https://mistboard.com/rules/banqi?x=1']);
+  const t = p.get(page);
+  assert.equal(t.clicks, 4);
+  assert.equal(t.impressions, 400);
+  assert.equal(t.ctr, 4 / 400);
+  assert.equal(t.position, (4 * 100 + 8 * 300) / 400);
+  assert.equal(pageKey(`${page}#`), page);
+  // Planted: without the page key the fragment row stays a page of its own.
+  const raw = byWindow(
+    parseTsv(windowsFixture('page', [['last28', `${page}#reveal`, 1, 300, '8.0']])),
+    'page',
+  );
+  assert.ok(raw.get('last28').has(`${page}#reveal`));
 });
 
 test('newKeys keeps last-week keys absent from the rest of the window', () => {
@@ -265,6 +296,8 @@ test('end to end: synthetic pull dir -> page with every section', () => {
       ['prior7', 'https://mistboard.com/zh-hant/rules/banqi', 6, 430, '6.0'],
       ['before7', 'https://mistboard.com/zh-hant/rules/banqi', 9, 900, '7.0'],
       ['last28', 'https://mistboard.com/zh-hant/rules/banqi', 16, 1342, '6.7'],
+      // Planted: a jump-link row of the same page must fold into it.
+      ['last7', 'https://mistboard.com/zh-hant/rules/banqi#flip', 1, 50, '6.8'],
     ]),
   );
   writeFileSync(
@@ -299,7 +332,8 @@ test('end to end: synthetic pull dir -> page with every section', () => {
   assert.match(md, /Bing to 2026-10-08 \(clicks only, life-os cache\)/);
   assert.match(md, /\| Bing 7d \| 140 \(\+33%\) \| - \|/);
   assert.match(md, /\| \*\*Hong Kong\*\* \| 206 \(was 0\) \| 8 \(was 0\)/);
-  assert.match(md, /\| \/zh-hant\/rules\/banqi \| 650 \(\+220\)/);
+  assert.match(md, /\| \/zh-hant\/rules\/banqi \| 700 \(\+270\)/);
+  assert.doesNotMatch(md, /#flip/);
   const worth = md.split('## Worth a look')[1].split('##')[0];
   assert.ok(worth.split('\n').filter((l) => l.startsWith('- ')).length <= 5);
 });

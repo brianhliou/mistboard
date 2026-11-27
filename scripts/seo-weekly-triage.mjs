@@ -150,13 +150,23 @@ export function dailyWindows(rows, posKey = 'position') {
   return out;
 }
 
-/** Windowed TSV rows -> Map<window, Map<key, totals>>. */
-export function byWindow(rows, keyCol) {
+/** Search Console page URL -> the page it names. GSC reports a jump link
+ * (/rules/jieqi#reveal) as its own row; it is the same page, so the
+ * fragment is dropped and the rows fold together. */
+export function pageKey(url) {
+  const hash = url.indexOf('#');
+  return hash === -1 ? url : url.slice(0, hash);
+}
+
+/** Windowed TSV rows -> Map<window, Map<key, totals>>. Rows whose keys
+ * match after `keyFn` are summed: clicks and impressions add, CTR is
+ * recomputed and position is impression-weighted (aggregate). */
+export function byWindow(rows, keyCol, keyFn = (k) => k) {
   const out = new Map();
   for (const r of rows ?? []) {
     if (!out.has(r.window)) out.set(r.window, new Map());
     const m = out.get(r.window);
-    const key = r[keyCol];
+    const key = keyFn(r[keyCol]);
     const prev = m.get(key);
     const cur = aggregate([r]);
     m.set(key, prev ? aggregate([prev, cur].map(toRow)) : cur);
@@ -606,7 +616,7 @@ export function buildModel({ dir, bingCache, date }) {
   const model = { date, google, bing, bingSource, missingWindows: !wq || !wp || !wc };
   if (!model.missingWindows) {
     const q = byWindow(wq, 'query');
-    const p = byWindow(wp, 'page');
+    const p = byWindow(wp, 'page', pageKey);
     const c = byWindow(wc, 'country');
     Object.assign(model, {
       queryMovers: movers(q.get('last7'), q.get('prior7')),
