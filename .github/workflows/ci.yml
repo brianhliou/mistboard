@@ -71,6 +71,7 @@ jobs:
         with:
           path: |
             apps/web/public/engine/pikafish/xiangqi-c07e94a5c7cb.nnue
+            apps/web/public/engine/ab-jchess/abjchess-20261030.nnue
             apps/web/public/engine/rapfi/*.data
           key: engine-nets-${{ hashFiles('apps/web/public/engine/*/net.json') }}
       - name: Build
@@ -125,6 +126,7 @@ jobs:
         with:
           path: |
             apps/web/public/engine/pikafish/xiangqi-c07e94a5c7cb.nnue
+            apps/web/public/engine/ab-jchess/abjchess-20261030.nnue
             apps/web/public/engine/rapfi/*.data
           key: engine-nets-${{ hashFiles('apps/web/public/engine/*/net.json') }}
       # No server build: nothing under apps/web imports @mistboard/server. The

@@ -1,0 +1,96 @@
+diff --git a/abjchess/src/uci.cpp b/abjchess/src/uci.cpp
+index 72872f1..abc79ca 100644
+--- a/abjchess/src/uci.cpp
++++ b/abjchess/src/uci.cpp
+@@ -424,7 +424,7 @@ struct Engine {
+             }
+         }
+         searcher.prepare(lim.ponder);  // preserve an immediate stop or ponderhit before the worker starts
+-        thread = Thread([this, root, lim] {
++        auto job = [this, root, lim] {
+             static const std::function<void(const std::string&)> info = [](const std::string& s) { out(s); };
+             try {
+                 const SearchResult r = searcher.go(root, lim, info, false);
+@@ -437,7 +437,12 @@ struct Engine {
+                 out(std::string("info string search failed: ") + error.what());
+                 out("bestmove 0000");
+             }
+-        });
++        };
++#if defined(ABJ_SYNC_GO)  // single-threaded WebAssembly: search on the calling thread, return after bestmove
++        job();
++#else
++        thread = Thread(job);
++#endif
+     }
+ 
+     void cmd_bench(std::istringstream& is) {
+@@ -471,15 +476,10 @@ struct Engine {
+ 
+ }  // namespace
+ 
+-int uci_loop(int argc, char** argv) {
+-    Engine engine;
+-    std::string line;
+-    // Command-line arguments are executed as one command (e.g. `abjchess bench 8`), then exit.
+-    const bool once = argc > 1;
+-    if (once) {
+-        for (int i = 1; i < argc; ++i) line += (i > 1 ? " " : "") + std::string(argv[i]);
+-    }
+-    while (once || std::getline(std::cin, line)) {
++// One UCI command line; false after quit. (wasm: also the entry point of abj_command.)
++static bool uci_dispatch(Engine& engine, const std::string& line) {
++    bool quit = false;
++    do {
+         std::istringstream is(line);
+         std::string cmd;
+         is >> cmd;
+@@ -492,7 +492,7 @@ int uci_loop(int argc, char** argv) {
+         else if (cmd == "position") { engine.wait(); engine.cmd_position(is); }
+         else if (cmd == "go") engine.cmd_go(is);
+         else if (cmd == "stop") engine.wait();
+-        else if (cmd == "quit") break;
++        else if (cmd == "quit") { quit = true; break; }
+         else if (cmd == "help" || cmd == "--help" || cmd == "license" || cmd == "--license")
+             out("AB JChess is a jieqi engine communicating through the UCI protocol.");
+         else if (cmd == "d") out(engine.pos.pretty());
+@@ -613,10 +613,25 @@ int uci_loop(int argc, char** argv) {
+         else if (cmd == "selfplay") { engine.wait(); selfplay(is); }
+         else if (!cmd.empty() && cmd[0] != '#')
+             out("Unknown command: '" + line + "'. Type help for more information.");
++    } while (false);
++    return !quit;
++}
++
++int uci_loop(int argc, char** argv) {
++    Engine engine;
++    std::string line;
++    // Command-line arguments are executed as one command (e.g. `abjchess bench 8`), then exit.
++    const bool once = argc > 1;
++    if (once) {
++        for (int i = 1; i < argc; ++i) line += (i > 1 ? " " : "") + std::string(argv[i]);
++    }
++    while (once || std::getline(std::cin, line)) {
++        const bool more = uci_dispatch(engine, line);
+         if (once) {
+             engine.wait();
+             break;
+         }
++        if (!more) break;
+     }
+     engine.wait();
+     if (const char* fn = std::getenv("ABJ_DUALSTATS"); fn && (nnue::g_dualEv[0] | nnue::g_dualEv[1])) {   // in-game dual stats
+@@ -628,4 +643,13 @@ int uci_loop(int argc, char** argv) {
+     return 0;
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++// Browser / Node entry: one UCI line per call; the engine (and its default net lookup) is created on the first call,
++// so the page writes the net into the module filesystem first. Returns 0 after quit.
++extern "C" int abj_command(const char* line) {
++    static Engine* engine = new Engine();
++    return uci_dispatch(*engine, line ? std::string(line) : std::string()) ? 1 : 0;
++}
++#endif
++
+ }  // namespace jq

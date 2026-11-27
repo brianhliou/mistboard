@@ -35,6 +35,10 @@ const levels = (prefix: string, count: number): string[] =>
 export const PIKAFISH_JIEQI_BUILD_URL =
   'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi-mistboard';
 export const PIKAFISH_JIEQI_NET_LICENSE_URL = '/engine/pikafish-jieqi/jieqi-net-LICENSE';
+/** Bumped with any file under /engine/ab-jchess/, which is served immutable. */
+export const ABJCHESS_ENGINE_ASSET_VERSION = 'efc83867-emsdk3174-net20261030';
+/** The AB-JChess browser build's notes: commit, recipe, net and source archive (#800). */
+export const ABJCHESS_BROWSER_BUILD_URL = `/engine/ab-jchess/README.md?v=${ABJCHESS_ENGINE_ASSET_VERSION}`;
 
 export const RAPFI_REPO_URL = 'https://github.com/dhbloo/rapfi';
 export const RAPFI_NETWORKS_LICENSE_URL = '/engine/rapfi/NETWORKS-CC0.txt';

@@ -113,4 +113,12 @@ export interface CevalHandle {
   /** Halt the current search (the pending evaluate never resolves). */
   stop(): void;
   dispose(): void;
+  /** The engine answering, when the handle decides it at run time (a flagged
+   *  engine with a fallback). Absent: the panel's static cevalEngineName. */
+  readonly engineName?: string;
+  /** Logistic win-curve constant of this engine's centipawns (winPercentK), for
+   *  the eval bar. Absent: the bar's default curve. */
+  readonly winK?: number;
+  /** Most lines the engine can report. Absent: no limit below the panel's. */
+  readonly maxMultiPv?: number;
 }

@@ -40,6 +40,8 @@ if (!options.skipBuild) {
 
 // Public CC0 network (about 11 MB), pinned by commit and sha256.
 run(['node', 'scripts/fetch-pikafish-net.mjs']);
+// AB-JChess jieqi net (580 KB), from the authors' release zip, sha256-pinned.
+run(['node', 'scripts/fetch-abjchess-browser-net.mjs']);
 run(['node', 'apps/web/scripts/fetch-rapfi-net.mjs']);
 
 if (!options.skipDrift) {

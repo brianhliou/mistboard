@@ -57,6 +57,21 @@ export function jqeEnabled(): boolean {
   return import.meta.env.VITE_JQE_ENABLED === 'true';
 }
 
+// AB-JChess as the browser's jieqi analysis engine (#800), off by default and
+// not forced on in dev: PikaJieQi stays the default and the fallback. On for a
+// build with VITE_ABJCHESS_CEVAL_ENABLED=true, or for one page with
+// `?engine=abjchess`; `?engine=pikajieqi` turns it off for that page.
+export function abjchessCevalEnabled(search: string = pageSearch()): boolean {
+  const engine = new URLSearchParams(search).get('engine');
+  if (engine === 'abjchess') return true;
+  if (engine === 'pikajieqi') return false;
+  return import.meta.env.VITE_ABJCHESS_CEVAL_ENABLED === 'true';
+}
+
+function pageSearch(): string {
+  return typeof location === 'undefined' ? '' : location.search;
+}
+
 // Crazyhouse Xiangqi renderer. Launched: always on, like fortress and atomic
 // (the server MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED flag remains the runtime
 // kill-switch for room creation).
