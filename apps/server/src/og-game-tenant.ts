@@ -261,6 +261,12 @@ export type TenantGamePageMeta = {
 
 const GAME_PAGE_ROUTE = /^(\/[a-z0-9-]+)?\/game\/([^/]+)$/;
 const ROOM_PAGE_ROUTE = /^\/room\/([^/]+)$/;
+// The optional prefix above also matches routes that are not tenant review
+// pages. /embed/game/:id (EMBED_ROUTE_PATTERNS) is a client widget with its
+// own noindex shell, and /historical-xiangqi/game/:id is the archive; neither
+// is a tenant route base, so treating them as one 404'd every game embed
+// from 2026-11-07 to 2026-11-27.
+const NON_TENANT_GAME_PREFIXES = new Set(['/embed', '/historical-xiangqi']);
 
 export type TenantGameRoutePage = {
   meta?: Omit<TenantGamePageMeta, 'imagePath'> & { imagePath?: string };
@@ -277,7 +283,7 @@ export async function tenantGameRoutePage(
 ): Promise<TenantGameRoutePage | null> {
   const normalized = pathname.replace(/\/+$/, '');
   const match = GAME_PAGE_ROUTE.exec(normalized);
-  if (!match?.[1] || match[1] === '/historical-xiangqi') return null;
+  if (!match?.[1] || NON_TENANT_GAME_PREFIXES.has(match[1])) return null;
   const generic = { noindex: true } as const;
   const missing = { ...generic, notFound: true } as const;
   let roomId: string;
@@ -358,6 +364,7 @@ export async function tenantGamePageMeta(
   store: TenantGameCardStore = liveStore,
 ): Promise<TenantGamePageMeta | null> {
   const gameMatch = GAME_PAGE_ROUTE.exec(pathname);
+  if (gameMatch?.[1] && NON_TENANT_GAME_PREFIXES.has(gameMatch[1])) return null;
   const roomMatch = gameMatch ? null : ROOM_PAGE_ROUTE.exec(pathname);
   const encodedId = gameMatch?.[2] ?? roomMatch?.[1];
   if (!encodedId) return null;

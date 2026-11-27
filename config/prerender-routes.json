@@ -369,6 +369,14 @@
         "title": "象棋AI分析 · 皮卡魚引擎免費分析棋盤 | Mistboard",
         "description": "免費的象棋AI分析棋盤：在瀏覽器裡用皮卡魚引擎分析任意局面。可以貼上棋譜或 FEN 匯入，擺出變著分支，復盤任何一盤對局。無需下載，也無需註冊帳號。"
       }
+    },
+    "metaByVariant": {
+      "jieqi": {
+        "en": {
+          "title": "Jieqi Analysis Board | Mistboard",
+          "description": "Analyse jieqi (xiangqi with face-down pieces) positions with a free engine. Import moves or a FEN, branch variations, and share any position by link."
+        }
+      }
     }
   },
   {

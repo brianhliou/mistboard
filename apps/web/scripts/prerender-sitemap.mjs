@@ -129,11 +129,15 @@ export async function writePrerenderSitemap(distDir, publicHost, repoRoot, track
     JSON.stringify({ lastmod: datedBy(['packages/game/seed']) }),
   );
   // leaderboard.html is an alias whose canonical is /player.
-  records.push({
-    path: '/games',
-    lastmod: datedBy(['apps/server/src/server-static-pages.ts']),
-    alternates: [],
-  });
+  // /games and /watch have no prerender artifact: the server writes their
+  // crawler body (STATIC_ROUTE_BODIES), so the source date is that file's.
+  for (const path of ['/games', '/watch']) {
+    records.push({
+      path,
+      lastmod: datedBy(['apps/server/src/server-static-pages.ts']),
+      alternates: [],
+    });
+  }
   const unique = new Map(records.map((record) => [record.path, record]));
   // Server-only gaps have no prerender artifact. Keep their source date and
   // locale group in the sidecar without claiming a rendered body exists.

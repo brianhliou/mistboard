@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { broadcastRecordsCredit, xiangqiBroadcastRoundStart } from '@mistboard/game';
+import { clientIpForRateLimit, createAuthRateLimiter } from '../auth-rate-limit.js';
 import * as persistence from './../persistence.js';
 import { playerPuzzleCount } from '../puzzle-store.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
@@ -1000,6 +1001,31 @@ export function streamSnapshotEvents<T>(
   response.on('close', close);
 }
 
+// A board's export is its whole move list as a file, one board a request. A
+// person downloads a game or a round's worth; a loop over every board id gets
+// a 429 after the first minute's share.
+export const BOARD_EXPORT_LIMIT = 30;
+const BOARD_EXPORT_WINDOW_MS = 60_000;
+let boardExportLimiter = createAuthRateLimiter(BOARD_EXPORT_LIMIT, BOARD_EXPORT_WINDOW_MS);
+
+/** Tests only: start every case with an empty bucket. */
+export function resetBoardExportLimiterForTests(): void {
+  boardExportLimiter = createAuthRateLimiter(BOARD_EXPORT_LIMIT, BOARD_EXPORT_WINDOW_MS);
+}
+
+// A round's payload carries every board in it, moves included. A viewer loads
+// one round, then every other round at once for the standings (a dozen or so),
+// and live updates come over the round's event stream, not this route. A loop
+// over every tour's rounds gets a 429 after the first minute's share.
+export const ROUND_API_LIMIT = 120;
+const ROUND_API_WINDOW_MS = 60_000;
+let roundApiLimiter = createAuthRateLimiter(ROUND_API_LIMIT, ROUND_API_WINDOW_MS);
+
+/** Tests only: start every case with an empty bucket. */
+export function resetRoundApiLimiterForTests(): void {
+  roundApiLimiter = createAuthRateLimiter(ROUND_API_LIMIT, ROUND_API_WINDOW_MS);
+}
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -1120,6 +1146,10 @@ export async function tryHandle(
   const boardExportMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/boards\/([^/]+)\/export$/);
   if (boardExportMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
+    if (!boardExportLimiter.check(clientIpForRateLimit(request))) {
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
     if (!requirePersistence(response)) return true;
     const payload = await xiangqiBroadcastBoardExportForApi(
       decodeURIComponent(boardExportMatch[1]!),
@@ -1234,6 +1264,10 @@ export async function tryHandle(
   const roundMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/([^/]+)\/rounds\/([^/]+)$/);
   if (roundMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
+    if (!roundApiLimiter.check(clientIpForRateLimit(request))) {
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
     if (!requirePersistence(response)) return true;
     const payload = await xiangqiBroadcastRoundForApi(
       decodeURIComponent(roundMatch[1]!),

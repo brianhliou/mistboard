@@ -18,8 +18,12 @@ import type { StoredXiangqiBroadcastBoard } from '../persistence.js';
 import { definePersistenceTests } from '../persistence-test-support.js';
 import { broadcastLiveEvaluator } from '../xiangqi-broadcast-live-eval.js';
 import {
+  BOARD_EXPORT_LIMIT,
   manualXiangqiBroadcastPollForApi,
   manualXiangqiBroadcastSourceImportForApi,
+  ROUND_API_LIMIT,
+  resetBoardExportLimiterForTests,
+  resetRoundApiLimiterForTests,
   staleWhileRevalidate,
   tryHandle,
   type XiangqiBroadcastApiPersistence,
@@ -192,7 +196,7 @@ definePersistenceTests('broadcast direct API discovery', () => {
     for (const path of paths) {
       const response = captureResponse();
       const emitter = new EventEmitter();
-      const request = Object.assign(emitter, { method: 'GET', headers: {} });
+      const request = Object.assign(emitter, { method: 'GET', headers: {}, socket: {} });
       assert.equal(
         await tryHandle(
           emptyCtx(),
@@ -1124,6 +1128,50 @@ test('broadcast APIs return null for unknown records', async () => {
   assert.equal(await xiangqiBroadcastRoundForApi(tour.slug, 'missing', deps()), null);
   assert.equal(await xiangqiBroadcastBoardForApi('missing', deps()), null);
   assert.equal(await xiangqiBroadcastBoardExportForApi('missing', deps()), null);
+});
+
+test('one address looping over board exports gets a 429 past the budget; another does not', async () => {
+  resetBoardExportLimiterForTests();
+  const exportStatus = async (boardId: string, remoteAddress: string) => {
+    const response = captureResponse();
+    const path = `/api/xiangqi/broadcasts/boards/${boardId}/export`;
+    await tryHandle(
+      emptyCtx(),
+      { method: 'GET', headers: {}, socket: { remoteAddress } } as unknown as IncomingMessage,
+      response,
+      path,
+      new URL(`http://test.local${path}`),
+    );
+    return response.statusCode;
+  };
+  for (let index = 0; index < BOARD_EXPORT_LIMIT; index += 1) {
+    assert.notEqual(await exportStatus(`tour-r01-b${index}`, '203.0.113.9'), 429);
+  }
+  assert.equal(await exportStatus('tour-r01-bnext', '203.0.113.9'), 429);
+  assert.notEqual(await exportStatus('tour-r01-b0', '203.0.113.10'), 429);
+  resetBoardExportLimiterForTests();
+});
+
+test('one address looping over round payloads gets a 429 past the budget; another does not', async () => {
+  resetRoundApiLimiterForTests();
+  const roundStatus = async (roundId: string, remoteAddress: string) => {
+    const response = captureResponse();
+    const path = `/api/xiangqi/broadcasts/some-tour/rounds/${roundId}`;
+    await tryHandle(
+      emptyCtx(),
+      { method: 'GET', headers: {}, socket: { remoteAddress } } as unknown as IncomingMessage,
+      response,
+      path,
+      new URL(`http://test.local${path}`),
+    );
+    return response.statusCode;
+  };
+  for (let index = 0; index < ROUND_API_LIMIT; index += 1) {
+    assert.notEqual(await roundStatus(`r${index}`, '203.0.113.9'), 429);
+  }
+  assert.equal(await roundStatus('rnext', '203.0.113.9'), 429);
+  assert.notEqual(await roundStatus('r0', '203.0.113.10'), 429);
+  resetRoundApiLimiterForTests();
 });
 
 test('admin broadcast ops route requires admin before persistence in production', async () => {

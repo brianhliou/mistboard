@@ -15,7 +15,11 @@ export function expandPrerenderRoutes(table, catalogs) {
             ...row,
             locale,
             locales: variant && variant !== 'xiangqi' ? ['en'] : row.locales,
-            ...(variant && variant !== 'xiangqi' ? { metaByLocale: undefined } : {}),
+            // metaByLocale is the xiangqi board's copy; another variant takes
+            // its own from metaByVariant, else the catalog keys.
+            ...(variant && variant !== 'xiangqi'
+              ? { metaByLocale: row.metaByVariant?.[variant] }
+              : {}),
             variant,
             route: prefix + row.route.replace(':variant', variant ?? ''),
             file:

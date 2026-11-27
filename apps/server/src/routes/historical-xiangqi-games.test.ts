@@ -6,8 +6,13 @@ import {
   GAMES_SEARCH_DEFAULT_MIN_PLIES,
   type GameSpecId,
 } from '@mistboard/game';
-import { seedBroadcastDiscoveryFixture } from '../broadcast-discovery-test-support.js';
+import {
+  seedBroadcastDiscoveryFixture,
+  seedBroadcastSourceFixture,
+} from '../broadcast-discovery-test-support.js';
+import { getPool } from '../persistence-db.js';
 import { definePersistenceTests } from '../persistence-test-support.js';
+import { getXiangqiBroadcastBoard } from '../persistence-xiangqi-broadcasts.js';
 import type { HttpApiContext } from './lib.js';
 // The searchable variants derive from the tenant registry (via the watch
 // channels), so the registrations must be populated, as index.ts does.
@@ -16,6 +21,7 @@ import { crosstableReviewUrl } from '../crosstable.js';
 import {
   compareSearchItems,
   type GameSearchFilters,
+  HISTORICAL_GAMES_LIMIT,
   mistboardResults,
   pageAcrossLanes,
   parseHistoricalXiangqiGameQuery,
@@ -23,39 +29,53 @@ import {
   playedPlyFloor,
   playedPlyMin,
   publicTags,
+  resetHistoricalGamesLimiterForTests,
   SEARCH_WINDOW,
   searchableVariants,
   searchLanes,
   tryHandle,
 } from './historical-xiangqi-games.js';
 
+async function searchBroadcasts(query = ''): Promise<{ status: number; body: string }> {
+  resetHistoricalGamesLimiterForTests();
+  let status = 0;
+  let body = '';
+  const response = {
+    writeHead(code: number) {
+      status = code;
+    },
+    end(chunk: string) {
+      body = chunk;
+    },
+  } as unknown as ServerResponse;
+  const url = new URL(
+    `http://test.local/api/historical-xiangqi/games?source=broadcast&plyMin=0${query}`,
+  );
+  assert.equal(
+    await tryHandle(
+      {} as HttpApiContext,
+      { method: 'GET', headers: {}, socket: {} } as unknown as IncomingMessage,
+      response,
+      url.pathname,
+      url,
+    ),
+    true,
+  );
+  return { status, body };
+}
+
 definePersistenceTests('historical search broadcast discovery', () => {
   test('broadcast search totals and filtered results omit unlisted boards', async () => {
     const { tours, boards } = await seedBroadcastDiscoveryFixture();
+    // The fixture's events were found by dpxq discovery, which the search
+    // leaves out; this case is about listing, so relay the listed one elsewhere.
+    await getPool().query('UPDATE xiangqi_broadcast_tours SET source_url = $2 WHERE slug = $1', [
+      tours[0]!.slug,
+      'https://vietnamchess.vn/databank/xqbase-vietnamchess',
+    ]);
     for (const event of ['', tours[1]!.name]) {
-      let status = 0;
-      let body = '';
-      const response = {
-        writeHead(code: number) {
-          status = code;
-        },
-        end(chunk: string) {
-          body = chunk;
-        },
-      } as unknown as ServerResponse;
-      const url = new URL(
-        'http://test.local/api/historical-xiangqi/games?source=broadcast&plyMin=0',
-      );
-      if (event) url.searchParams.set('event', event);
-      assert.equal(
-        await tryHandle(
-          {} as HttpApiContext,
-          { method: 'GET' } as IncomingMessage,
-          response,
-          url.pathname,
-          url,
-        ),
-        true,
+      const { status, body } = await searchBroadcasts(
+        event ? `&event=${encodeURIComponent(event)}` : '',
       );
       assert.equal(status, 200);
       const page = JSON.parse(body);
@@ -67,6 +87,76 @@ definePersistenceTests('historical search broadcast discovery', () => {
       assert.ok(!body.includes(tours[1]!.slug));
     }
   });
+
+  test('boards relayed from dpxq are left out of the search and still open by id', async () => {
+    const { byKey } = await seedBroadcastSourceFixture();
+    const { status, body } = await searchBroadcasts();
+    assert.equal(status, 200);
+    const page = JSON.parse(body);
+    assert.equal(page.total, 1);
+    assert.deepEqual(
+      page.games.map((game: { id: string }) => game.id),
+      [byKey.elsewhere.board.id],
+    );
+    // Planted: one dpxq board by its own URL, one by its tour's discovery URL.
+    for (const key of ['dpxqBoard', 'dpxqTour'] as const) {
+      assert.ok(!body.includes(byKey[key].board.id), key);
+      assert.equal((await getXiangqiBroadcastBoard(byKey[key].board.id))?.id, byKey[key].board.id);
+    }
+  });
+});
+
+async function statusFor(
+  path: string,
+  remoteAddress: string,
+  headers: Record<string, string> = {},
+): Promise<number> {
+  let status = 0;
+  const response = {
+    writeHead(code: number) {
+      status = code;
+    },
+    end() {},
+  } as unknown as ServerResponse;
+  const url = new URL(`http://test.local${path}`);
+  await tryHandle(
+    {} as HttpApiContext,
+    { method: 'GET', headers, socket: { remoteAddress } } as unknown as IncomingMessage,
+    response,
+    url.pathname,
+    url,
+  );
+  return status;
+}
+
+test('one address walking games by id gets a 429 past the budget; another address does not', async () => {
+  resetHistoricalGamesLimiterForTests();
+  const walker = '203.0.113.7';
+  for (let index = 0; index < HISTORICAL_GAMES_LIMIT; index += 1) {
+    assert.notEqual(await statusFor(`/api/historical-xiangqi/games/hxq_${index}`, walker), 429);
+  }
+  // The search and the download share the budget with the game page.
+  assert.equal(await statusFor(`/api/historical-xiangqi/games/hxq_next`, walker), 429);
+  assert.equal(await statusFor('/api/historical-xiangqi/games', walker), 429);
+  assert.equal(await statusFor('/api/historical-xiangqi/games/hxq_0/export.pgn', walker), 429);
+  assert.notEqual(await statusFor('/api/historical-xiangqi/games/hxq_0', '203.0.113.8'), 429);
+  resetHistoricalGamesLimiterForTests();
+});
+
+test('a caller outside the CDN cannot rotate forwarded or visitor headers to dodge the limit', async () => {
+  resetHistoricalGamesLimiterForTests();
+  // The platform proxy appends the caller's address (one trusted hop); the
+  // caller controls everything to its left and the CDN visitor header, which
+  // counts only when that hop is inside the CDN's ranges.
+  const caller = '198.51.100.20';
+  for (let index = 0; index <= HISTORICAL_GAMES_LIMIT; index += 1) {
+    const status = await statusFor(`/api/historical-xiangqi/games/hxq_${index}`, '10.0.0.2', {
+      'x-forwarded-for': `192.0.2.${index % 250}, ${caller}`,
+      'cf-connecting-ip': `192.0.2.${(index + 1) % 250}`,
+    });
+    assert.equal(status === 429, index === HISTORICAL_GAMES_LIMIT, `request ${index + 1}`);
+  }
+  resetHistoricalGamesLimiterForTests();
 });
 
 function parse(query: string) {

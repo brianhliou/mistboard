@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { GAMES_SEARCH_DEFAULT_MIN_PLIES, type GameSpecId, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { crosstableReviewUrl } from './../crosstable.js';
 import { flipFirstColorForRoom, isFlipInkVariant } from './../flip-first-color.js';
 import { PGN_CONTENT_TYPE } from './../game-export-shared.js';
@@ -117,6 +118,30 @@ type UnifiedXiangqiSearchChunk = {
   total: number;
 };
 
+// One budget per address across the search, a game and its download. A person
+// paging results and opening games stays far below it; a loop walking the
+// archive game by game gets a 429 after the first minute's share.
+export const HISTORICAL_GAMES_LIMIT = 60;
+const HISTORICAL_GAMES_WINDOW_MS = 60_000;
+let historicalGamesLimiter = createAuthRateLimiter(
+  HISTORICAL_GAMES_LIMIT,
+  HISTORICAL_GAMES_WINDOW_MS,
+);
+
+/** Tests only: start every case with an empty bucket. */
+export function resetHistoricalGamesLimiterForTests(): void {
+  historicalGamesLimiter = createAuthRateLimiter(
+    HISTORICAL_GAMES_LIMIT,
+    HISTORICAL_GAMES_WINDOW_MS,
+  );
+}
+
+function rateLimited(request: IncomingMessage, response: ServerResponse): boolean {
+  if (historicalGamesLimiter.check(clientIpForRateLimit(request))) return false;
+  writeJson(response, 429, { error: 'rate_limited' });
+  return true;
+}
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -127,6 +152,7 @@ export async function tryHandle(
   const exportMatch = pathname.match(/^\/api\/historical-xiangqi\/games\/([^/]+)\/export\.pgn$/);
   if (exportMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
+    if (rateLimited(request, response)) return true;
     if (!requirePersistence(response)) return true;
     const game = await persistence.getHistoricalXiangqiGame(decodeURIComponent(exportMatch[1]!));
     // Same by-id gate as the detail route below: unlisted games are linked and
@@ -154,6 +180,7 @@ export async function tryHandle(
   const detailMatch = pathname.match(/^\/api\/historical-xiangqi\/games\/([^/]+)$/);
   if (detailMatch) {
     if (!requireMethod(request, response, 'GET')) return true;
+    if (rateLimited(request, response)) return true;
     if (!requirePersistence(response)) return true;
     const game = await persistence.getHistoricalXiangqiGame(decodeURIComponent(detailMatch[1]!));
     // Direct-id access serves unlisted games too: an unlisted corpus is absent
@@ -183,6 +210,7 @@ export async function tryHandle(
 
   if (pathname !== '/api/historical-xiangqi/games') return false;
   if (!requireMethod(request, response, 'GET')) return true;
+  if (rateLimited(request, response)) return true;
   if (!requirePersistence(response)) return true;
 
   const launched = searchableVariants();
@@ -544,6 +572,9 @@ async function queryBroadcastXiangqiGames(
     playedTo: filters.playedTo,
     plyMin: filters.plyMin,
     plyMax: filters.plyMax,
+    // Boards relayed from dpxq.com open from their event and round pages but
+    // are not listed in the search.
+    excludeDpxq: true,
     offset,
     limit,
   });

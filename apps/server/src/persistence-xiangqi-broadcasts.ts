@@ -34,6 +34,7 @@ import {
   type XiangqiBroadcastPollMode,
   xiangqiBroadcastPollState,
 } from './xiangqi-broadcast-poll-window.js';
+import { DPXQ_BROADCAST_BOARD_SQL } from './xiangqi-broadcast-source-origin.js';
 import {
   translatedXiangqiBroadcastBoard,
   translatedXiangqiBroadcastRound,
@@ -80,6 +81,8 @@ export type XiangqiBroadcastBoardSearchFilters = {
   playedTo?: string;
   plyMin?: number;
   plyMax?: number;
+  /** Leave out boards relayed from dpxq.com (xiangqi-broadcast-source-origin.ts). */
+  excludeDpxq?: boolean;
   limit?: number;
   offset?: number;
 };
@@ -1194,6 +1197,7 @@ function buildCompletedBoardSearchWhere(filters: XiangqiBroadcastBoardSearchFilt
   if (typeof filters.plyMax === 'number') {
     conditions.push(`boards.ply_count <= ${bind(filters.plyMax)}`);
   }
+  if (filters.excludeDpxq) conditions.push(`NOT ${DPXQ_BROADCAST_BOARD_SQL}`);
 
   return { clause: conditions.join('\n       AND '), values };
 }
