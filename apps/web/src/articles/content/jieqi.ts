@@ -1,5 +1,5 @@
 import { JIEQI_CAPTURE_PRIVACY, JIEQI_RULES_THUMBNAIL, playClosing } from '../diagrams.js';
-import { jieqiRulesDiagram } from '../../jieqi-rules-diagrams.js';
+import { jieqiRulesAfterPair, jieqiRulesDiagram, jieqiRulesStartPair } from '../../jieqi-rules-diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 export const jieqiArticle: Article = {
@@ -15,19 +15,19 @@ export const jieqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-11-12',
-  updateNote: 'The sample game is a new one, with every move graded by AB-JChess and the luck of each turned-over piece.',
+  updatedAt: '2026-11-27',
+  updateNote: 'The rules are shorter, set out as lists beside the diagrams, with a new board showing how each face-down piece makes its first move.',
   audience: 'Players learning jieqi, with or without experience of xiangqi.',
   thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
   tldr: [
-    'A face-down piece makes its first move using the role of its starting point, then reveals to both players.',
-    'After revealing, it uses its own moves. Advisors can leave the palace and elephants can cross the river.',
-    'Checkmate wins. Leaving your opponent with no legal move also wins, even without check.',
+    'Every piece but the general starts face-down and makes its first move as the piece whose point it starts on.',
+    'That move turns it face-up, and from then on it plays as itself. Advisors may leave the palace and elephants may cross the river.',
+    'Checkmate wins, and so does leaving your opponent with no legal move.',
   ],
   intro: [
     {
       kind: 'paragraph',
-      text: 'Jieqi, also called Reveal Xiangqi, is xiangqi with shuffled, hidden pieces. You can see where every piece stands and which side it belongs to. Only the generals start face-up. You learn the identity of one of your other pieces by moving it. Red moves first.',
+      text: 'Jieqi, also called Reveal Xiangqi, is xiangqi played with the pieces shuffled face-down. You can see where every piece stands and whose it is, but not what it is until it moves. Red moves first.',
     },
   ],
   sections: [
@@ -35,21 +35,16 @@ export const jieqiArticle: Article = {
       heading: 'The board and setup',
       blocks: [
         {
-          kind: 'paragraph',
-          text: 'Pieces stand on points where the lines meet. Red starts at the bottom of the diagrams and moves toward the top. Black moves toward the bottom. The river divides the board across the middle. Each general stays inside its own palace, the area marked with diagonal lines.',
-        },
-        {
-          kind: 'paragraph',
-          text: "Set each general face-up at the centre of its back rank. Shuffle each side's other fifteen pieces separately and deal them face-down onto its remaining starting points. Each side has two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. Neither player knows the hidden identities, including their own. Face-down pieces are often called dark pieces.",
-        },
-        {
           kind: 'raw-svg',
-          svg: jieqiRulesDiagram('start', 'START: RED AT THE BOTTOM'),
-          caption: 'The generals are face-up. Every plain disc is a face-down piece, red-brown for Red and green for Black. The deal changes identities, while the starting points stay the same.',
+          svg: jieqiRulesStartPair('WHAT YOU SEE', 'WHAT EACH POINT MOVES AS'),
         },
         {
-          kind: 'paragraph',
-          text: 'The coordinates in these examples name points. Files run from a on the left to i on the right, as Red sees them. Ranks run from 1 at the bottom to 10 at the top. So b1 is a horse starting point beside the left corner; e4 is the central soldier starting point.',
+          kind: 'list',
+          items: [
+            '**The generals start face-up** in the centre of each back rank.',
+            "**Each side's other 15 pieces are shuffled face-down** onto that side's usual starting points. Nobody knows which is which, not even their owner.",
+            '**A face-down piece moves as the piece that starts on its point** in xiangqi, shown on the right. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move.',
+          ],
         },
       ],
     },
@@ -57,35 +52,25 @@ export const jieqiArticle: Article = {
       heading: 'How a face-down piece moves',
       blocks: [
         {
-          kind: 'paragraph',
-          text: 'A face-down piece moves, attacks, and captures as the piece that normally starts on its point. The corners use chariot moves. Beside them are horse points, then elephant points, then advisor points beside the general. The two pieces set forward behind the soldiers use cannon moves. The front line uses soldier moves. [Xiangqi Rules](/rules/xiangqi#the-pieces) draws each move on its own board.',
+          kind: 'raw-svg',
+          svg: jieqiRulesDiagram('horse', 'MOVES AS A HORSE', 'TURNS OVER: AN ADVISOR'),
         },
         {
-          kind: 'paragraph',
-          text: 'You move and reveal as a single turn. There is no separate turn for flipping a piece in place. Its hidden identity cannot change the path of this first move: the piece on b1 must make a horse move even if it will turn out to be a cannon or an advisor.',
+          kind: 'list',
+          items: [
+            '**Its first move is its point’s move.** The piece on a horse point makes a horse move, whatever it turns out to be.',
+            '**It turns face-up where it lands**, for both players to see. Moving and turning over is one turn; you cannot flip a piece in place.',
+          ],
         },
         {
           kind: 'raw-svg',
-          svg: jieqiRulesDiagram('horse', 'BEFORE: HORSE POINT b1', 'AFTER: ADVISOR ON c3'),
-          caption: 'Red moves b1 to c3 as a horse, which needs b2 empty. It lands and reveals as an advisor. The horse move from b1 to d2 is blocked by the piece on c1.',
+          svg: jieqiRulesDiagram('cannon', 'CAPTURES AS A CANNON', 'TURNS OVER: A SOLDIER'),
         },
         {
-          kind: 'paragraph',
-          text: 'Both players see the identity when the piece lands, and from then on it moves and attacks as that piece.',
-        },
-        { kind: 'sub-heading', text: 'A cannon capture can reveal a soldier' },
-        {
-          kind: 'paragraph',
-          text: 'A cannon captures by jumping over exactly one piece, and a face-down piece on a cannon point does the same. At the start, Red can play b3 to b10 by jumping over the black piece on b8, which stays where it is.',
-        },
-        {
-          kind: 'raw-svg',
-          svg: jieqiRulesDiagram('cannon', 'BEFORE: CANNON POINT b3', 'AFTER: SOLDIER ON b10'),
-          caption: 'The piece makes a cannon capture over b8, then reveals as a soldier. Red learns the captured identity. Black sees its face-down piece leave the board.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'The revealed soldier has already crossed the river, so from b10 it can step sideways, but it cannot go back to b9.',
+          kind: 'list',
+          items: [
+            '**Captures work the same way.** A piece on a cannon point captures by jumping one piece, as a cannon does.',
+          ],
         },
       ],
     },
@@ -93,30 +78,29 @@ export const jieqiArticle: Article = {
       heading: 'Revealed pieces use their own moves',
       blocks: [
         {
-          kind: 'paragraph',
-          text: 'A revealed advisor may leave the palace. A revealed elephant may cross the river. Their movement shapes stay the same: an advisor moves one point diagonally, and an elephant moves two diagonally, with the point between, called the eye, empty. The general always stays inside its own palace.',
+          kind: 'raw-svg',
+          svg: jieqiRulesAfterPair(
+            ['advisor', 'ADVISOR OUT OF THE PALACE'],
+            ['elephant', 'ELEPHANT ACROSS THE RIVER'],
+          ),
         },
         {
-          kind: 'svg-row',
+          kind: 'list',
           items: [
-            {
-              svg: jieqiRulesDiagram('advisor', 'REVEALED ADVISOR: c3 TO d4'),
-              caption: 'After the b1 to c3 reveal and a Black reply, the advisor can step from c3 to d4. It can continue playing outside the palace.',
-            },
-            {
-              svg: jieqiRulesDiagram('elephant', 'REVEALED ELEPHANT: a5 TO c7'),
-              caption: 'A different deal puts an elephant under a4. Red moves it to a5 as a soldier. After Black replies, the elephant can capture on c7 across the river because b6, its eye, is clear.',
-            },
+            '**Advisors may leave the palace**, still one point diagonally.',
+            '**Elephants may cross the river**, still two points diagonally, blocked when the point between them is taken.',
+            '**The general never leaves its palace.**',
           ],
         },
         {
-          kind: 'paragraph',
-          text: "A soldier follows its river rule from wherever it reveals, so a corner reveal can leave you with a soldier far behind your front line.",
+          kind: 'raw-svg',
+          svg: jieqiRulesDiagram('corner', 'MOVES AS A CHARIOT', 'A SOLDIER FROM THE CORNER'),
         },
         {
-          kind: 'raw-svg',
-          svg: jieqiRulesDiagram('corner', 'CORNER REVEAL: SOLDIER ON a3'),
-          caption: 'Red can slide the dark piece from a1 to a3 as a chariot. Here it reveals as a soldier. It will have to advance as a soldier on later turns; its own piece on a4 currently blocks it.',
+          kind: 'list',
+          items: [
+            '**A soldier keeps its river rule wherever it turns over.** This one moved from the corner as a chariot, and now it can only step forward.',
+          ],
         },
       ],
     },
@@ -124,12 +108,15 @@ export const jieqiArticle: Article = {
       heading: 'Captured dark pieces',
       blocks: [
         {
-          kind: 'paragraph',
-          text: 'If a piece is captured face-down, only its capturer learns its identity. Its former owner and spectators see a dark piece leave the board and nothing else. The capturer can then rule that identity out among the pieces still hidden. If the piece had already revealed, everyone already knew what was taken. The piece that made the capture reveals to both players either way.',
-        },
-        {
           kind: 'raw-svg',
           svg: JIEQI_CAPTURE_PRIVACY,
+        },
+        {
+          kind: 'list',
+          items: [
+            '**Only the capturer learns what a face-down piece was.** Its owner and spectators see a dark piece leave the board.',
+            '**A face-down piece that captures turns over** for both players, as on any move.',
+          ],
         },
       ],
     },
@@ -137,27 +124,38 @@ export const jieqiArticle: Article = {
       heading: 'Check, checkmate, and draws',
       blocks: [
         {
-          kind: 'paragraph',
-          text: 'A general is in check when an enemy piece attacks its point. A face-down enemy piece attacks using its starting-point role. A piece that has just moved attacks using its revealed identity, so you must look again after every reveal.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'You must answer check on your turn, and a move that leaves your own general attacked is illegal. The generals also cannot face each other along a clear file. Any piece, including a face-down one, can block that file.',
+          kind: 'list',
+          items: [
+            '**A face-down piece never gives check.** No starting point reaches the enemy palace. The move that turns it over can check, as the piece it turns out to be.',
+            '**Answer every check.** A move that leaves your general attacked is illegal.',
+            '**The generals may not face each other** on an open file. Any piece blocks it, face-down ones included.',
+          ],
         },
         {
           kind: 'table',
           wrap: true,
-          headers: ['Position or event', 'Result on Mistboard'],
+          headers: ['When', 'Result'],
           rows: [
-            ['The player to move is in check and has no legal move.', 'Checkmate. That player loses.'],
-            ['The player to move has no legal move, even without check.', 'Stalemate. That player loses.'],
-            ['80 plies pass without a capture.', 'Draw. A ply is one move by one player, so this is 40 moves by each side. Revealing a piece alone does not reset the count.'],
-            ['The same position with the same side to move occurs for the third time.', 'A player who checked on every one of their turns in the repeating cycle loses. If nobody gave check in the cycle and only one player chased on every one of their turns, that player loses. Anything else is a draw.'],
+            ['You have no legal move and are in check', 'Checkmate: you lose.'],
+            ['You have no legal move and are not in check', 'Stalemate: you lose too.'],
+            ['80 plies (40 moves each) pass without a capture', 'Draw. A reveal alone does not reset the count.'],
+            ['The same position, with the same side to move, comes a third time', 'Whoever checked on every turn of the cycle loses. Otherwise, if one player alone chased on every turn, that player loses. Anything else is a draw.'],
+          ],
+        },
+        { kind: 'sub-heading', text: 'What counts as a chase' },
+        {
+          kind: 'list',
+          items: [
+            '**A chase newly attacks an enemy piece**, the same piece every time.',
+            '**It does not count against a protected piece**, or against a piece of the same kind that could take back.',
+            '**Except:** a horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected.',
+            '**Generals and soldiers never chase.** A general, or a soldier that has not crossed the river, cannot be chased.',
           ],
         },
         {
-          kind: 'paragraph',
-          text: 'A chase is a move that newly attacks an enemy piece, the same piece every time. Generals and soldiers never chase, and a general or a soldier that has not crossed the river cannot be chased. Attacking a protected piece does not count, and neither does attacking a piece of the same kind that could capture back. A horse or cannon attacking a chariot, or an advisor or elephant attacking a chariot, horse or cannon, counts even when the target is protected. Games started before this update keep the old rule: only perpetual check lost, and the no-capture draw came after 60 moves each.',
+          kind: 'note',
+          label: 'Older games',
+          text: 'A game started under the older rule keeps it: only perpetual check lost, and the no-capture draw came after 60 moves each.',
         },
       ],
     },
@@ -166,7 +164,7 @@ export const jieqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13, and the game swings to Black. Both sides slip once on move 17. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks and side lines are AB-JChess’s reading of the game, and the die beside a turned-over piece grades how lucky the turn was.',
+          text: 'jqe, playing Red, against AB-JChess, from their 600-game match in October. Black is at the bottom of this board. Red takes six pieces in the first eleven moves, but two of Black’s face-down pieces turn over as chariots on moves 11 and 13. On move 23 Red turns over the piece beside its general and gets a soldier, and Black’s chariots mate on move 25. The marks are AB-JChess’s grades, and the die beside a turned-over piece grades its luck.',
         },
         {
           kind: 'embed',

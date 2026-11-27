@@ -7,6 +7,7 @@ import {
   isJieqiLegalMove,
   type JieqiGameState,
   type JieqiSquare,
+  jieqiCheckedGeneral,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { jieqiArticle } from './articles/content/jieqi.js';
@@ -91,6 +92,25 @@ describe('Jieqi rules examples through the game kernel', () => {
     expect(after.noCaptureClock).toBe(1); // revealing alone does not reset the clock
   });
 
+  it('no face-down piece can give check: none of its points reaches the enemy palace', () => {
+    // A face-down piece is always on its starting point, since any move turns it
+    // over. Clear Black down to its general so no blocker hides an attack.
+    const start = end('start');
+    const red = Object.fromEntries(
+      Object.entries(start.board).filter(([, piece]) => piece?.color === 'red'),
+    );
+    for (const file of ['d', 'e', 'f']) {
+      for (const rank of [8, 9, 10]) {
+        const general = `${file}${rank}` as JieqiSquare;
+        const board = { ...red, [general]: { color: 'black', role: 'general', faceDown: false } };
+        expect(
+          jieqiCheckedGeneral(board as JieqiGameState['board'], { type: 'playing', turn: 'black' }),
+          general,
+        ).toBeNull();
+      }
+    }
+  });
+
   it('a reveal without capture still reaches the no-capture draw limit', () => {
     const before = { ...end('start'), noCaptureClock: 119 };
     const after = applyJieqiMove(before, { from: 'e4', to: 'e5' });
@@ -133,6 +153,6 @@ describe('Jieqi rules examples through the game kernel', () => {
         }
       }
     }
-    expect(figures).toBe(7);
+    expect(figures).toBe(6);
   });
 });
