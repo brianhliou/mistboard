@@ -3671,12 +3671,6 @@ const ZH_HANS: Record<string, string> = {
     '**兵向正前方走一个点，永远不后退**，吃子也是这样。过河以后还可以横走一个点；到了最后一条横线，就只能横走。兵永远不升变。',
   '**Answer every check.** A move that leaves your own general attacked is illegal. A general can help mate from the far end of an open file, because the enemy general may not step onto that file.':
     '**被将军必须应将。**让自己的将帅被攻击的走法不合法。将帅可以从一条打开的纵线另一端协助将死，因为对方的将帅不能走到这条线上。',
-  'You have no legal move and are in check': '没有合法着法，且正被将军',
-  'Checkmate: you lose.': '将死：你输了。',
-  'You have no legal move and are not in check': '没有合法着法，但没有被将军',
-  'Stalemate: you lose too.': '困毙：你也输了。',
-  'The same position, with the same side to move, comes a third time':
-    '同一局面、同一方走棋，第三次出现',
   'Whoever checked on every move of the cycle loses. If both sides did, or neither did, it is a draw.':
     '在这个循环里每步都将军的一方判负。如果双方都这样，或双方都没有，判和。',
   '120 plies (60 moves each) pass without a capture': '连续 120 个半回合（每方 60 步）没有吃子',
@@ -11383,12 +11377,6 @@ const ZH_HANT: Record<string, string> = {
     '**兵向正前方走一個點，永遠不後退**，吃子也是這樣。過河以後還可以橫走一個點；到了最後一條橫線，就只能橫走。兵永遠不升變。',
   '**Answer every check.** A move that leaves your own general attacked is illegal. A general can help mate from the far end of an open file, because the enemy general may not step onto that file.':
     '**被將軍必須應將。**讓自己的將帥被攻擊的走法不合法。將帥可以從一條打開的直線另一端協助將死，因為對方的將帥不能走到這條線上。',
-  'You have no legal move and are in check': '沒有合法著法，且正被將軍',
-  'Checkmate: you lose.': '將死：你輸了。',
-  'You have no legal move and are not in check': '沒有合法著法，但沒有被將軍',
-  'Stalemate: you lose too.': '困斃：你也輸了。',
-  'The same position, with the same side to move, comes a third time':
-    '同一局面、同一方走棋，第三次出現',
   'Whoever checked on every move of the cycle loses. If both sides did, or neither did, it is a draw.':
     '在這個循環裡每步都將軍的一方判負。如果雙方都這樣，或雙方都沒有，判和。',
   '120 plies (60 moves each) pass without a capture': '連續 120 個半回合（每方 60 步）沒有吃子',
