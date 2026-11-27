@@ -15,7 +15,7 @@
 //     board sizing costs nothing.
 
 import { maybeGameSpecForId } from '@mistboard/game';
-import { readDisplayPreferences } from './display-preferences.js';
+import { displayPreferenceStorageKey, readDisplayPreferences } from './display-preferences.js';
 import { readStoredBanqiTile3d } from './xiangqi-appearance-storage.js';
 
 const DISPLAY_PREFERENCES_CHANGE_EVENT = 'mistboard:display-preferences-change';
@@ -43,6 +43,15 @@ function subscribeToPreferenceChanges(): void {
   if (subscribed || typeof window === 'undefined') return;
   subscribed = true;
   window.addEventListener(DISPLAY_PREFERENCES_CHANGE_EVENT, invalidateCache);
+  // The change event fires only in the document that wrote the setting. An
+  // embed is its own document: the article or forum page around it, the
+  // account page in another tab, or the gear on the host page changes the
+  // speed without telling it, and its boards kept gliding at the speed they
+  // loaded with. Every other same-origin document hears the write as a
+  // `storage` event (key null is a clear).
+  window.addEventListener('storage', (event) => {
+    if (event.key === null || event.key === displayPreferenceStorageKey) invalidateCache();
+  });
 }
 
 function prefersReducedMotion(): boolean {

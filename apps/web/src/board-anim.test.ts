@@ -8,10 +8,15 @@ import {
   holdBoardSettle,
   PIECE_GLIDE_EASING,
   pieceAnimationDurationMs,
+  pieceFlipDurationMs,
   resetBoardSettleForTests,
   trackPieceAnimation,
 } from './board-anim.js';
-import { type DisplayPreferenceValue, writeDisplayPreference } from './display-preferences.js';
+import {
+  type DisplayPreferenceValue,
+  displayPreferenceStorageKey,
+  writeDisplayPreference,
+} from './display-preferences.js';
 
 // The write API types select values as the pref's DEFAULT literal; the settings
 // UI casts the option through DisplayPreferenceValue (see account.ts), so the
@@ -54,6 +59,24 @@ describe('pieceAnimationDurationMs', () => {
     expect(pieceAnimationDurationMs()).toBe(500);
     setPieceAnimation('none');
     expect(pieceAnimationDurationMs()).toBe(0);
+  });
+
+  it('re-reads when another document writes the preference (a storage event, no change event)', () => {
+    setPieceAnimation('normal');
+    expect(pieceAnimationDurationMs()).toBe(250);
+    expect(pieceFlipDurationMs()).toBe(280);
+    // The host page around an embed, or another tab, wrote it: this document
+    // sees only the stored value and a storage event.
+    storageValues.set(displayPreferenceStorageKey, JSON.stringify({ pieceAnimation: 'slow' }));
+    const unrelated = new Event('storage') as Event & { key: string | null };
+    Object.defineProperty(unrelated, 'key', { value: 'some.other.key' });
+    window.dispatchEvent(unrelated);
+    expect(pieceAnimationDurationMs()).toBe(250);
+    const event = new Event('storage') as Event & { key: string | null };
+    Object.defineProperty(event, 'key', { value: displayPreferenceStorageKey });
+    window.dispatchEvent(event);
+    expect(pieceAnimationDurationMs()).toBe(500);
+    expect(pieceFlipDurationMs()).toBe(420);
   });
 
   it('returns 0 when the OS asks for reduced motion, regardless of the preference', () => {
