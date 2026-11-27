@@ -15,7 +15,10 @@ import {
   TEST_DATABASE_URL,
   test,
 } from './persistence-test-support.js';
-import { tryHandle as tryHandleHistoricalRoute } from './routes/historical-xiangqi-games.js';
+import {
+  resetHistoricalGamesLimiterForTests,
+  tryHandle as tryHandleHistoricalRoute,
+} from './routes/historical-xiangqi-games.js';
 // The search covers the launched variants, read from the tenant registry and
 // the launch flags, as in production.
 import './variant-tenant/register-tenants.js';
@@ -211,7 +214,7 @@ definePersistenceTests('historical xiangqi', () => {
         const capture = captureResponse();
         await tryHandleHistoricalRoute(
           {} as never,
-          { method: 'GET', headers: {} } as unknown as IncomingMessage,
+          getRequest(),
           capture,
           '/api/historical-xiangqi/games',
           new URL(`http://test.local/api/historical-xiangqi/games?${query}`),
@@ -354,7 +357,7 @@ definePersistenceTests('historical xiangqi', () => {
         const capture = captureResponse();
         await tryHandleHistoricalRoute(
           {} as never,
-          { method: 'GET', headers: {} } as unknown as IncomingMessage,
+          getRequest(),
           capture,
           '/api/historical-xiangqi/games',
           new URL(`http://test.local/api/historical-xiangqi/games?${query}`),
@@ -464,7 +467,7 @@ definePersistenceTests('historical xiangqi', () => {
     const okResp = captureResponse();
     await tryHandleHistoricalRoute(
       {} as never,
-      { method: 'GET', headers: {} } as unknown as IncomingMessage,
+      getRequest(),
       okResp,
       `/api/historical-xiangqi/games/${unlisted.id}`,
       new URL(`http://test.local/api/historical-xiangqi/games/${unlisted.id}`),
@@ -476,7 +479,7 @@ definePersistenceTests('historical xiangqi', () => {
     const hiddenResp = captureResponse();
     await tryHandleHistoricalRoute(
       {} as never,
-      { method: 'GET', headers: {} } as unknown as IncomingMessage,
+      getRequest(),
       hiddenResp,
       `/api/historical-xiangqi/games/${priv.id}`,
       new URL(`http://test.local/api/historical-xiangqi/games/${priv.id}`),
@@ -486,6 +489,13 @@ definePersistenceTests('historical xiangqi', () => {
 });
 
 type ResponseCapture = { body: string; status: number | null };
+
+// A fresh per-address budget for each request: these cases test the listing,
+// not the rate limit, which has its own test beside the route.
+function getRequest(): IncomingMessage {
+  resetHistoricalGamesLimiterForTests();
+  return { method: 'GET', headers: {}, socket: {} } as unknown as IncomingMessage;
+}
 
 function captureResponse(): ServerResponse & ResponseCapture {
   const capture = {

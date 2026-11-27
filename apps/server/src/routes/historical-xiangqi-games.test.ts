@@ -21,6 +21,7 @@ import { crosstableReviewUrl } from '../crosstable.js';
 import {
   compareSearchItems,
   type GameSearchFilters,
+  HISTORICAL_GAMES_LIMIT,
   mistboardResults,
   pageAcrossLanes,
   parseHistoricalXiangqiGameQuery,
@@ -28,6 +29,7 @@ import {
   playedPlyFloor,
   playedPlyMin,
   publicTags,
+  resetHistoricalGamesLimiterForTests,
   SEARCH_WINDOW,
   searchableVariants,
   searchLanes,
@@ -35,6 +37,7 @@ import {
 } from './historical-xiangqi-games.js';
 
 async function searchBroadcasts(query = ''): Promise<{ status: number; body: string }> {
+  resetHistoricalGamesLimiterForTests();
   let status = 0;
   let body = '';
   const response = {
@@ -101,6 +104,59 @@ definePersistenceTests('historical search broadcast discovery', () => {
       assert.equal((await getXiangqiBroadcastBoard(byKey[key].board.id))?.id, byKey[key].board.id);
     }
   });
+});
+
+async function statusFor(
+  path: string,
+  remoteAddress: string,
+  headers: Record<string, string> = {},
+): Promise<number> {
+  let status = 0;
+  const response = {
+    writeHead(code: number) {
+      status = code;
+    },
+    end() {},
+  } as unknown as ServerResponse;
+  const url = new URL(`http://test.local${path}`);
+  await tryHandle(
+    {} as HttpApiContext,
+    { method: 'GET', headers, socket: { remoteAddress } } as unknown as IncomingMessage,
+    response,
+    url.pathname,
+    url,
+  );
+  return status;
+}
+
+test('one address walking games by id gets a 429 past the budget; another address does not', async () => {
+  resetHistoricalGamesLimiterForTests();
+  const walker = '203.0.113.7';
+  for (let index = 0; index < HISTORICAL_GAMES_LIMIT; index += 1) {
+    assert.notEqual(await statusFor(`/api/historical-xiangqi/games/hxq_${index}`, walker), 429);
+  }
+  // The search and the download share the budget with the game page.
+  assert.equal(await statusFor(`/api/historical-xiangqi/games/hxq_next`, walker), 429);
+  assert.equal(await statusFor('/api/historical-xiangqi/games', walker), 429);
+  assert.equal(await statusFor('/api/historical-xiangqi/games/hxq_0/export.pgn', walker), 429);
+  assert.notEqual(await statusFor('/api/historical-xiangqi/games/hxq_0', '203.0.113.8'), 429);
+  resetHistoricalGamesLimiterForTests();
+});
+
+test('a caller outside the CDN cannot rotate forwarded or visitor headers to dodge the limit', async () => {
+  resetHistoricalGamesLimiterForTests();
+  // The platform proxy appends the caller's address (one trusted hop); the
+  // caller controls everything to its left and the CDN visitor header, which
+  // counts only when that hop is inside the CDN's ranges.
+  const caller = '198.51.100.20';
+  for (let index = 0; index <= HISTORICAL_GAMES_LIMIT; index += 1) {
+    const status = await statusFor(`/api/historical-xiangqi/games/hxq_${index}`, '10.0.0.2', {
+      'x-forwarded-for': `192.0.2.${index % 250}, ${caller}`,
+      'cf-connecting-ip': `192.0.2.${(index + 1) % 250}`,
+    });
+    assert.equal(status === 429, index === HISTORICAL_GAMES_LIMIT, `request ${index + 1}`);
+  }
+  resetHistoricalGamesLimiterForTests();
 });
 
 function parse(query: string) {
