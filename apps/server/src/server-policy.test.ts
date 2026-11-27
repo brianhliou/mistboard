@@ -613,6 +613,18 @@ test('a site-played game page is noindexed; an archive game and the lists are no
   }
 });
 
+// Finished rooms were filed as "Duplicate without user-selected canonical"
+// until 2026-11-27; a room is a play surface, not a landing page.
+test('every room page is noindexed; the room-adjacent public pages are not', () => {
+  for (const route of ['/room/xmj_abc', '/room/jq_live', '/room/abc123/']) {
+    assert.equal(isClientRoute(route), true, route);
+    assert.equal(isNoindexRoute(route), true, route);
+  }
+  for (const route of ['/room', '/rooms', '/room-extra/x', '/watch']) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
+});
+
 test('isNoindexRoute ignores a trailing slash', () => {
   assert.equal(isNoindexRoute('/account/'), true);
   assert.equal(isNoindexRoute('/following/'), true);

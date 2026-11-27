@@ -1908,8 +1908,8 @@ test('a share-tagged game, invite, challenge or broadcast link serves utm-free H
   const roundPath = '/broadcast/xiangqi/t/round/r';
   const cases = [
     // A game page carries og:url and no canonical link; a round carries both.
-    // A room link gets no rewritten shell at all: the caller serves the static
-    // index.html byte for byte, so nothing can echo a tag.
+    // A room link gets the noindex shell (2026-11-27) and, like a challenge,
+    // no og:url or canonical that could echo a tag.
     {
       pathname: '/game/room-1',
       campaign: 'game',
@@ -1929,7 +1929,7 @@ test('a share-tagged game, invite, challenge or broadcast link serves utm-free H
       campaign: 'invite',
       ogUrl: null,
       canonical: null,
-      rewritten: false,
+      rewritten: true,
     },
     {
       pathname: '/challenge/seek_abc',
@@ -2442,13 +2442,9 @@ test('a finished tenant game page gets its pairing as title, the review URL as o
     );
     assert.match(response.body, /<div id="app"><\/div>/);
     // A site-played game page is noindexed like the bare /game/:id (SEO D8,
-    // widened 2026-10-17), and carries no canonical beside the robots tag. The
-    // room URL is the live surface and is left alone.
-    if (pathname === '/jieqi/game/jq_x') {
-      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
-    } else {
-      assert.doesNotMatch(response.body, /noindex/, pathname);
-    }
+    // widened 2026-10-17), and so is its room (2026-11-27): neither carries a
+    // canonical beside the robots tag, and the room keeps its link preview.
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow'], pathname);
     assert.doesNotMatch(response.body, /rel="canonical"/, pathname);
   }
 
@@ -2464,6 +2460,9 @@ test('a finished tenant game page gets its pairing as title, the review URL as o
   });
   assert.doesNotMatch(response.body, /Pikafish/);
   assert.doesNotMatch(response.body, /og\/game\//);
+  // Live or finished, a room is a play surface and stays out of search.
+  assert.deepEqual(robotsTags(response.body), ['noindex, follow']);
+  assert.doesNotMatch(response.body, /rel="canonical"/);
 });
 
 test('the bare analysis and editor routes keep the xiangqi wording and take a FEN too', async () => {

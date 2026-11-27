@@ -145,6 +145,10 @@ export const CLIENT_ONLY_NOINDEX: readonly { routeId: string; path: string }[] =
     path: '/player/rating-stats',
   },
   {
+    routeId: '/room/*',
+    path: '/room/crawler-room',
+  },
+  {
     routeId: '/xiangqi/game/*',
     path: '/xiangqi/game/crawler',
   },
@@ -1477,20 +1481,6 @@ export const CRAWLER_CONTENT_MANIFEST: readonly CrawlerContentEntry[] = [
     hreflang: [],
     source: 'db-fixture',
     baselineChars: 162,
-  },
-  {
-    routeId: '/room/*',
-    path: '/room/crawler-room',
-    minChars: 150,
-    phrase: 'Invite opponent',
-    phraseKey: 'live.titleInviteOpponent',
-    locale: 'en',
-    h1: true,
-    canonical: true,
-    hreflang: [],
-    source: 'prerender',
-    knownGap: '#956',
-    baselineChars: 0,
   },
   {
     routeId: 'changelog-month',

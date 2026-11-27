@@ -677,6 +677,11 @@ export function isNoindexRoute(pathname: string): boolean {
     // Unlisted since 2026-11-25: the rating distribution stays reachable by
     // URL, but nothing links it and search should drop it.
     normalized === '/player/rating-stats' ||
+    // A live or finished room is a play surface, not a landing page: every
+    // finished room duplicates its review page, and Google filed them as
+    // "Duplicate without user-selected canonical" until 2026-11-27. Link
+    // previews keep their own og: meta; only search drops them.
+    /^\/room\/[^/]+$/.test(normalized) ||
     isSitePlayedGamePage(normalized)
   );
 }
