@@ -15,6 +15,8 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Playing
 
+- The strongest Jungle bot now keeps its engine loaded between moves, so it no longer runs out of time at 1+1 ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The Xiangqi Mahjong table is wider, its tiles are larger and the same size for both players, and the wall count reads as tiles left ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - Xiangqi has a Bold piece set and two new board colours, Green and Pine ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Room quick chat sends Hi, Good luck, Good game, Well played and Thanks, shown in each reader's language ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Game cards on /games and /correspondence are simpler: the board, one line per player with the clock, and Accept in the open seat of a seek ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
@@ -86,6 +88,10 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Learning and puzzles
 
+- The last puzzle of a lesson study now leads to the next study when its description links to one ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Profiles show Puzzle Storm, Puzzle Streak and days-in-a-row rows under the puzzle ratings ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The Chess960 starting positions article now ends with a button to the Fog Chess rules ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- A lesson's hints and wrong-move messages show in the reader's language when the lesson has a translation ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - Study lessons fit one phone screen with the board edge to edge, move on with Next puzzle, and show the closing comment in a sheet you can tuck away by tapping the board ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - The Pikafish guide links the easier bot levels and the analysis board on its first screen and has a new section on downloading Pikafish and its licence ([ae6c26bf](https://github.com/brianhliou/mistboard/commit/ae6c26bf))
 - The Fanfanqi study embed animates each move and flip ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
@@ -128,6 +134,9 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Watching and review
 
+- Fanfanqi review draws the better move on the board and lets you open a quiet alternative as a branch ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Fanfanqi review loads its move grades sooner ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Fanfanqi review shows a larger board on desktop ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - The watch page and the homepage game show each side's HP in Fanfanqi and points in Three Kingdoms Banqi ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Finished game cards show 1, 0 or ½ beside each player ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Broadcast board pages now use the game review layout on phone and desktop, with a larger board and the moves, chart and chat where review has them ([c8f6c542](https://github.com/brianhliou/mistboard/commit/c8f6c542))
@@ -175,12 +184,15 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Community
 
+- The leaderboard groups ladders by game and shows every rated time control, with a note when a pool has no players yet ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - Player profiles show a Fanfanqi row with each player's games and results ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - A message left unread for 12 hours now sends you an email reminder, at most one a day, with a one-click unsubscribe ([b4af5df0](https://github.com/brianhliou/mistboard/commit/b4af5df0))
 - Player profiles now show the puzzle rating graph to every visitor, a shorter ratings column, and a Founder badge ([a52a7079](https://github.com/brianhliou/mistboard/commit/a52a7079))
 
 ### Site
 
+- The source page names the bot each jieqi engine plays and the licence of each ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Emails come from Mistboard by name, sit in one centred card with the site icon, and no longer print long links under the button ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - Stats count a game between a site operator account and a guest player when the guest's browser has no tie to an operator account ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Article and rules diagrams draw the Green and Pine boards in full ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - Rapfi is the first Gomoku champion on the champions page, and engine champions carry the crown in the About menu ([f3e694ca](https://github.com/brianhliou/mistboard/commit/f3e694ca))
@@ -239,12 +251,31 @@ What changed on mistboard.com, month by month, newest first.
 
 ### Removed
 
+- The rating stats page is no longer linked from the leaderboard ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The post-game Play again by correspondence button ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - The per-side luck totals line in Fanfanqi review ([a3b1ea9d](https://github.com/brianhliou/mistboard/commit/a3b1ea9d))
 - Hong Kong mahjong is closed to new games ([fe32f804](https://github.com/brianhliou/mistboard/commit/fe32f804))
 - Retired Atomic Xiangqi games no longer get new computer analysis; finished games and stored analysis stay readable ([6a165462](https://github.com/brianhliou/mistboard/commit/6a165462))
 
 ### Fixed
 
+- Xiangqi pieces on the homepage and analysis board now draw with their art instead of blank discs while the page loads ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The homepage on a phone no longer opens in the desktop layout and rearranges while it loads ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- On phones the homepage viewer's loading box now matches a xiangqi-family board, and banqi, gomoku and jungle boards show at full size with no blank space ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The Fanfanqi and Three Kingdoms Banqi rules pages show both play buttons at once instead of adding Play a friend after load ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The homepage Fanfanqi bot row no longer pops in and pushes the other rows after the page loads ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The homepage game viewer draws its first board sooner on slow connections, with the article rows and News loading after it ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Fanfanqi review no longer marks both moves around a misread position as mistakes ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The correspondence room drops its Correspondence games button; the site menu and the notifications bell lead to your games ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- A correspondence move waiting for Confirm shows as a titled panel ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The username settings page no longer shows a next change date that has already passed ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Xiangqi Mahjong tiles keep one size as the hand goes from four tiles to five ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Three Kingdoms Banqi shows one Misty card on /bots, with its levels and version ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Misty's Three Kingdoms Banqi, Fanfanqi and Jungle Chess cards show the picked level's games ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Misty's Fanfanqi card shows its version ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- The Gomoku bot card on /bots shows its level description again ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- Earlier Jungle games against Misty now count toward the level they were played at ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
+- A finished broadcast whose games came in as results only is now checked once a day for up to 60 days, so records posted late still import ([d4b2e4b6](https://github.com/brianhliou/mistboard/commit/d4b2e4b6))
 - The last-move band is readable on the light board colours ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - The move list marks the last move while the board shows it ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
 - The jieqi odds strips keep one height as a side's pool empties, so the board no longer shifts on the last flip ([1927fdc4](https://github.com/brianhliou/mistboard/commit/1927fdc4))
