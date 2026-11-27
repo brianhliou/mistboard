@@ -2354,6 +2354,31 @@ test('unknown live-game links serve a real 404 shell, including bad ids and wron
   }
 });
 
+test('a game embed of a real tenant room serves the 200 embed shell, not the 404 page', async () => {
+  await import('./variant-tenant/register-tenants.js');
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  // The banqi-luck article embeds a real banqi room; any tenant prefix reached
+  // the 404 shell through the review route's optional prefix.
+  for (const pathname of ['/embed/game/bq_7e8ce2e7', '/embed/game/xq_card']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      tenantGameStore: {
+        summary: async () => assert.fail('an embed must not read a game for route meta'),
+        events: async () => null,
+        analysis: async () => null,
+      },
+    });
+    assert.equal(response.status, 200, pathname);
+    assert.doesNotMatch(response.body, /Page not found/, pathname);
+    assert.deepEqual(robotsTags(response.body), ['noindex, follow'], pathname);
+  }
+});
+
 test('hidden playtests and failed game reads keep a generic noindex shell', async () => {
   await import('./variant-tenant/register-tenants.js');
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));

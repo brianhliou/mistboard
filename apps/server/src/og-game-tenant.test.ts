@@ -398,6 +398,20 @@ test('tenant preview lookup fails closed for playtests, read failures and unload
   assert.equal(await tenantGameRoutePage('/room/jq_live', noReads), null);
 });
 
+test('a game embed of a real tenant room is not a tenant review route', async () => {
+  await loadRegistry();
+  // The optional prefix of the review route regex also matches /embed/game/:id.
+  // Claimed as a tenant route, a real room id under /embed resolved to no
+  // registration and served the 404 shell (2026-11-07 to 2026-11-27).
+  const noReads = store({
+    summary: async () => assert.fail('an embed must not read a game for route meta'),
+  });
+  assert.ok(variantTenantForRoomId(XQ_ROOM), 'fixture id belongs to a tenant');
+  assert.equal(await tenantGameRoutePage(`/embed/game/${XQ_ROOM}`, noReads), null);
+  assert.equal(await tenantGameRoutePage(`/embed/game/${XQ_ROOM}/`, noReads), null);
+  assert.equal(await tenantGamePageMeta(`/embed/game/${XQ_ROOM}`, noReads), null);
+});
+
 // ── the card ────────────────────────────────────────────────────────────────
 
 test('the card draws the analysed turning point, else the final position, else the pairing', async () => {
