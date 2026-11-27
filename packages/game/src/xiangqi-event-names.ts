@@ -75,7 +75,33 @@ export const XIANGQI_EVENT_GLOSSARY: ReadonlyArray<readonly [string, string]> = 
   ['棋类', 'Board Games'],
   ['比赛', 'Competition'],
   ['预赛A组', 'Preliminary Group A'],
+  ['预赛B组', 'Preliminary Group B'],
   ['预赛', 'Preliminary'],
+  // The Asian and world championships and multi-sport games in the dpxq
+  // archive (2026-11-27 import), whose parts fell through to pinyin
+  // ("Mingshou", "Shineiyundonghui", "Zhiliyundonghui", "Guangzhouyayunhui",
+  // "Hunhetuanti", "Beimei", "Qitianbeimeiguo", "Chengren").
+  ['室内运动会', 'Indoor Games'],
+  ['智力运动会', 'Mind Sports Games'],
+  ['智运会', 'Mind Sports Games'],
+  ['亚运会', 'Asian Games'],
+  ['广州', 'Guangzhou'],
+  ['混合团体', 'Mixed Team'],
+  ['团体', 'Team'],
+  ['决赛', 'Final'],
+  ['名手', 'Masters'],
+  ['大师', 'Masters'],
+  ['美洲', 'Americas'],
+  ['北美', 'North American'],
+  ['美国', 'US'],
+  ['奇天杯', 'Qitian Cup'],
+  ['成人组', 'Adult'],
+  ['成人', 'Adult'],
+  // The 2023 Asian Championship in Bangkok, named for Princess Sirindhorn.
+  ['诗琳通公主杯', 'Princess Sirindhorn Cup'],
+  // A run-together sponsor ("Butiaowangbinglinchengxia Cup") reads worse than
+  // no sponsor: the title drops it.
+  ['布条王兵临城下杯', ''],
   ['甲组', 'Division A'],
   ['乙组', 'Division B'],
   ['个人', 'Individual'],
@@ -122,9 +148,7 @@ export const XIANGQI_STUDY_EVENT_TERMS: ReadonlyArray<readonly [string, string]>
   ['群众比赛', 'Amateur'],
   ['等级赛', 'Rating Tournament'],
   ['选拔赛', 'Qualifier'],
-  ['决赛', 'Final'],
   ['中国', 'China'],
-  ['亚运会', 'Asian Games'],
   ['亚洲杯', 'Asian Cup'],
 ];
 
