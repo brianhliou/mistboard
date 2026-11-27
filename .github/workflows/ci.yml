@@ -140,6 +140,10 @@ jobs:
       # 40 MB net is untracked; the web build fetches it, this job never builds.
       - name: Fetch the pinned Rapfi net
         run: node apps/web/scripts/fetch-rapfi-net.mjs
+      # abjchess-worker.test.ts pins the AB-JChess net's bytes; the net is
+      # untracked (#800) and only the build fetches it. A no-op on a cache hit.
+      - name: Fetch the pinned AB-JChess net
+        run: node scripts/fetch-abjchess-browser-net.mjs
       - name: Unit tests (web, shard ${{ matrix.shard }} of 2)
         run: npm run test:unit --workspace @mistboard/web -- --shard ${{ matrix.shard }}/2
 
