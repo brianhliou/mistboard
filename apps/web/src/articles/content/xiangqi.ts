@@ -12,6 +12,7 @@ import {
   XQ_RULES_PRIMER_START_BOARD,
   XQ_RULES_PRIMER_THUMBNAIL,
 } from '../diagrams.js';
+import { xiangqiRulesDiagram } from '../../xiangqi-rules-diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 export const xiangqiArticle: Article = {
@@ -31,8 +32,8 @@ export const xiangqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
-    updatedAt: '2026-11-15',
-    updateNote: 'Added a short summary at the top.',
+    updatedAt: '2026-11-27',
+    updateNote: 'The rules are shorter, set out as lists beside the diagrams, with new boards showing a horse move and a cannon capture from the start.',
     tldr: [
       'Red moves first on a board of 9 files and 10 ranks. Generals and advisors stay in their palaces; elephants cannot cross the river.',
       'Cannons capture by jumping exactly one screen. Horses and elephants can be blocked; soldiers gain sideways movement after crossing the river.',
@@ -45,60 +46,195 @@ export const xiangqiArticle: Article = {
       {
         kind: 'paragraph',
         text:
-          'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier. Its siblings are janggi in Korea and shogi in Japan, and it shares a more distant root with chess. The Chinese Xiangqi Association [puts the number of players in China in the hundreds of millions](https://www.chinadaily.com.cn/a/201711/15/WS5a290fe2a310fcb6fafd3495.html).',
-      },
-      {
-        kind: 'paragraph',
-        text:
-          'Red and Black alternate moves, with Red first. Each side begins with 16 pieces: one general, two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. The goal is to checkmate the opposing general.',
+          'Xiangqi, also known as Chinese chess, is played by Red and Black on the points of a 9 by 10 board. Red moves first. The goal is to checkmate the enemy general.',
       },
     ],
     sections: [
-      // Optional rules-page slot, before the board: what changes for a chess
-      // player. #410 (2026-09-25): the pages that rank for "how to play chinese
-      // chess" carry a chess comparison; ours had it only in the FAQ.
       {
-        heading: 'For chess players: seven rule changes',
+        heading: 'The board and setup',
         blocks: [
           {
-            kind: 'paragraph',
-            text:
-              'If you already play chess, most of xiangqi will feel familiar. These are the seven rules that catch chess players out, each explained in full further down.',
-          },
+            kind: 'raw-svg',
+            svg: XQ_RULES_PRIMER_START_BOARD,
+          } as ArticleBlock,
           {
-            kind: 'table',
-            keyColumn: true,
-            headers: ['Rule', 'In chess', 'In xiangqi'],
-            rows: [
-              ['No legal move', 'Stalemate, a draw', 'A loss for the player who cannot move'],
-              [
-                'The two kings',
-                'May stand on the same file',
-                'The generals may never face each other on an open file',
-              ],
-              ['Checking forever', 'A draw by repetition', 'A loss for the side giving every check'],
-              [
-                'Capturing',
-                'Every piece captures the way it moves',
-                'The cannon captures only by jumping one piece',
-              ],
-              [
-                'Knight and bishop',
-                'The knight jumps and the bishop slides',
-                'The horse and elephant are stopped by a piece in their path',
-              ],
-              [
-                'The pawn and the soldier',
-                'Moves forward, captures diagonally, and promotes on the last rank',
-                'Moves and captures the same way, and never promotes',
-              ],
-              ['Castling', 'The king and a rook move together once', 'Does not exist'],
+            kind: 'list',
+            items: [
+              '**Pieces stand on points**, the crossings of the lines: 9 files and 10 ranks.',
+              "**The river splits the board in half.** Elephants never cross it; soldiers gain a sideways step once they do.",
+              "**The palace is the 3 by 3 box** on each side's back ranks, marked with diagonals. The general and advisors never leave it.",
+              '**Each side has 16 pieces:** one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.',
+              '**The back rank holds, edge to edge:** chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. The cannons stand two ranks ahead on the b and h files, and the soldiers one rank further on the a, c, e, g and i files.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'The pieces',
+        blocks: [
+          {
+            kind: 'list',
+            items: [
+              '**A piece captures by landing on an enemy piece.** No piece moves through an occupied point, except the cannon when it captures.',
+            ],
+          },
+          { kind: 'sub-heading', text: 'General' },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_GENERAL_BOARD,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**One point along a line, inside its palace.**',
             ],
           },
           {
-            kind: 'paragraph',
-            text:
-              'A soldier changes once, at the river, and never promotes. Before the river it steps one point straight ahead. Once across, it may also step one point to the left or right, and it captures on those same points, never diagonally. A soldier that reaches the last rank can only step sideways.',
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_FACING_PAIR,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**The generals may never face each other** on a file with nothing between them. A move that opens that file is illegal, so a general guards the file in front of it like a chariot.',
+            ],
+          },
+          { kind: 'sub-heading', text: 'Advisor' },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_ADVISOR_BOARD,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**One point diagonally, inside its palace.** It has only five points to stand on.',
+            ],
+          },
+          { kind: 'sub-heading', text: 'Elephant' },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_ELEPHANT_PAIR,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**Exactly two points diagonally, never across the river.** It has seven points on its own half.',
+              "**A piece on the point between blocks it.** That point is the elephant's eye.",
+            ],
+          },
+          { kind: 'sub-heading', text: 'Horse' },
+          {
+            kind: 'raw-svg',
+            svg: xiangqiRulesDiagram('horse', 'A HORSE MOVE', 'THE HORSE ON C3'),
+          },
+          {
+            kind: 'list',
+            items: [
+              '**One point along a line, then one diagonally outward.** It moves like a chess knight (the closest chess piece) but does not jump.',
+            ],
+          },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_HORSE_PAIR,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              "**A piece on the first point blocks that move.** That point is the horse's leg. From its starting point, the elephant beside it blocks the horse's way toward the centre.",
+            ],
+          },
+          { kind: 'sub-heading', text: 'Chariot' },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_CHARIOT_BOARD,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**Any distance along a line**, like a chess rook. It is the strongest piece on the board.',
+            ],
+          },
+          { kind: 'sub-heading', text: 'Cannon' },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_CANNON_PAIR,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**Moves like a chariot when it is not capturing.**',
+            ],
+          },
+          {
+            kind: 'raw-svg',
+            svg: xiangqiRulesDiagram('cannon', 'CAPTURES BY JUMPING', 'THE CANNON TAKES A HORSE'),
+          },
+          {
+            kind: 'list',
+            items: [
+              '**To capture, it jumps exactly one piece**, of either colour, and lands on the enemy piece beyond. The piece it jumps is the screen. Here the cannon jumps the black cannon and takes the horse behind it.',
+            ],
+          },
+          { kind: 'sub-heading', text: 'Soldier' },
+          {
+            kind: 'raw-svg',
+            svg: XQ_PRIMER_SOLDIER_PAIR,
+          } as ArticleBlock,
+          {
+            kind: 'list',
+            items: [
+              '**One point straight forward, never backward.** It captures the same way it moves.',
+              '**Across the river it may also step one point sideways.** On the last rank it can only step sideways.',
+              '**It never promotes.**',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Check, checkmate, and draws',
+        blocks: [
+          {
+            kind: 'list',
+            items: [
+              '**Answer every check.** A move that leaves your own general attacked is illegal.',
+              '**A general can help mate from the far end of an open file**, because the enemy general may not step onto that file.',
+            ],
+          },
+          {
+            kind: 'table',
+            wrap: true,
+            headers: ['When', 'Result'],
+            rows: [
+              ['You have no legal move and are in check', 'Checkmate: you lose.'],
+              ['You have no legal move and are not in check', 'Stalemate: you lose too.'],
+              [
+                'The same position, with the same side to move, comes a third time',
+                'Whoever checked on every move of the cycle loses. If both sides did, or neither did, it is a draw.',
+              ],
+              ['120 plies (60 moves each) pass without a capture', 'Draw.'],
+            ],
+          },
+          {
+            kind: 'note',
+            label: 'Chases and older games',
+            text: 'Tournament rules also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is a draw. Games started before the 120-ply limit keep their 60-ply limit.',
+          },
+        ],
+      },
+      {
+        heading: 'For chess players',
+        blocks: [
+          {
+            kind: 'list',
+            items: [
+              '**Stalemate loses** for the player who cannot move. It is no escape from a lost game.',
+              '**Perpetual check loses** for the side giving it, instead of drawing.',
+              '**The generals may not face each other**, so a piece standing between them may be pinned there.',
+              '**A piece between an enemy cannon and your general** is a screen: the cannon then gives check.',
+              '**Horses and elephants can be blocked.** Check the leg and the eye before you plan a move.',
+              '**Soldiers capture straight ahead, never diagonally, and never promote.**',
+              '**There is no castling and no double first step.**',
+            ],
           },
           {
             kind: 'raw-svg',
@@ -107,218 +243,15 @@ export const xiangqiArticle: Article = {
         ],
       },
       {
-        heading: 'The board',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_RULES_PRIMER_START_BOARD,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              'The **palace** is the 3 by 3 box on each player\'s back side. Generals and advisors must stay inside their own palace. The **river** divides the board in half. Elephants cannot cross it, and soldiers gain sideways movement after crossing it.',
-          },
-          { kind: 'sub-heading', text: 'Setting up' },
-          {
-            kind: 'paragraph',
-            text:
-              'Files are lettered a to i from Red\'s left and ranks numbered 1 to 10 from Red\'s side, so Red\'s back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side\'s cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.',
-          },
-        ],
-      },
-      {
-        heading: 'The pieces',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              'A piece captures by landing on an enemy-occupied point, and no piece may move through an occupied point. The cannon\'s capturing jump is the only exception. The pieces are listed below in the traditional order.',
-          },
-          {
-            kind: 'table',
-            keyColumn: true,
-            headers: ['Piece', 'Moves', 'Limits'],
-            rows: [
-              [
-                'General 帥 / 將',
-                'One point along a line',
-                'Never leaves the palace; may not face the other general on an open file',
-              ],
-              ['Advisor 仕 / 士', 'One point diagonally', 'Never leaves the palace'],
-              [
-                'Elephant 相 / 象',
-                'Two points diagonally',
-                'Cannot cross the river; blocked by a piece on the midpoint',
-              ],
-              [
-                'Horse 傌 / 馬',
-                'One point along a line, then one diagonally outward',
-                'Blocked by a piece on the first point',
-              ],
-              ['Chariot 俥 / 車', 'Any distance along a line', 'Cannot jump'],
-              [
-                'Cannon 炮 / 砲',
-                'Any distance along a line; captures by jumping exactly one piece',
-                'Needs a screen to capture',
-              ],
-              [
-                'Soldier 兵 / 卒',
-                'One point forward; one point sideways too after crossing the river',
-                'Never backward; never promotes',
-              ],
-            ],
-            caption: 'Every piece captures the way it moves, except the cannon.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'For chess players: the chariot is exactly a rook, the horse is a knight that can be blocked, and the general is a king confined to its palace. The elephant only loosely resembles a bishop, and the advisor and the cannon have no chess counterpart.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              '**General:** moves one point horizontally or vertically and can never leave its own palace. The two generals may never face each other along an open file with nothing between them: a move that would expose that line is illegal. In effect, a general guards the file in front of it like a chariot.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_GENERAL_BOARD,
-          } as ArticleBlock,
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_FACING_PAIR,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              '**Advisor:** moves one point diagonally and, like the general, stays inside the palace. Both advisors share just five possible points. Their main job is to protect the general, but they can also become a liability by blocking its escape or serving as a cannon screen.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_ADVISOR_BOARD,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              '**Elephant:** moves exactly two points diagonally and cannot cross the river, so the two elephants share only seven possible points on their own half. It does not jump: a piece on the midpoint of the diagonal, the elephant\'s eye, blocks the move.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_ELEPHANT_PAIR,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              '**Horse:** moves one point orthogonally and then one point diagonally outward, like a chess knight, but it does not jump. If the orthogonal point it steps through, the horse\'s leg, is occupied, the horse cannot move in that direction.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_HORSE_PAIR,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              '**Chariot:** moves any distance horizontally or vertically and cannot jump, exactly like a rook. It is the strongest piece on the board.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_CHARIOT_BOARD,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              '**Cannon:** moves like a chariot when it is not capturing. To capture, it jumps over exactly one piece, friend or foe, called the screen, and lands on an enemy piece beyond it.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_CANNON_PAIR,
-          } as ArticleBlock,
-          {
-            kind: 'paragraph',
-            text:
-              '**Soldier:** moves one point straight forward and never backward. After crossing the river it may also move one point sideways. It never promotes.',
-          },
-          {
-            kind: 'raw-svg',
-            svg: XQ_PRIMER_SOLDIER_PAIR,
-          } as ArticleBlock,
-        ],
-      },
-      {
-        heading: 'Check, checkmate, and endings',
-        blocks: [
-          {
-            kind: 'paragraph',
-            text:
-              'A general is in **check** when an enemy piece attacks it. Every move must leave your own general safe, so a player in check must move the general, capture the attacker, or block the attack. If no legal answer exists, it is checkmate and the checked player loses.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'A player with no legal move also loses, even when the general is not in check. In Western chess that position is a stalemate draw; in xiangqi it is a win for the player who made the last move.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.',
-          },
-          { kind: 'sub-heading', text: 'Repetition' },
-          // Matches the kernel (xiangqiPerpetualCheckLoser): one-sided perpetual
-          // check loses, mutual or check-free repetition draws, chase is not
-          // judged. The earlier text said only "two automatic draw rules", which
-          // was wrong once perpetual check started losing.
-          {
-            kind: 'paragraph',
-            text:
-              'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.',
-          },
-          {
-            kind: 'paragraph',
-            text:
-              'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. New games are also drawn after 120 consecutive plies without a capture, or 60 moves by each player. Games started before this correction keep their original 60-ply limit.',
-          },
-        ],
-      },
-      // Optional rules-page slot, after the endings.
-      {
-        heading: 'Mistakes chess players make',
-        blocks: [
-          {
-            kind: 'table',
-            headers: ['Habit from chess', 'What happens in xiangqi'],
-            rows: [
-              [
-                'Moving a piece off the file between the two generals',
-                'The move is illegal: it would leave the generals facing each other',
-              ],
-              ['Heading for stalemate to save a lost game', 'Stalemate loses, so the escape is a defeat'],
-              [
-                'Checking again and again to force a draw',
-                'Perpetual check loses for the side giving it',
-              ],
-              [
-                'Putting a piece between an enemy cannon and your general',
-                'The move is illegal: with exactly one piece between them, the cannon attacks your general',
-              ],
-              [
-                'Moving a horse or elephant without checking its path',
-                "A piece on the horse's leg or the elephant's eye blocks the move",
-              ],
-            ],
-          },
-        ],
-      },
-      {
         heading: 'Reading xiangqi moves',
         blocks: [
           {
-            kind: 'paragraph',
-            text:
-              'Xiangqi moves are written three ways. Mistboard shows algebraic notation by default outside Chinese: the central cannon is **Che3**, the cannon on the h file moving to e3. WXF notation numbers files from each player\'s right and writes the same move **C2.5**: cannon on file 2 moves sideways to file 5. Chinese notation reads the same way in characters: **炮二平五**, cannon two traverses to five. The move list setting switches between them.',
+            kind: 'list',
+            items: [
+              '**Algebraic, the default here outside Chinese:** files a to i from Red\'s left, ranks 1 to 10 from Red\'s side. The central cannon opening is **Che3**.',
+              "**WXF:** files numbered from each player's right. The same move is **C2.5**, cannon on file 2 traverses to file 5.",
+              '**Chinese notation** writes the WXF form in characters. The move list setting switches between all three.',
+            ],
           },
         ],
       },
@@ -328,7 +261,7 @@ export const xiangqiArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red\'s chariots and cannons pour through the gap and checkmate on the thirteenth move.',
+              'A trap from a manual printed in 1632. Red gives up a horse; when Black takes it, Red\'s chariots and cannons pour through the gap and mate on move 13.',
           },
           {
             kind: 'embed',
@@ -339,11 +272,10 @@ export const xiangqiArticle: Article = {
             // Width-bound at the 702px column, as the jieqi rules page's embed.
             aspect: [702, 800],
           } as ArticleBlock,
-          { kind: 'sub-heading', text: 'A first opening' },
           {
             kind: 'paragraph',
             text:
-              'The most common opening is the central cannon (中炮): Red moves a cannon to the centre file, aiming at Black\'s central soldier and the general behind it. Black\'s most common answer is the screen horses (屏风马), both horses developed toward the centre to guard that soldier. [Central Cannon vs Screen Horses](/study/4KXXmLaG) collects model games of the pairing.',
+              'For a first opening: Red\'s most common is the central cannon, aimed down the centre file, and Black\'s most common answer is the screen horses, both horses guarding the centre. [Central Cannon vs Screen Horses](/study/4KXXmLaG) collects model games.',
           },
         ],
       },
@@ -356,47 +288,42 @@ export const xiangqiArticle: Article = {
               {
                 question: 'How does each piece move in xiangqi?',
                 answer:
-                  'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.',
+                  'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is taken. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.',
               },
               {
                 question: 'How big is a xiangqi board, and how many pieces are there?',
                 answer:
-                  'The board has 9 files and 10 ranks, 90 points in all, with pieces standing on the points rather than in squares. There are 32 pieces, 16 per side: one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.',
-              },
-              {
-                question: 'What do the Chinese characters on xiangqi pieces mean?',
-                answer:
-                  'Each piece is named by one character, and Red and Black mostly write the same word two ways. The generals differ: Red\'s 帥 means commander and Black\'s 將 means general. The advisors, 仕 and 士, are both read shì and mean a scholar-official. Red\'s elephant 相 means minister and Black\'s 象 means elephant, and the two are pronounced alike. The horse (傌 / 馬), chariot (俥 / 車) and cannon (炮 / 砲) are one word each, with one component added or swapped on one side: Red\'s cannon takes the fire radical and Black\'s the stone radical. The soldiers differ again: Red\'s 兵 is a soldier and Black\'s 卒 a foot soldier.',
+                  '9 files by 10 ranks, 90 points, with pieces on the points. There are 32 pieces, 16 a side.',
               },
               {
                 question: 'What can a soldier capture?',
                 answer:
-                  'Any enemy piece on a point it could move to: the point straight ahead, and after crossing the river the points to its left and right as well. It never captures backward or diagonally, and it never promotes.',
+                  'An enemy piece on a point it could move to: straight ahead, and after the river also left and right. Never backward or diagonally.',
               },
               {
                 question: 'Can the general capture a soldier?',
                 answer:
-                  'Yes. The general captures any enemy piece on an adjacent point along a line, including a soldier, as long as it stays inside the palace and the move does not leave the two generals facing each other on an open file.',
+                  'Yes, on an adjacent point along a line, as long as it stays in the palace and the move does not leave the generals facing each other.',
               },
               {
                 question: 'What is the flying general rule?',
                 answer:
-                  'It is the rule that the two generals may never face each other on an open file with nothing between them (飞将 in Chinese). The name comes from the idea that a general facing the other could fly down the file and capture it. In practice any move that would leave the generals facing each other is illegal, so a general controls the file in front of it like a chariot.',
+                  'The two generals may never face each other on an open file. The name comes from the idea that a general could fly down the file and capture the other. Any move that would leave them facing is illegal.',
               },
               {
                 question: 'Which xiangqi pieces are worth the most?',
                 answer:
-                  'The usual rule of thumb: chariot 9, cannon 4.5, horse 4, advisor 2, elephant 2, soldier 1 before crossing the river and 2 after. The chariot is worth about two of any other piece, so a trade of a horse or cannon for a chariot is nearly always good.',
+                  'A common rule of thumb: chariot 9, cannon 4.5, horse 4, advisor 2, elephant 2, soldier 1 before the river and 2 after.',
               },
               {
                 question: 'How do you win at xiangqi?',
                 answer:
-                  'Checkmate the general, or leave your opponent with no legal move: unlike Western chess, stalemate is a loss for the player who cannot move. In practice games are decided by getting the chariots onto open files early, keeping cannons behind a screen, and using soldiers that have crossed the river as attacking pieces. The eight engine levels on this page start well below club strength, and the post-game review shows where a game turned.',
+                  'Checkmate the general, or leave your opponent with no legal move: stalemate is a loss for the player who cannot move.',
               },
               {
                 question: 'Is perpetual check allowed in xiangqi?',
                 answer:
-                  'No. A player who repeats the position by giving check on every move loses. On Mistboard the side that checked on every move of a threefold repetition loses; if both sides checked throughout, or neither did, it is a draw.',
+                  'No. If the position repeats three times and one side checked on every move of the cycle, that side loses. If both did, or neither did, it is a draw.',
               },
               {
                 question: 'When was xiangqi invented?',
@@ -406,7 +333,7 @@ export const xiangqiArticle: Article = {
               {
                 question: 'What is the difference between xiangqi and chess?',
                 answer:
-                  'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.',
+                  'Pieces stand on the points of a 9 by 10 grid. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse and elephant can be blocked, soldiers never promote, and stalemate loses.',
               },
             ],
           },
@@ -414,7 +341,7 @@ export const xiangqiArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: "Rated games need an account. Casual games, the engine ladder and friend links don't.",
+        lead: 'Play it here in English with no account: find an opponent, invite a friend, or take on eight bot levels, and every finished game gets a move-by-move review. Rated games need an account.',
         playLabel: 'Find an opponent',
         playHref: '/?play=lobby&gameSpecId=xiangqi',
         secondary: [
