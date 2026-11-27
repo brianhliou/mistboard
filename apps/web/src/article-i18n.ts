@@ -1053,8 +1053,15 @@ const ZH_HANS: Record<string, string> = {
     '不算。无棋可走的一方判负，即使将帅没有被将军。',
   'Here. Play a bot starts a game at the level you choose; Play a friend makes an invite link. No account is needed, and finished games get a move-by-move review.':
     '就在这里。“与电脑对弈”按你选的等级开局；“和朋友下”生成邀请链接。无需账号，结束的对局可以逐步复盘。',
-  'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
-    '八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
+  'Play it here in English with no account. The bots never see your face-down pieces, every finished game gets a move-by-move review, and above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
+    '在这里下揭棋无需账号。电脑永远看不到你的暗子，每盘结束的对局都有逐步复盘；八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋电脑。',
+  'About jieqi': '关于揭棋',
+  "**It began in Guangzhou in the 1980s,** by [Chinese Wikipedia's account](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B), when two brothers brought the hidden pieces of a military board game into xiangqi. It spread through Guangdong, Hong Kong and Macau.":
+    '**揭棋起源于 1980 年代的广州。** 据[中文维基百科](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B)记载，两兄弟把海陆空棋的暗子玩法带进了象棋。之后它在广东、香港和澳门流行开来。',
+  '**The first tournament with standard rules was in Hong Kong in May 2011**, with more than 60 players. The first online one followed in 2014.':
+    '**第一场统一规则的比赛于 2011 年 5 月在香港举行**，有 60 多名棋手参加。第一场网上比赛在 2014 年。',
+  "**Today it is a built-in mode in China's biggest xiangqi apps**, and it is spreading in Vietnam, where it is called Cờ úp.":
+    '**如今，中国最大的几款象棋应用都内置了揭棋模式**，它在越南也在流行，越南叫 Cờ úp。',
   'Play a bot': '与电脑对弈',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想学揭棋的玩家，无论是否下过象棋。',
@@ -8412,8 +8419,15 @@ const ZH_HANT: Record<string, string> = {
     '不算。無棋可走的一方判負，即使將帥沒有被將軍。',
   'Here. Play a bot starts a game at the level you choose; Play a friend makes an invite link. No account is needed, and finished games get a move-by-move review.':
     '就在這裡。「與電腦對弈」按你選的等級開局；「和朋友下」產生邀請連結。無需帳號，結束的對局可以逐步覆盤。',
-  'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
-    '八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
+  'Play it here in English with no account. The bots never see your face-down pieces, every finished game gets a move-by-move review, and above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
+    '在這裡下揭棋無需帳號。電腦永遠看不到你的暗子，每盤結束的對局都有逐步覆盤；八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋電腦。',
+  'About jieqi': '關於揭棋',
+  "**It began in Guangzhou in the 1980s,** by [Chinese Wikipedia's account](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B), when two brothers brought the hidden pieces of a military board game into xiangqi. It spread through Guangdong, Hong Kong and Macau.":
+    '**揭棋起源於 1980 年代的廣州。** 據[中文維基百科](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B)記載，兩兄弟把海陸空棋的暗子玩法帶進了象棋。之後它在廣東、香港和澳門流行開來。',
+  '**The first tournament with standard rules was in Hong Kong in May 2011**, with more than 60 players. The first online one followed in 2014.':
+    '**第一場統一規則的比賽於 2011 年 5 月在香港舉行**，有 60 多名棋手參加。第一場網上比賽在 2014 年。',
+  "**Today it is a built-in mode in China's biggest xiangqi apps**, and it is spreading in Vietnam, where it is called Cờ úp.":
+    '**如今，中國最大的幾款象棋應用都內建了揭棋模式**，它在越南也在流行，越南叫 Cờ úp。',
   'Play a bot': '與電腦對弈',
   'Players learning jieqi, with or without experience of xiangqi.':
     '想學揭棋的玩家，無論是否下過象棋。',

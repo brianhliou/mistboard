@@ -160,6 +160,19 @@ export const jieqiArticle: Article = {
       ],
     },
     {
+      heading: 'About jieqi',
+      blocks: [
+        {
+          kind: 'list',
+          items: [
+            "**It began in Guangzhou in the 1980s,** by [Chinese Wikipedia's account](https://zh.wikipedia.org/wiki/%E6%8F%AD%E6%A3%8B), when two brothers brought the hidden pieces of a military board game into xiangqi. It spread through Guangdong, Hong Kong and Macau.",
+            '**The first tournament with standard rules was in Hong Kong in May 2011**, with more than 60 players. The first online one followed in 2014.',
+            "**Today it is a built-in mode in China's biggest xiangqi apps**, and it is spreading in Vietnam, where it is called Cờ úp.",
+          ],
+        },
+      ],
+    },
+    {
       heading: 'A sample game',
       blocks: [
         {
@@ -232,7 +245,7 @@ export const jieqiArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.',
+      lead: 'Play it here in English with no account. The bots never see your face-down pieces, every finished game gets a move-by-move review, and above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.',
       playLabel: 'Play a bot',
       playHref: '/?play=computer&gameSpecId=jieqi',
       layout: 'single-row',
