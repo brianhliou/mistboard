@@ -467,7 +467,9 @@ describe('correspondence move deadline at commitment', () => {
     expect(lines[0]?.textContent).toBe(listCopy.en);
   });
 
-  it('updates the setup deadline when days change and hides it for live play', () => {
+  // The pace chips name the days, so the setup hint only says what a miss costs, and it
+  // sits under Time so the dialog keeps one height in both paces.
+  it('puts the short setup deadline under Time across day changes, and units for live play', () => {
     vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
     setResolvedSignedIn(true);
     openLandingSetupDialog({
@@ -477,20 +479,23 @@ describe('correspondence move deadline at commitment', () => {
       initialCorrespondenceDays: 1,
       locale: 'en',
     });
+    expect(
+      document.querySelector('.landing-setup-actions .correspondence-deadline-notice'),
+    ).toBeNull();
     const notice = document.querySelector<HTMLElement>(
-      '.landing-setup-actions .correspondence-deadline-notice',
+      '[data-setup-section="time"] .landing-setup-row-hint',
     );
-    expect(notice?.hidden).toBe(false);
-    expect(notice?.textContent).toBe(locales[0][2](1));
+    expect(notice?.textContent).toBe('Miss a move and you lose.');
     const seven = [
       ...document.querySelectorAll<HTMLButtonElement>('.landing-correspondence-presets button'),
     ].find((button) => button.textContent?.includes('7'));
+    expect(seven).toBeDefined();
     seven?.click();
-    expect(notice?.textContent).toBe(locales[0][2](7));
+    expect(notice?.textContent).toBe('Miss a move and you lose.');
     const live = document.querySelector<HTMLButtonElement>('.landing-time-mode button');
     expect(live).not.toBeNull();
     live?.click();
-    expect(notice?.hidden).toBe(true);
+    expect(notice?.textContent).toBe('minutes + seconds per move');
   });
 
   it('does not warn on your own seek or an expired challenge without an accept control', () => {

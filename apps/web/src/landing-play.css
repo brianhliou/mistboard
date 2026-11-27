@@ -816,7 +816,10 @@
    scrolling: five columns on a wide screen (the dialog widens to 600px), four in
    the 520px dialog, three or two on a phone. */
 .landing-variant-grid {
-  --landing-variant-card-height: 88px;
+  /* A tile is as tall as its marker and name: the one-line height is the
+     floor, and a row whose name wraps grows to the two-line height. */
+  --landing-variant-card-height: 72px;
+  --landing-variant-row-max: 88px;
   --landing-variant-grid-rows: 3;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -832,8 +835,9 @@
      `overflow-y` rather than `overflow` so the horizontal clip that squares off
      the cell borders is unchanged. The + 2px is the grid's own top and bottom
      border: box-sizing is border-box, so without it full rows overflow by
-     2px and the picker shows a scrollbar with nothing to scroll to. */
-  max-height: calc(var(--landing-variant-grid-rows) * var(--landing-variant-card-height) + 2px);
+     2px and the picker shows a scrollbar with nothing to scroll to. Rows
+     size to their names, so the cap counts each row at the two-line height. */
+  max-height: calc(var(--landing-variant-grid-rows) * var(--landing-variant-row-max) + 2px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -849,8 +853,8 @@
   gap: 4px;
   justify-items: center;
   min-width: 0;
-  min-height: var(--landing-variant-card-height, 88px);
-  padding: 8px 6px 7px;
+  min-height: var(--landing-variant-card-height, 72px);
+  padding: 7px 6px;
   border: 0;
   border-radius: 0;
   background: color-mix(in srgb, var(--site-panel-soft) 82%, var(--site-panel) 18%);
@@ -868,11 +872,14 @@
   display: none;
 }
 
+/* A fixed size, not a percentage width with an aspect ratio: the row was sized
+   before the percentage resolved, so a 50px marker overflowed its tile. */
 .landing-variant-card-thumb {
+  --landing-variant-thumb-size: 40px;
   display: block;
-  width: 100%;
-  max-width: 40px;
-  aspect-ratio: 1 / 1;
+  width: var(--landing-variant-thumb-size);
+  max-width: 100%;
+  height: var(--landing-variant-thumb-size);
 }
 
 .landing-variant-card-thumb svg {
@@ -894,7 +901,6 @@
 }
 
 .landing-variant-card-name {
-  min-height: 28px;
   font-size: 12px;
   font-weight: 760;
   line-height: 1.14;
@@ -1534,7 +1540,13 @@ html.landing-setup-open body {
 }
 /* Friend with real time runs six rows plus two-line opponent buttons and the
    Pace row, which on a 1280x720 window put half the Rating row under a scroll.
-   Short desktop windows get tighter rows and margins instead. */
+   Short desktop windows get tighter rows and margins instead: a little on a
+   laptop-height window, more below 760px. */
+@media (min-width: 680px) and (max-height: 860px) {
+  .landing-setup-dialog--open .landing-setup-accordion {
+    gap: 8px;
+  }
+}
 @media (min-width: 680px) and (max-height: 760px) {
   .landing-setup-dialog.landing-setup-dialog--open {
     max-height: calc(100vh - 24px);
@@ -1702,13 +1714,15 @@ html.landing-setup-open body {
 
 /* The panel's top stays put while rows below Opponent come and go (Bot row,
    Real time / Correspondence, Game type), so nothing above them jumps. The
-   offset centres the tallest (friend) panel. */
+   offset centres the tallest panel, a signed-in Friend game with its Send to
+   row (about 740px); the old 700px put that panel's bottom off a 1280x800
+   screen. */
 .landing-setup-overlay:has(.landing-setup-dialog--open) {
   place-items: start center;
-  padding-top: max(18px, calc((100vh - 700px) / 2));
+  padding-top: max(18px, calc((100vh - 740px) / 2));
 }
 
-/* Real-time units appear once under Time control; correspondence chips name days. */
+/* Under Time: the real-time units, or in correspondence what a missed move costs. */
 .landing-setup-row-hint {
   display: block;
   margin-top: 3px;
@@ -1803,9 +1817,14 @@ html.landing-setup-open body {
   font-weight: 760;
 }
 
-/* Bigger game markers: the tiles had room around a 40px mark. */
+/* Bigger game markers than the accordion's 40px; the tile floor and the
+   two-line row height follow the marker. */
+.landing-setup-dialog--open .landing-variant-grid {
+  --landing-variant-card-height: 76px;
+  --landing-variant-row-max: 92px;
+}
 .landing-setup-dialog--open .landing-variant-card-thumb {
-  max-width: 50px;
+  --landing-variant-thumb-size: 44px;
 }
 
 /* Jungle's elephants sit on the board's token: a cream rounded square with a
@@ -1852,6 +1871,33 @@ html.landing-setup-open body {
 .landing-setup-dialog .landing-setup-mode-switcher > .landing-start-option {
   min-height: 54px;
   padding-block: 8px;
+}
+/* Play: Anyone or the site's author, his photo beside his name. */
+.landing-host-opponent > .landing-start-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+.landing-host-opponent-photo {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.landing-host-opponent-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  text-align: start;
+}
+.landing-host-opponent > .landing-start-option.landing-host-opponent-capped {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 .landing-setup-header:has(.landing-setup-sheet-back:not([hidden])) {
   position: relative;
@@ -1905,6 +1951,37 @@ html.landing-setup-open body {
   text-align: start;
   font: inherit;
   cursor: pointer;
+}
+/* Desktop: the picked player sits beside Share a link | Pick a player, so
+   the Send to row stays one control tall and the dialog fits a laptop
+   screen without scrolling. The phone sheet keeps them stacked, and a
+   narrow window wraps the box to its own line rather than squeezing it. */
+.landing-setup-dialog:not(.landing-setup-sheet)
+.landing-setup-section:has(> .landing-challenge-player-row:not([hidden])) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+.landing-setup-dialog:not(.landing-setup-sheet)
+  .landing-setup-section
+  > .landing-challenge-player-row:not([hidden]) {
+  flex: 1 1 220px;
+  min-height: 44px;
+  min-width: 0;
+  padding-block: 2px;
+}
+.landing-setup-dialog:not(.landing-setup-sheet)
+  .landing-setup-section:has(> .landing-challenge-player-row:not([hidden]))
+  > .landing-start-options {
+  flex: 0 0 auto;
+  grid-template-columns: auto auto;
+}
+.landing-setup-dialog:not(.landing-setup-sheet)
+  .landing-setup-section:has(> .landing-challenge-player-row:not([hidden]))
+  .landing-start-option {
+  padding-inline: 12px;
+  white-space: nowrap;
 }
 .landing-challenge-player-option:hover,
 .landing-challenge-player-row:hover {

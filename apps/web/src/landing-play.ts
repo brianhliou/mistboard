@@ -39,6 +39,13 @@ import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-pl
 import { targetedChallengeRequestBody } from './challenge-model.js';
 import { type FirstMoveOwedFailure, renderFirstMoveOwed } from './correspondence-first-move.js';
 import {
+  fetchHostInfo,
+  HOST_NAME,
+  type HostInfo,
+  hostOfferedSpecIds,
+  startHostGame,
+} from './correspondence-host.js';
+import {
   correspondenceRatedAvailable,
   isCorrespondenceSpecFor,
   type SeekPreferredColor,
@@ -59,6 +66,11 @@ import {
   pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
 import { buildLandingChallengePlayer } from './landing-challenge-player.js';
+import {
+  buildLandingHostOpponent,
+  type LandingPlayWith,
+  landingHostRowVisible,
+} from './landing-host-opponent.js';
 import { createLandingLiveChallenge } from './landing-live-challenge.js';
 import { lastPlayedVariant, withLastPlayedFirst } from './last-played-variant.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
@@ -67,12 +79,7 @@ import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { onRuntimeEngineRostersChanged } from './runtime-engine-rosters.js';
-import {
-  buildCorrespondenceDeadlineNotice,
-  buildCorrespondenceListDeadlineNotice,
-  buildSeekAcceptAction,
-  correspondenceDeadlineText,
-} from './seek-accept.js';
+import { buildCorrespondenceListDeadlineNotice, buildSeekAcceptAction } from './seek-accept.js';
 import {
   buildSetupRowSection,
   colorOptionButton,
@@ -144,6 +151,8 @@ export type LandingPlayChoice = {
    * player last chose in the friend dialog.
    */
   initialColor?: LandingColorPreference;
+  /** Find opponent by correspondence opens on the site's author (`&with=host`). */
+  initialPlayWith?: LandingPlayWith;
 };
 export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 export type LandingGameSpecId =
@@ -1696,6 +1705,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         ...(correspondenceDays !== null
           ? { initialTimeMode: 'correspondence', initialCorrespondenceDays: correspondenceDays }
           : {}),
+        ...(params.get('with') === 'host' ? { initialPlayWith: 'host' as const } : {}),
       });
       break;
     }
@@ -1758,6 +1768,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('tc');
   params.delete('days');
   params.delete('rated');
+  params.delete('with');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -1991,6 +2002,38 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     onOpen: () => setPlayerPickerOpen(true),
     onClose: () => setPlayerPickerOpen(false),
   });
+  // Find opponent by correspondence can name the site's author instead of anyone.
+  // His offer loads the first time that pairing shows; until then the row stays hidden.
+  const hostOpponent = buildLandingHostOpponent({
+    locale,
+    ...(choice.initialPlayWith ? { initial: choice.initialPlayWith } : {}),
+    // Re-scopes the variants, pace, side and rating rows to the pick.
+    onChange: () => syncGameSpecificSections(),
+  });
+  let hostInfoRequested = false;
+  // Set once the side row exists (it is built after the pace controls first sync).
+  let syncHostSide: (withHost: boolean) => void = () => {};
+  // His game has its own side pick (lobby seeks have none) and fixed days; the
+  // days picked for an open seek come back when the player switches to Anyone.
+  let hostColor: LandingColorPreference = choice.initialColor ?? 'random';
+  let daysBeforeHost: number | null | undefined;
+  const hostOfferedSpecs = (): LandingGameSpecId[] => {
+    const info = hostOpponent.info();
+    return info
+      ? hostOfferedSpecIds(
+          info,
+          variantOptions.map((option) => option.gameSpecId),
+        )
+      : [];
+  };
+  const hostRowVisible = () =>
+    landingHostRowVisible({
+      mode: choice.mode,
+      timeMode: selectedTimeMode,
+      info: hostOpponent.info(),
+      offeredSpecIds: hostOfferedSpecs(),
+    });
+  const hostActive = () => hostRowVisible() && hostOpponent.hostPicked();
 
   // Opponent leads the setup. Each mode renders a
   // different section set, so switching closes this dialog and reopens it in
@@ -2294,6 +2337,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     correspondenceGroup.append(button);
     return { button, option };
   });
+  // The author's fixed pace stands in for the day chips while his game is picked.
+  const hostPaceChip = startOptionButton('', true);
+  hostPaceChip.hidden = true;
+  hostPaceChip.dataset.hostPace = 'true';
+  correspondenceGroup.append(hostPaceChip);
 
   // Which variants may be played by correspondence is a shared product list in
   // @mistboard/game (the server's fail-closed allowlist reads the same array).
@@ -2308,7 +2356,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const correspondenceAvailable = () =>
     (choice.mode === 'pvp' || choice.mode === 'lobby') &&
     isCorrespondenceSpecFor(selectedGameSpecId, webVariantOfferedInMenu) &&
-    (!rated || correspondenceRatedOffered()) &&
+    // A game with the author is always casual, so a Rated pick never hides it.
+    (!rated || correspondenceRatedOffered() || hostActive()) &&
     correspondenceEnabled();
   // Assigned once the rated toggle exists (it is built after the time section), so a
   // time-mode switch re-scopes Rated for the segment it lands on.
@@ -2318,19 +2367,51 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
   // one chip group for the active segment; keeps the allowed real-time presets in
   // sync (rated keeps only rated-eligible paces, and a pick that is no longer offered falls back to 3+2).
-  const deadlineNotice = buildCorrespondenceDeadlineNotice(selectedCorrespondenceDays ?? 1, locale);
   const syncTimeControls = () => {
     const corrAvailable = correspondenceAvailable();
     if (!corrAvailable) {
       selectedTimeMode = 'realtime';
       selectedCorrespondenceDays = null;
     }
+    if (choice.mode === 'lobby' && selectedTimeMode === 'correspondence' && !hostInfoRequested) {
+      hostInfoRequested = true;
+      void fetchHostInfo().then((info) => {
+        if (!closed) hostOpponent.setInfo(info);
+      });
+    }
+    // The author's game: only the variants he plays, his days, casual, a side.
+    // `.landing-setup-section` is a grid, which beats `[hidden]`; hide it inline too.
+    const showHostRow = hostRowVisible();
+    hostOpponent.section.hidden = !showHostRow;
+    hostOpponent.section.style.display = showHostRow ? '' : 'none';
+    const withHost = hostActive();
+    const hostSpecs = hostOfferedSpecs();
+    for (const tile of variantTiles) {
+      const offTheOffer = withHost && !hostSpecs.includes(tile.gameSpecId);
+      tile.el.hidden = offTheOffer;
+      // The cards are grids too, so `[hidden]` alone leaves them showing.
+      tile.el.style.display = offTheOffer ? 'none' : '';
+    }
+    if (withHost && !hostSpecs.includes(selectedGameSpecId)) {
+      selectedGameSpecId = hostSpecs[0]!;
+      // Re-runs this sync on a variant his offer allows.
+      syncGameSpecificSections();
+      return;
+    }
+    const hostInfo = hostOpponent.info();
+    if (withHost && hostInfo) {
+      if (daysBeforeHost === undefined) daysBeforeHost = selectedCorrespondenceDays;
+      selectedCorrespondenceDays = hostInfo.daysPerMove;
+      updateStartOptionButtonLabel(hostPaceChip, dayOptionLabel(hostInfo.daysPerMove, locale));
+    } else if (daysBeforeHost !== undefined) {
+      if (selectedTimeMode === 'correspondence') {
+        selectedCorrespondenceDays = daysBeforeHost ?? DEFAULT_CORRESPONDENCE_DAYS;
+      }
+      daysBeforeHost = undefined;
+    }
+    hostPaceChip.hidden = !withHost;
+    syncHostSide(withHost);
     const corrActive = selectedTimeMode === 'correspondence';
-    deadlineNotice.hidden = !corrActive;
-    deadlineNotice.textContent = correspondenceDeadlineText(
-      selectedCorrespondenceDays ?? 1,
-      locale,
-    );
 
     timeModeToggle.hidden = !corrAvailable;
     realtimeModeButton.classList.toggle('selected', !corrActive);
@@ -2344,7 +2425,13 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       .closest('[data-setup-section="time"]')
       ?.querySelector<HTMLSpanElement>('.landing-setup-row-hint');
     if (timeHint) {
-      timeHint.textContent = corrActive ? '' : t('setup.timeUnits', {}, locale);
+      // The chips name the days, so in correspondence the hint says what a miss costs. It
+      // sits under Time rather than above Start so the dialog keeps one height in both paces.
+      timeHint.textContent = t(
+        corrActive ? 'correspondence.moveDeadlineShort' : 'setup.timeUnits',
+        {},
+        locale,
+      );
     }
     challengePlayer.section.hidden = choice.mode !== 'pvp' || isGuest();
     challengePlayer.setRealtime(!corrActive);
@@ -2371,7 +2458,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       button.setAttribute('aria-checked', selected ? 'true' : 'false');
     }
     for (const { button, option } of correspondenceButtons) {
-      const selected = corrActive && selectedCorrespondenceDays === option.days;
+      button.hidden = withHost;
+      const selected = corrActive && !withHost && selectedCorrespondenceDays === option.days;
       button.classList.toggle('selected', selected);
       button.setAttribute('aria-checked', selected ? 'true' : 'false');
     }
@@ -2560,6 +2648,41 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     onUnavailable: () => challengePlayer.markUnavailable(),
     onSettled: () => syncAccountRequirement(),
   });
+  // A game with the author starts at once; a refusal stays in the dialog, and a cap
+  // turns his choice off with the reason on it.
+  const startHostFromPlay = async (info: HostInfo) => {
+    startButton.disabled = true;
+    startButton.setAttribute('aria-busy', 'true');
+    startButton.textContent = t('setup.creating', {}, locale);
+    status.replaceChildren();
+    const outcome = await startHostGame(
+      info,
+      { gameSpecId: selectedGameSpecId, side: correspondenceSeat(selectedGameSpecId, hostColor) },
+      locale,
+    );
+    startButton.removeAttribute('aria-busy');
+    switch (outcome.kind) {
+      case 'started':
+        navigateFromSetup(outcome.url);
+        return;
+      case 'sign-in':
+        requireAccount();
+        return;
+      case 'first-move-owed':
+        renderFirstMoveOwed(status, outcome.failure, locale);
+        break;
+      case 'refused':
+        status.textContent = outcome.message;
+        if (outcome.capped) {
+          hostOpponent.setInfo({
+            ...info,
+            canPlay: false,
+            reason: outcome.error === 'player_limit_reached' ? 'player_limit_reached' : 'host_full',
+          });
+        }
+    }
+    syncAccountRequirement();
+  };
   startButton.addEventListener('click', () => {
     if (needsAccount() || (challengePlayer.choosingPlayer() && !challengePlayer.canSend())) return;
     if (choice.mode === 'pve') {
@@ -2567,6 +2690,11 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       seekPrompt.hidden = true;
     }
     rememberGameStartSource('setup-dialog');
+    const hostInfo = hostActive() ? hostOpponent.info() : null;
+    if (hostInfo) {
+      void startHostFromPlay(hostInfo);
+      return;
+    }
     if (selectedCorrespondenceDays !== null) {
       // Challenge a friend posts a link challenge (the invite link the friend
       // opens); Find opponent posts an open seek to the board (color
@@ -2759,8 +2887,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     correspondenceAccountNotice.hidden = !correspondenceNeedsAccount();
     challengePlayer.section.hidden = choice.mode !== 'pvp' || isGuest();
     if (!startButton.hasAttribute('aria-busy')) {
-      startButton.textContent =
-        challengePlayer.choosingPlayer() && challengePlayer.selectedHandle()
+      startButton.textContent = hostActive()
+        ? t('correspondence.hostPlay', { name: HOST_NAME }, locale)
+        : challengePlayer.choosingPlayer() && challengePlayer.selectedHandle()
           ? t('setup.sendChallengeTo', { handle: challengePlayer.selectedHandle()! }, locale)
           : playLabel;
       startButton.disabled = challengePlayer.choosingPlayer() && !challengePlayer.canSend();
@@ -2777,8 +2906,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           mode: choice.mode === 'pvp' ? 'friend' : 'lobby',
           timePresetId: selectedPreset,
           daysPerMove: selectedCorrespondenceDays ?? undefined,
-          preferredColor,
+          preferredColor: hostActive() ? hostColor : preferredColor,
           rated,
+          ...(hostActive() ? { playWith: 'host' as const } : {}),
         },
         locale,
       ),
@@ -2791,13 +2921,17 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     // A correspondence game shows no Casual/Rated choice at all while rated
     // correspondence is held (server flag off). Inline display: the section's own
     // `display: grid` would defeat the hidden attribute.
-    const hide = selectedTimeMode === 'correspondence' && !isCorrespondenceRatedModeEnabled();
+    // A game with the author is always casual, so the row goes with it.
+    const hide =
+      (selectedTimeMode === 'correspondence' && !isCorrespondenceRatedModeEnabled()) ||
+      hostActive();
     ratingSection.section.style.display = hide ? 'none' : '';
   };
   syncRatedToggle();
 
   // Color picker shows for PvE and Challenge-a-friend. Hidden for casual/rated
   // lobby matchmaking — color is server-assigned there so the pool stays unified.
+  // Find opponent shows it only for a game with the author, on its own pick.
   const colorSection =
     choice.mode === 'pve' || choice.mode === 'pvp'
       ? buildColorPreferenceSection(
@@ -2813,7 +2947,26 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
           },
           locale,
         )
-      : null;
+      : buildColorPreferenceSection(
+          () => hostColor,
+          (value) => {
+            hostColor = value;
+            syncSetupAccordion();
+          },
+          () => selectedGameSpecId,
+          (sync) => {
+            syncColorPreferenceControls = sync;
+          },
+          locale,
+        );
+  if (choice.mode === 'lobby') {
+    syncHostSide = (withHost) => {
+      const showSide =
+        withHost && !webVariantTenantForSpecId(selectedGameSpecId)?.landing?.hideColorPicker;
+      colorSection.hidden = !showSide;
+      colorSection.style.display = showSide ? '' : 'none';
+    };
+  }
 
   syncGameSpecificSections = () => {
     const capabilities = landingGameSpecCapabilities(selectedGameSpecId);
@@ -2830,7 +2983,10 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     const hideColorPicker =
       webVariantTenantForSpecId(selectedGameSpecId)?.landing?.hideColorPicker ?? false;
     if (hideColorPicker) preferredColor = 'random';
-    if (colorSection) {
+    hostColor = hideColorPicker
+      ? 'random'
+      : coerceColorPreferenceForCapabilities(hostColor, capabilities);
+    if (choice.mode !== 'lobby') {
       // `.hidden` alone won't hide it: `.landing-setup-section` sets
       // `display: grid`, which overrides the `[hidden]` attribute's
       // `display: none`. Toggle the inline display so it actually disappears.
@@ -2885,11 +3041,12 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     );
   };
   const colorSummary = () => {
-    if (preferredColor === 'random') return t('setup.random', {}, locale);
+    const color = choice.mode === 'lobby' ? hostColor : preferredColor;
+    if (color === 'random') return t('setup.random', {}, locale);
     const capabilities = landingGameSpecCapabilities(selectedGameSpecId);
-    if (preferredColor === capabilities.firstColor)
+    if (color === capabilities.firstColor)
       return localizeSetupLabel(capabilities.firstLabel, locale);
-    if (preferredColor === capabilities.secondColor)
+    if (color === capabilities.secondColor)
       return localizeSetupLabel(capabilities.secondLabel, locale);
     return t('setup.random', {}, locale);
   };
@@ -2913,6 +3070,12 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       t('setup.sendTo', {}, locale),
       challengePlayer.section,
       challengePlayer.summary,
+    ),
+    buildSetupSection(
+      'playWith',
+      t('setup.playWith', {}, locale),
+      hostOpponent.section,
+      hostOpponent.summary,
     ),
     ...(colorSection
       ? [
@@ -2951,7 +3114,17 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ]
       : []),
   ];
-  const order = ['opponent', 'engine', 'pace', 'sendTo', 'variant', 'time', 'side', 'gameType'];
+  const order = [
+    'opponent',
+    'engine',
+    'pace',
+    'sendTo',
+    'playWith',
+    'variant',
+    'time',
+    'side',
+    'gameType',
+  ];
   setupSections.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   let openSetupSectionId = modeSwitcher ? 'opponent' : variantSelectable ? 'variant' : 'time';
   syncSetupAccordion = () => {
@@ -3003,13 +3176,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const accordion = document.createElement('div');
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
-  actions.append(
-    seekPrompt,
-    deadlineNotice,
-    startButton,
-    correspondenceAccountNotice,
-    signInButton,
-  );
+  actions.append(seekPrompt, startButton, correspondenceAccountNotice, signInButton);
   const notice = choice.notice ? document.createElement('p') : null;
   if (notice) {
     notice.className = 'landing-setup-notice';
@@ -3385,6 +3552,7 @@ type PlayDialogSetup = {
   rated?: boolean;
   preferredColor?: LandingColorPreference;
   mode?: 'friend' | 'lobby';
+  playWith?: LandingPlayWith;
 };
 
 // The deep link that reopens the setup dialog with these picks, so signing in
@@ -3398,6 +3566,7 @@ function playSetupPath(setup: PlayDialogSetup, locale: Locale): string {
   if (setup.daysPerMove !== undefined) params.set('days', String(setup.daysPerMove));
   if (setup.rated !== undefined) params.set('rated', setup.rated ? '1' : '0');
   if (setup.preferredColor) params.set('side', setup.preferredColor);
+  if (setup.playWith === 'host') params.set('with', 'host');
   return localizedHref(`/?${params.toString()}`, locale);
 }
 

@@ -107,7 +107,10 @@ describe('landing play panel', () => {
       expect(ratedNotice?.hidden).toBe(false);
       expect(ratedNotice?.textContent).toBe(t('lobby.panelRatedSignIn', {}, locale));
       expect(signIn()?.hidden).toBe(false);
-      expect(fetchSpy).not.toHaveBeenCalled();
+      // Only the author's offer loads (for the Play row); nothing starts a game.
+      expect(
+        fetchSpy.mock.calls.filter(([url]) => String(url) !== '/api/correspondence/host'),
+      ).toEqual([]);
 
       // A guest's casual friend invite opens a direct room (#1059): no wall.
       document.querySelector<HTMLButtonElement>('.landing-setup-close')?.click();
@@ -608,7 +611,10 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Find opponent');
     expect(selectedModalTimeControl()).toBe('10 + 5');
-    expect(document.querySelector('.landing-color-label')).toBeNull();
+    // Find opponent has no side row: the server assigns colors.
+    expect(document.querySelector<HTMLElement>('[data-setup-section="side"]')?.hidden ?? true).toBe(
+      true,
+    );
     clickModalButton('1 + 1');
     clickModalButton('Find opponent');
     await flushPromises();
@@ -1312,6 +1318,179 @@ describe('landing play panel', () => {
     selectModalVariant('crazyhouse-xiangqi');
 
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
+  });
+
+  describe('Find opponent by correspondence with the site author', () => {
+    const HOST_INFO = {
+      enabled: true,
+      host: { handle: 'brianhliou-dev', displayName: 'Brian' },
+      daysPerMove: 2,
+      gameSpecIds: ['xiangqi', 'jieqi'],
+      limits: { perPlayer: 2, total: 15 },
+      signedIn: true,
+      isHost: false,
+      canPlay: true,
+      reason: null,
+    };
+    const hostRow = () => document.querySelector<HTMLElement>('[data-setup-section="playWith"]');
+    const hostRowShown = () => hostRow() !== null && hostRow()!.hidden === false;
+    const hostButton = () =>
+      document.querySelector<HTMLButtonElement>('.landing-host-opponent [data-play-with="host"]');
+    const startButton = () =>
+      document.querySelector<HTMLButtonElement>('button.landing-setup-start');
+    const stubHost = (info: unknown, post?: () => Response) => {
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === '/api/correspondence/host') {
+          if (init?.method === 'POST') return post ? post() : jsonResponse({}, { status: 500 });
+          return info === null ? jsonResponse({}, { status: 404 }) : jsonResponse(info);
+        }
+        return jsonResponse({ playing: 0, online: 0 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      return fetchSpy;
+    };
+
+    beforeEach(() => {
+      vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
+      setResolvedSignedIn(true);
+    });
+
+    it('shows only for Online by correspondence with the offer on', async () => {
+      stubHost(HOST_INFO);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Find opponent');
+      await flushPromises();
+      expect(hostRowShown()).toBe(false); // live play never shows it
+      clickModalButton('Correspondence');
+      await flushPromises();
+      expect(hostRowShown()).toBe(true);
+      clickModalButton('Real time');
+      expect(hostRowShown()).toBe(false);
+
+      // A friend challenge keeps Send to and never offers the author.
+      openPlaySetup(panel, 'Challenge a friend');
+      clickModalButton('Correspondence');
+      await flushPromises();
+      expect(hostRowShown()).toBe(false);
+    });
+
+    it('stays hidden while the offer is off or the viewer is the author', async () => {
+      for (const info of [null, { ...HOST_INFO, isHost: true }]) {
+        stubHost(info);
+        const panel = buildLandingPlayPanel([]);
+        document.body.append(panel);
+        openPlaySetup(panel, 'Find opponent');
+        clickModalButton('Correspondence');
+        await flushPromises();
+        expect(hostRowShown()).toBe(false);
+        document.body.replaceChildren();
+      }
+    });
+
+    it('narrows the variants to his, fixes his days, drops Rated and starts through his endpoint', async () => {
+      setRatedModeEnabled(true, true);
+      const navigated: string[] = [];
+      setRoomNavigator((url) => {
+        navigated.push(url);
+      });
+      const fetchSpy = stubHost(HOST_INFO, () =>
+        jsonResponse({ url: '/correspondence/game_host1' }, { status: 201 }),
+      );
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Find opponent');
+      selectModalVariant('dark-chess');
+      clickModalButton('Correspondence');
+      await flushPromises();
+      clickModalButton('7 days');
+      clickModalButton('Brian H. Liou');
+
+      expect(new Set(visibleVariantPickerSpecs())).toEqual(new Set(['xiangqi', 'jieqi']));
+      expect(['xiangqi', 'jieqi']).toContain(selectedVariantSpec());
+      expect(visibleCorrespondenceOptions()).toEqual(['2 days']);
+      expect(document.querySelector<HTMLElement>('[data-setup-section="gameType"]')?.hidden).toBe(
+        true,
+      );
+      expect(document.querySelector<HTMLElement>('[data-setup-section="side"]')?.hidden).toBe(
+        false,
+      );
+      expect(startButton()?.textContent).toBe('Play Brian H. Liou');
+
+      selectModalVariant('jieqi');
+      clickModalColor('Black');
+      startButton()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+
+      const post = fetchSpy.mock.calls.find(
+        ([url, init]) =>
+          String(url) === '/api/correspondence/host' &&
+          (init as RequestInit | undefined)?.method === 'POST',
+      );
+      expect(post).toBeDefined();
+      expect(JSON.parse(String((post![1] as RequestInit).body))).toEqual({
+        gameSpecId: 'jieqi',
+        side: 'second',
+      });
+      expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/correspondence/seeks')).toBe(
+        false,
+      );
+      expect(navigated).toEqual(['/correspondence/game_host1']);
+
+      // Back to Anyone: every variant and the open seek's own days return.
+      document.body.replaceChildren(panel);
+      openPlaySetup(panel, 'Find opponent');
+      clickModalButton('Correspondence');
+      await flushPromises();
+      clickModalButton('Brian H. Liou');
+      clickModalButton('Anyone');
+      expect(visibleVariantPickerSpecs().length).toBeGreaterThan(2);
+      expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
+    });
+
+    it('turns his choice off with the reason on it once the player is at the cap', async () => {
+      stubHost({ ...HOST_INFO, canPlay: false, reason: 'player_limit_reached' });
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Find opponent');
+      clickModalButton('Correspondence');
+      await flushPromises();
+
+      expect(hostRowShown()).toBe(true);
+      expect(hostButton()?.disabled).toBe(true);
+      expect(hostButton()?.textContent).toContain('You have 2 games going');
+      expect(hostButton()?.title).toBe(
+        t('correspondence.hostPlayerLimit', { name: 'Brian H. Liou', limit: 2 }, 'en'),
+      );
+      expect(
+        document
+          .querySelector('.landing-host-opponent [data-play-with="anyone"]')
+          ?.classList.contains('selected'),
+      ).toBe(true);
+    });
+
+    it('turns his choice off when a start is refused at the cap', async () => {
+      stubHost(HOST_INFO, () => jsonResponse({ error: 'host_full', limit: 15 }, { status: 409 }));
+      setRoomNavigator(() => {});
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+
+      openPlaySetup(panel, 'Find opponent');
+      clickModalButton('Correspondence');
+      await flushPromises();
+      clickModalButton('Brian H. Liou');
+      startButton()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+
+      expect(document.querySelector('.landing-setup-status')?.textContent).toBe(
+        t('correspondence.hostFull', { name: 'Brian H. Liou', limit: 15 }, 'en'),
+      );
+      expect(hostButton()?.disabled).toBe(true);
+      expect(hostButton()?.textContent).toContain('Full, try again in a few days');
+    });
   });
 
   it('offers correspondence days for casual dark chess in both friend challenge and find opponent', () => {
@@ -2105,9 +2284,9 @@ function visibleModalTimeControls(): string[] {
 function visibleCorrespondenceOptions(): string[] {
   const group = document.querySelector<HTMLElement>('.landing-correspondence-presets');
   if (!group || group.hidden) return [];
-  return [...group.querySelectorAll<HTMLButtonElement>('button')].map(
-    (button) => button.textContent?.trim() ?? '',
-  );
+  return [...group.querySelectorAll<HTMLButtonElement>('button')]
+    .filter((button) => !button.hidden)
+    .map((button) => button.textContent?.trim() ?? '');
 }
 
 function correspondenceToggleVisible(): boolean {
