@@ -124,7 +124,7 @@ test('accepting a seek makes a casual correspondence table; east deals and owes 
     assert.equal(room.seatTokens.east?.userId, 'first-xmj');
     assert.equal(room.seatTokens.west?.userId, 'second-xmj');
     assert.equal(state(room).correspondence, true);
-    assert.equal(state(room).match.hand.taiTable, 2, 'production correspondence stays on table 2');
+    assert.equal(state(room).match.hand.taiTable, 3, 'a new correspondence table scores table 3');
     assert.equal(view(room, 'east').dealer, 'east');
     const deadline = tenantDurableDeadlineFor(tenant, room);
     assert.equal(deadline?.seat, 'east');
@@ -417,7 +417,7 @@ function ownOrPublic(seat: XmjSeat): RegExp {
   return new RegExp(
     [
       `^snapshot\\.state\\.hands\\.${seat}$`,
-      '^snapshot\\.state\\.legal\\.(discard|claims\\[\\]\\.fromHand)$',
+      '^snapshot\\.state\\.legal\\.(discard|declareReady|claims\\[\\]\\.fromHand)$',
       '^snapshot\\.state\\.(discards\\.(east|west)|melds\\.(east|west)\\[\\]\\.tiles)$',
       '^snapshot\\.state\\.results\\[\\]\\.score\\.shape\\.(pair|meld)$',
       '^(snapshot\\.)?events\\[\\]\\.move\\.fromHand$',
@@ -449,6 +449,9 @@ async function assertSeatSeesOnlyItsOwn(room: XmjRuntimeRoom, seat: XmjSeat, whe
     assert.deepEqual(shown.hands[seat], own, `${where}: ${seat}'s own hand`);
     for (const tile of shown.legal.discard) {
       assert.ok(own.includes(tile), `${where}: ${seat} may discard ${tile}, not in its hand`);
+    }
+    for (const tile of shown.legal.declareReady ?? []) {
+      assert.ok(own.includes(tile), `${where}: ${seat} may declare on ${tile}, not in its hand`);
     }
     for (const claim of shown.legal.claims) {
       assert.ok(

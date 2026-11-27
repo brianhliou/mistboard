@@ -252,12 +252,12 @@ export function xmjLegalClaims(
  * 鼓角齊鳴 lines. A stored game replays under the table it was played with, and
  * a setup with no stamp is table 1 (`XmjRoomSetup.taiTable`).
  *
- * Table 3 adds 聽牌 (1) with an atomic declaration and discard. It is accepted
- * only by explicit setup: new rooms remain on table 2. 雙龍搶珠 / 雙龍再戰
- * remain outside these tables.
+ * Table 3 (current) is table 2 plus 聽牌 (1): an atomic declaration and
+ * discard that locks the hand. New rooms are stamped table 3; a game stamped 2
+ * keeps table 2. 雙龍搶珠 / 雙龍再戰 remain outside these tables.
  */
 export type XmjTaiTable = 1 | 2 | 3;
-export const XMJ_TAI_TABLE: XmjTaiTable = 2;
+export const XMJ_TAI_TABLE: XmjTaiTable = 3;
 
 export type XmjTaiKey =
   | 'win'
@@ -394,7 +394,7 @@ function line(key: XmjTaiKey): XmjTaiLine {
 /**
  * The 台 count for a winning hand, on the context's table.
  *
- * Table 2 (current): 天胡, a win on either seat's first draw, is flat 6 and
+ * Tables 2 and 3: 天胡, a win on either seat's first draw, is flat 6 and
  * replaces everything else; otherwise the lines sum. Five soldiers of one
  * colour score 五兵合縱 / 五卒連橫 and not 鼓角齊鳴 too: the app's table does
  * not say, and the narrower line replacing the wider one is the usual reading.

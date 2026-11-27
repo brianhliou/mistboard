@@ -48,9 +48,9 @@ export const xiangqiMahjong32Article: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-15',
-  updatedAt: '2026-11-06',
+  updatedAt: '2026-11-26',
   updateNote:
-    'Matches at 10+5 can now be rated.',
+    'Declaring ready is in: a win after declaring scores 1 point more.',
   audience:
     'Xiangqi players who have never played mahjong, mahjong players who have never seen this game, and anyone at the Mistboard table who wants to know why a hand won.',
   intro: [
@@ -133,7 +133,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.',
+          text: 'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. When a discard leaves you one tile from a win, you can declare ready with it. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.',
         },
         {
           kind: 'paragraph',
@@ -168,7 +168,28 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game, and no declaring that you are one tile from winning.',
+          text: 'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game.',
+        },
+      ],
+    },
+    {
+      heading: 'Declaring ready',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'When a discard would leave you one tile from a win, you can declare ready as you throw it. The table offers this only while a tile that would win is still out of sight: not in your hand, a set on the table or either discard row.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The declaration is face up, and it locks your hand. On your turn you either win with the tile you drew or throw that same tile, and the only discard you can claim is one that wins. A drawn tile that does not win is thrown for you after the usual pause, or at once in a correspondence game.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'A win after declaring scores 1 point more. The price is a hand you can no longer change, while the other player knows to hold back anything that might complete it.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'In correspondence, running out of time on a declared hand does not lose the game. The drawn tile is thrown, even one that would have won.',
         },
       ],
     },
@@ -247,6 +268,7 @@ export const xiangqiMahjong32Article: Article = {
             ['Five Soldiers', '+5', 'Five Soldiers of one colour'],
             ['Self-draw', '+2', 'You drew the winning tile'],
             ['Last tile', '+1', 'Self-draw on the last wall tile'],
+            ['Declared ready', '+1', 'You declared ready before winning'],
           ],
         },
         {
@@ -314,9 +336,9 @@ export const xiangqiMahjong32Article: Article = {
                 'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.',
             },
             {
-              question: 'Why is there no kong or ready declaration?',
+              question: 'Why is there no kong?',
               answer:
-                'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.',
+                'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. Gamesofa’s table also pays 5 points for each of two hands won after a ready declaration; Mistboard leaves those two lines out.',
             },
             {
               question: 'Why does the deal always alternate?',

@@ -152,9 +152,10 @@ test('the check catches a planted bot that peeks at the opponent hand and the wa
 // The search's optimized playout kernel must keep the production rules and
 // heuristic policy: a fast simulation with different scoring is a different bot.
 test('fast heuristic playouts match the real kernel and policy in both dealer seats', () => {
+  // The playouts model table 2: they do not declare 聽牌 or lock a hand.
   for (let seed = 1; seed <= 100; seed += 1) {
     const walls = xmjMatchWalls(seed);
-    const actual = xmjPlayBotMatch(seed, [xmjBotAction, xmjBotAction]);
+    const actual = xmjPlayBotMatch(seed, [xmjBotAction, xmjBotAction], { taiTable: 2 });
     for (let i = 0; i < actual.results.length; i += 1) {
       const result = actual.results[i]!;
       const expected =

@@ -94,6 +94,26 @@ test('baseline is the byte-for-byte bot snapshot from issue #675', () => {
   }
 });
 
+test('the scoring-table option reproduces older measurements on the same seeds', () => {
+  // The stage-1 smoke in the bot-match notes (seeds 10001-10010, weight 4) was
+  // measured on table 1: 11 wins, 1 draw, 8 losses, +17 tai.
+  const summarize = (taiTable: 1 | 2 | 3, challenger = xmjDefensiveAction) =>
+    xmjSummarizeBotPairs(xmjRunBotPairs(10001, 10, challenger, baseline, undefined, { taiTable }));
+  const stage1 = summarize(1);
+  assert.deepEqual(
+    [stage1.wins, stage1.draws, stage1.losses, stage1.taiDifference],
+    [11, 1, 8, 17],
+  );
+  assert.deepEqual(xmjPlayBotMatch(10001, [baseline, baseline]).taiTable, 3);
+  // Bots that never declare score the same on tables 2 and 3.
+  const t2 = xmjPlayBotMatch(10001, [xmjDefensiveAction, baseline], { taiTable: 2 });
+  const t3 = xmjPlayBotMatch(10001, [xmjDefensiveAction, baseline], { taiTable: 3 });
+  assert.deepEqual({ ...t3, taiTable: 2 }, t2);
+  // The current bot declares on table 3, so its measurement there differs.
+  assert.notDeepEqual(summarize(3, current).taiDifference, summarize(2, current).taiDifference);
+  assert.throws(() => xmjPlayBotMatch(1, [baseline, baseline], { taiTable: 4 as 3 }), RangeError);
+});
+
 test('challenger breaks an offensive tie toward the safer discard using only its view', () => {
   const state = createXmjRoomState({ walls: xmjMatchWalls(49), firstDealer: 'east' });
   const view = xmjViewFor(state, 'east');

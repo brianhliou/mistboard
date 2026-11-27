@@ -3,6 +3,7 @@ import {
   XMJ_MATCH_HANDS,
   XMJ_TAI_TABLE,
   type XmjHandResult,
+  type XmjTaiTable,
   type XmjTile,
   xmjMatchWinner,
   xmjShuffle,
@@ -43,8 +44,18 @@ export function xmjMatchWalls(seed: number): XmjTile[][] {
   return Array.from({ length: XMJ_MATCH_HANDS }, () => xmjShuffle(random));
 }
 
+/**
+ * The 台 table a measured match scores on. Defaults to the table new rooms use
+ * (XMJ_TAI_TABLE); a measurement taken before table 3 reproduces with
+ * `{ taiTable: 2 }` on the same seeds.
+ */
+export interface XmjBotMatchOptions {
+  readonly taiTable?: XmjTaiTable;
+}
+
 export interface XmjBotMatchResult {
   readonly seed: number;
+  readonly taiTable: XmjTaiTable;
   readonly tai: readonly [number, number];
   readonly winner: 0 | 1 | null;
   /** By losing seat; self-draws are not deal-ins. */
@@ -56,9 +67,13 @@ export interface XmjBotMatchResult {
 export function xmjPlayBotMatch(
   seed: number,
   policies: readonly [XmjBotPolicy, XmjBotPolicy],
+  { taiTable = XMJ_TAI_TABLE }: XmjBotMatchOptions = {},
 ): XmjBotMatchResult {
+  if (taiTable !== 1 && taiTable !== 2 && taiTable !== 3) {
+    throw new RangeError('Tai table must be 1, 2 or 3');
+  }
   let state = createXmjRoomState(
-    { walls: xmjMatchWalls(seed), firstDealer: 'east', taiTable: XMJ_TAI_TABLE },
+    { walls: xmjMatchWalls(seed), firstDealer: 'east', taiTable },
     `xmj-bench-${seed}`,
   );
   let steps = 0;
@@ -99,6 +114,7 @@ export function xmjPlayBotMatch(
   }
   return {
     seed,
+    taiTable,
     tai: match.scores,
     winner: xmjMatchWinner(match),
     dealIns,
@@ -125,6 +141,7 @@ export function xmjRunBotPairs(
   challenger: XmjBotPolicy = xmjDefensiveAction,
   opponent: XmjBotPolicy = baseline,
   onPair?: (pair: XmjBotSeedPair) => void,
+  options: XmjBotMatchOptions = {},
 ): XmjBotSeedPair[] {
   checkSeed(firstSeed);
   if (!Number.isInteger(pairs) || pairs < 1 || firstSeed + pairs - 1 > 0xffffffff) {
@@ -133,8 +150,8 @@ export function xmjRunBotPairs(
   const out: XmjBotSeedPair[] = [];
   for (let i = 0; i < pairs; i += 1) {
     const seed = firstSeed + i;
-    const challengerEast = xmjPlayBotMatch(seed, [challenger, opponent]);
-    const challengerWest = xmjPlayBotMatch(seed, [opponent, challenger]);
+    const challengerEast = xmjPlayBotMatch(seed, [challenger, opponent], options);
+    const challengerWest = xmjPlayBotMatch(seed, [opponent, challenger], options);
     const pair: XmjBotSeedPair = {
       seed,
       challengerEast,

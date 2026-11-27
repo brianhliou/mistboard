@@ -15,6 +15,11 @@
  *
  * Deterministic: the sampler is seeded from the visible position, so the same
  * view always gets the same answer.
+ *
+ * Table 3: whether to declare 聽牌 with the chosen discard is the heuristic
+ * bot's public-outs rule (`xmjBotDeclares`); the playouts do not model the
+ * lock. A declared seat's own win counts its +1, and a locked hand leaves its
+ * non-winning draws to the room's automatic discard.
  */
 
 import {
@@ -24,7 +29,7 @@ import {
   type XmjClaim,
   type XmjTile,
 } from './xiangqi-mahjong.js';
-import { xmjBotAction } from './xiangqi-mahjong-bot.js';
+import { xmjBotAction, xmjBotDiscardAction, xmjBotIsLocked } from './xiangqi-mahjong-bot.js';
 import type { XmjAction, XmjPlayerView, XmjSeat } from './xiangqi-mahjong-room.js';
 
 const KINDS = 14;
@@ -794,7 +799,7 @@ function searchDiscard(view: XmjPlayerView, seat: XmjSeat, root: Root): XmjActio
             root.sim.meld[root.me] as Int8Array | null,
             true,
             drew && view.wallCount === 0,
-          );
+          ) + declaredBonus(view, seat);
     // A win that still loses the match is the one win worth weighing against playing on.
     const last = view.handNumber >= view.handsInMatch;
     if (!last || root.lead + tai > 0 || options.length === 0) return { action: 'self-draw' };
@@ -803,15 +808,22 @@ function searchDiscard(view: XmjPlayerView, seat: XmjSeat, root: Root): XmjActio
     if (utility(root, tai) >= (rated[best] as number)) return { action: 'self-draw' };
     return { action: 'discard', tile: XMJ_TILE_KINDS[options[best] as number] as XmjTile };
   }
-  if (options.length === 0) return null;
+  // A locked hand throws its draw by the room's automatic discard.
+  if (options.length === 0 || xmjBotIsLocked(view, seat)) return null;
   if (options.length === 1) {
-    return { action: 'discard', tile: XMJ_TILE_KINDS[options[0] as number] as XmjTile };
+    return xmjBotDiscardAction(view, seat, XMJ_TILE_KINDS[options[0] as number] as XmjTile);
   }
   const rated = rateDiscards(root, options, random);
-  return {
-    action: 'discard',
-    tile: XMJ_TILE_KINDS[options[bestIndex(rated)] as number] as XmjTile,
-  };
+  return xmjBotDiscardAction(
+    view,
+    seat,
+    XMJ_TILE_KINDS[options[bestIndex(rated)] as number] as XmjTile,
+  );
+}
+
+/** Table 3's 聽牌 line, for a win by a seat that has declared. */
+function declaredBonus(view: XmjPlayerView, seat: XmjSeat): number {
+  return xmjBotIsLocked(view, seat) ? 1 : 0;
 }
 
 function searchClaim(view: XmjPlayerView, seat: XmjSeat, root: Root): XmjAction {
@@ -872,7 +884,9 @@ function searchClaim(view: XmjPlayerView, seat: XmjSeat, root: Root): XmjAction 
   if (win) {
     const hand = (root.sim.hand[me] as Int8Array).slice();
     hand[tile] += 1;
-    const tai = scoreWin(hand, root.sim.meld[me] as Int8Array | null, false, false);
+    const tai =
+      scoreWin(hand, root.sim.meld[me] as Int8Array | null, false, false) +
+      declaredBonus(view, seat);
     if (utility(root, tai) >= bestValue) {
       return { action: 'claim', kind: win.kind, fromHand: win.fromHand };
     }

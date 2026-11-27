@@ -6951,8 +6951,8 @@ const ZH_HANS: Record<string, string> = {
     '把 32 张牌盖着洗匀。庄家拿五张，另一位玩家拿四张；其余 23 张是牌墙，双方都从这里摸牌。牌桌上会显示牌墙还剩几张。',
   'A deal from your seat: the dealer has five tiles, you have four, and 23 are left in the wall.':
     '从你的座位看发牌：庄家五张，你四张，牌墙还剩 23 张。',
-  'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.':
-    '庄家先打出一张牌，不摸牌。之后每一轮都是：从牌墙摸一张，然后宣告胡牌，或亮面打出一张。两轮之间你手上永远是四张，差一张成牌，第五张就是你在等的那张。',
+  'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. When a discard leaves you one tile from a win, you can declare ready with it. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.':
+    '庄家先打出一张牌，不摸牌。之后每一轮都是：从牌墙摸一张，然后宣告胡牌，或亮面打出一张。如果打出一张后只差一张就能胡，可以在打出时宣告听牌。两轮之间你手上永远是四张，差一张成牌，第五张就是你在等的那张。',
   'If you discard the tile you just drew, it shows shaded in your discard row, so the other player knows you did not keep the new tile. If you discard from your hand instead, they know you kept it, but not which of your tiles you threw: the table always shows the tile leaving from the middle of your hand, never from the place it really sat.':
     '如果打出的是刚摸到的牌，它在你的弃牌列会显示为暗色，对手就知道你没留下新牌。如果改打手中的牌，对手知道你留下了新牌，但不知道你打的是原本哪一张：牌桌一律显示牌从你手牌中间打出，从不显示它原本的位置。',
   'Claiming a discard': '吃碰对手的弃牌',
@@ -6966,8 +6966,8 @@ const ZH_HANS: Record<string, string> = {
     '来看一次吃牌。你手上有红车、红马、黑象和黑卒。轮到对手时，他从牌墙摸牌，打出红炮，正是你这组顺子缺的那张。',
   'The other player draws a tile and discards the red Cannon. You claim it instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.':
     '对手摸一张牌，打出红炮。你不摸牌，吃下这张。车马炮亮出，与手牌分开摆放，吃来的炮横放，然后你不摸牌直接打出卒。你留下黑象，等另一张黑象来凑成将眼。',
-  'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game, and no declaring that you are one tile from winning.':
-    '这样亮出的面子最多一组，因为一副手牌只容得下一组。这个游戏没有杠（四张相同），也没有宣告听牌。',
+  'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game.':
+    '这样亮出的面子最多一组，因为一副手牌只容得下一组。这个游戏没有杠（四张相同）。',
   'How a hand ends': '一手牌怎么结束',
   'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
     '一手牌有三种结束方式。你摸到凑成手牌的那张并宣告胡牌，这是自摸。或者对手打出那张牌，你拿来胡。或者牌墙摸完了没人胡：这手牌流局，双方都不计分，换人做庄。',
@@ -6977,7 +6977,8 @@ const ZH_HANS: Record<string, string> = {
     '可选 1+1、3+2、5+5 或 10+5。每人六手共用一个计时器，两手之间计时暂停。第一手由谁做庄，随机抽定。',
   'A match between two signed-in players can be rated at any of the four time controls, and the rating counts the whole match as one result. Matches against Misty, the computer, are unrated.':
     '两位已登录玩家的比赛在四种时限下都可以计等级分，整场比赛算作一个结果。对电脑 Misty 的比赛不计等级分。',
-  'Matches at 10+5 can now be rated.': '10+5 的比赛现在也可以计等级分。',
+  'Declaring ready is in: a win after declaring scores 1 point more.':
+    '现在可以宣告听牌：宣告后胡牌多计 1 台。',
   'Winning hands and their score': '胡牌牌型与台数',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是胡对手弃牌时的台数。',
@@ -7031,6 +7032,17 @@ const ZH_HANS: Record<string, string> = {
   'You drew the winning tile': '胡的那张是自己摸到的',
   'Last tile': '海底捞月',
   'Self-draw on the last wall tile': '摸牌墙最后一张自摸',
+  'Declared ready': '听牌',
+  'You declared ready before winning': '胡牌前宣告了听牌',
+  'Declaring ready': '宣告听牌',
+  'When a discard would leave you one tile from a win, you can declare ready as you throw it. The table offers this only while a tile that would win is still out of sight: not in your hand, a set on the table or either discard row.':
+    '如果打出一张后只差一张就能胡，可以在打出这张时宣告听牌。只有在能胡的牌还有没露面的时候才能宣告：不在你手上、不在桌上亮出的面子里，也不在双方的弃牌里。',
+  'The declaration is face up, and it locks your hand. On your turn you either win with the tile you drew or throw that same tile, and the only discard you can claim is one that wins. A drawn tile that does not win is thrown for you after the usual pause, or at once in a correspondence game.':
+    '宣告是公开的，宣告后手牌就锁定了。轮到你时，要么用摸到的牌胡，要么把这张牌打出去；对手的弃牌也只能拿来胡，不能再吃碰。摸到不能胡的牌，会在平常的停顿后自动替你打出，通讯对局则立即打出。',
+  'A win after declaring scores 1 point more. The price is a hand you can no longer change, while the other player knows to hold back anything that might complete it.':
+    '宣告听牌后胡牌多计 1 台。代价是手牌再也不能换，而对手也知道要扣住可能让你胡的牌。',
+  'In correspondence, running out of time on a declared hand does not lose the game. The drawn tile is thrown, even one that would have won.':
+    '通讯对局里，宣告听牌后超时不会输掉对局：摸到的牌会被打出，即使那张本来能胡。',
   'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.':
     '天胡是例外：不论谁胡，都计 6 台，不再加计其他项目。',
   'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.':
@@ -7058,9 +7070,9 @@ const ZH_HANS: Record<string, string> = {
   'What if a player leaves before the match is over?': '比赛还没结束就有人离开怎么办？',
   'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
     '不论比分如何，留下的一方赢得比赛。离开对局、超时和认输，都和 Mistboard 上任何对局一样结束比赛。',
-  'Why is there no kong or ready declaration?': '为什么没有杠，也不能宣告听牌？',
-  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.':
-    '线上牌桌的 32 张玩法大多不算杠，Mistboard 也不算。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。宣告听牌目前还没有。Gamesofa 的计台表里，听牌 1 台，宣告听牌后胡的双龙抢珠和再战各 5 台；在牌桌能宣告听牌之前，Mistboard 先不计这三项。',
+  'Why is there no kong?': '为什么没有杠？',
+  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. Gamesofa’s table also pays 5 points for each of two hands won after a ready declaration; Mistboard leaves those two lines out.':
+    '线上牌桌的 32 张玩法大多不算杠，Mistboard 也不算。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。Gamesofa 的计台表里，宣告听牌后胡的双龙抢珠和再战各 5 台；Mistboard 不计这两项。',
   'Why does the deal always alternate?': '为什么每手都要换庄？',
   'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.':
     '有些牌桌让胡牌的庄家连庄，并另外加台。Mistboard 则每手都换庄，庄家也不另加台，所以六手的比赛每人各做三次庄。',
@@ -8723,8 +8735,8 @@ const ZH_HANT: Record<string, string> = {
     '把 32 張牌蓋著洗勻。莊家拿五張，另一位玩家拿四張；其餘 23 張是牌牆，雙方都從這裡摸牌。牌桌上會顯示牌牆還剩幾張。',
   'A deal from your seat: the dealer has five tiles, you have four, and 23 are left in the wall.':
     '從你的座位看發牌：莊家五張，你四張，牌牆還剩 23 張。',
-  'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.':
-    '莊家先打出一張牌，不摸牌。之後每一輪都是：從牌牆摸一張，然後宣告胡牌，或亮面打出一張。兩輪之間你手上永遠是四張，差一張成牌，第五張就是你在等的那張。',
+  'The dealer starts by discarding one tile, without drawing. From then on, a turn is: draw one tile from the wall, then either declare a win or discard one tile face up. When a discard leaves you one tile from a win, you can declare ready with it. Between turns you always hold four tiles, one short of a hand, and the fifth tile is the one you are waiting for.':
+    '莊家先打出一張牌，不摸牌。之後每一輪都是：從牌牆摸一張，然後宣告胡牌，或亮面打出一張。如果打出一張後只差一張就能胡，可以在打出時宣告聽牌。兩輪之間你手上永遠是四張，差一張成牌，第五張就是你在等的那張。',
   'If you discard the tile you just drew, it shows shaded in your discard row, so the other player knows you did not keep the new tile. If you discard from your hand instead, they know you kept it, but not which of your tiles you threw: the table always shows the tile leaving from the middle of your hand, never from the place it really sat.':
     '如果打出的是剛摸到的牌，它在你的棄牌列會顯示為暗色，對手就知道你沒留下新牌。如果改打手中的牌，對手知道你留下了新牌，但不知道你打的是原本哪一張：牌桌一律顯示牌從你手牌中間打出，從不顯示它原本的位置。',
   'Claiming a discard': '吃碰對手的棄牌',
@@ -8738,8 +8750,8 @@ const ZH_HANT: Record<string, string> = {
     '來看一次吃牌。你手上有紅俥、紅傌、黑象和黑卒。輪到對手時，他從牌牆摸牌，打出紅炮，正是你這組順子缺的那張。',
   'The other player draws a tile and discards the red Cannon. You claim it instead of drawing. Chariot, Horse and Cannon go face up, set apart from your hand, with the claimed Cannon turned sideways, and you discard the Soldier without drawing. You keep the black Elephant and wait for the other one to make the pair.':
     '對手摸一張牌，打出紅炮。你不摸牌，吃下這張。俥傌炮亮出，與手牌分開擺放，吃來的炮橫放，然後你不摸牌直接打出卒。你留下黑象，等另一張黑象來湊成將眼。',
-  'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game, and no declaring that you are one tile from winning.':
-    '這樣亮出的面子最多一組，因為一副手牌只容得下一組。這個遊戲沒有槓（四張相同），也沒有宣告聽牌。',
+  'You can lay down only one set this way, since a hand has room for one. There is no kong (four of a kind) in this game.':
+    '這樣亮出的面子最多一組，因為一副手牌只容得下一組。這個遊戲沒有槓（四張相同）。',
   'How a hand ends': '一手牌怎麼結束',
   'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
     '一手牌有三種結束方式。你摸到湊成手牌的那張並宣告胡牌，這是自摸。或者對手打出那張牌，你拿來胡。或者牌牆摸完了沒人胡：這手牌流局，雙方都不計分，換人做莊。',
@@ -8749,7 +8761,8 @@ const ZH_HANT: Record<string, string> = {
     '可選 1+1、3+2、5+5 或 10+5。每人六手共用一個計時器，兩手之間計時暫停。第一手由誰做莊，隨機抽定。',
   'A match between two signed-in players can be rated at any of the four time controls, and the rating counts the whole match as one result. Matches against Misty, the computer, are unrated.':
     '兩位已登入玩家的比賽在四種時限下都可以計等級分，整場比賽算作一個結果。對電腦 Misty 的比賽不計等級分。',
-  'Matches at 10+5 can now be rated.': '10+5 的比賽現在也可以計等級分。',
+  'Declaring ready is in: a win after declaring scores 1 point more.':
+    '現在可以宣告聽牌：宣告後胡牌多計 1 台。',
   'Winning hands and their score': '胡牌牌型與台數',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是胡對手棄牌時的台數。',
@@ -8803,6 +8816,17 @@ const ZH_HANT: Record<string, string> = {
   'You drew the winning tile': '胡的那張是自己摸到的',
   'Last tile': '海底撈月',
   'Self-draw on the last wall tile': '摸牌牆最後一張自摸',
+  'Declared ready': '聽牌',
+  'You declared ready before winning': '胡牌前宣告了聽牌',
+  'Declaring ready': '宣告聽牌',
+  'When a discard would leave you one tile from a win, you can declare ready as you throw it. The table offers this only while a tile that would win is still out of sight: not in your hand, a set on the table or either discard row.':
+    '如果打出一張後只差一張就能胡，可以在打出這張時宣告聽牌。只有在能胡的牌還有沒露面的時候才能宣告：不在你手上、不在桌上亮出的面子裡，也不在雙方的棄牌裡。',
+  'The declaration is face up, and it locks your hand. On your turn you either win with the tile you drew or throw that same tile, and the only discard you can claim is one that wins. A drawn tile that does not win is thrown for you after the usual pause, or at once in a correspondence game.':
+    '宣告是公開的，宣告後手牌就鎖定了。輪到你時，要麼用摸到的牌胡，要麼把這張牌打出去；對手的棄牌也只能拿來胡，不能再吃碰。摸到不能胡的牌，會在平常的停頓後自動替你打出，通訊對局則立即打出。',
+  'A win after declaring scores 1 point more. The price is a hand you can no longer change, while the other player knows to hold back anything that might complete it.':
+    '宣告聽牌後胡牌多計 1 台。代價是手牌再也不能換，而對手也知道要扣住可能讓你胡的牌。',
+  'In correspondence, running out of time on a declared hand does not lose the game. The drawn tile is thrown, even one that would have won.':
+    '通訊對局裡，宣告聽牌後超時不會輸掉對局：摸到的牌會被打出，即使那張本來能胡。',
   'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.':
     '天胡是例外：不論誰胡，都計 6 台，不再加計其他項目。',
   'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.':
@@ -8830,9 +8854,9 @@ const ZH_HANT: Record<string, string> = {
   'What if a player leaves before the match is over?': '比賽還沒結束就有人離開怎麼辦？',
   'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
     '不論比分如何，留下的一方贏得比賽。離開對局、超時和認輸，都和 Mistboard 上任何對局一樣結束比賽。',
-  'Why is there no kong or ready declaration?': '為什麼沒有槓，也不能宣告聽牌？',
-  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.':
-    '線上牌桌的 32 張玩法大多不算槓，Mistboard 也不算。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。宣告聽牌目前還沒有。Gamesofa 的計台表裡，聽牌 1 台，宣告聽牌後胡的雙龍搶珠和再戰各 5 台；在牌桌能宣告聽牌之前，Mistboard 先不計這三項。',
+  'Why is there no kong?': '為什麼沒有槓？',
+  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. Gamesofa’s table also pays 5 points for each of two hands won after a ready declaration; Mistboard leaves those two lines out.':
+    '線上牌桌的 32 張玩法大多不算槓，Mistboard 也不算。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。Gamesofa 的計台表裡，宣告聽牌後胡的雙龍搶珠和再戰各 5 台；Mistboard 不計這兩項。',
   'Why does the deal always alternate?': '為什麼每手都要換莊？',
   'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.':
     '有些牌桌讓胡牌的莊家連莊，並另外加台。Mistboard 則每手都換莊，莊家也不另加台，所以六手的比賽每人各做三次莊。',

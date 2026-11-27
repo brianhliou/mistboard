@@ -7,6 +7,10 @@
  * nearest winning hand whose missing tiles are still unseen? It always wins
  * when it can, claims a set only when that brings it strictly closer, and
  * discards the tile whose loss leaves it closest, preferring more live outs.
+ *
+ * On table 3 it declares 聽牌 when that same discard leaves a ready hand with
+ * enough live winning tiles (`xmjBotDeclares`), and a declared hand leaves
+ * its non-winning draws to the room's automatic discard, as a person's does.
  */
 
 import {
@@ -18,6 +22,7 @@ import {
   type XmjClaim,
   type XmjMeld,
   type XmjTile,
+  xmjWinShape,
 } from './xiangqi-mahjong.js';
 import type { XmjAction, XmjPlayerView, XmjSeat } from './xiangqi-mahjong-room.js';
 
@@ -180,6 +185,58 @@ function chooseClaim(view: XmjPlayerView, seat: XmjSeat): XmjClaim | null {
   return pick;
 }
 
+/**
+ * Fewest live winning tiles a bot declares on. A declared hand can no longer
+ * change its wait or claim a set, so a wait on one tile stays open instead.
+ */
+export const XMJ_BOT_DECLARE_MIN_OUTS = 2;
+
+/**
+ * Copies of the tiles that would complete this ready hand that the seat has
+ * not seen: its own tiles and the public table only, never the wall or the
+ * opponent's hand.
+ */
+export function xmjLiveWinningOuts(
+  concealed: readonly XmjTile[],
+  melds: readonly XmjMeld[],
+  unseen: ReadonlyMap<XmjTile, number>,
+): number {
+  let outs = 0;
+  for (const tile of XMJ_TILE_KINDS) {
+    const left = unseen.get(tile) ?? 0;
+    if (left > 0 && xmjWinShape([...concealed, tile], melds) !== null) outs += left;
+  }
+  return outs;
+}
+
+/** True when this seat has a locked (declared) hand. */
+export function xmjBotIsLocked(view: XmjPlayerView, seat: XmjSeat): boolean {
+  return view.declared?.[seat] === true;
+}
+
+/**
+ * Whether to declare 聽牌 with this discard: the room must offer it (table 3,
+ * a wait still physically possible), and the ready hand it leaves must have at
+ * least XMJ_BOT_DECLARE_MIN_OUTS winning tiles this seat has not seen.
+ */
+export function xmjBotDeclares(view: XmjPlayerView, seat: XmjSeat, tile: XmjTile): boolean {
+  if (!view.legal.declareReady?.includes(tile)) return false;
+  const kept = [...(view.hands[seat] ?? [])];
+  const at = kept.indexOf(tile);
+  if (at < 0) return false;
+  kept.splice(at, 1);
+  return (
+    xmjLiveWinningOuts(kept, view.melds[seat], xmjUnseen(view, seat)) >= XMJ_BOT_DECLARE_MIN_OUTS
+  );
+}
+
+/** A discard, declared when `xmjBotDeclares` says so. */
+export function xmjBotDiscardAction(view: XmjPlayerView, seat: XmjSeat, tile: XmjTile): XmjAction {
+  return xmjBotDeclares(view, seat, tile)
+    ? { action: 'declare-ready', tile }
+    : { action: 'discard', tile };
+}
+
 /** The action this seat's bot takes from its view, or null if it has none. */
 export function xmjBotAction(view: XmjPlayerView, seat: XmjSeat): XmjAction | null {
   const legal = view.legal;
@@ -191,10 +248,12 @@ export function xmjBotAction(view: XmjPlayerView, seat: XmjSeat): XmjAction | nu
       ? { action: 'pass' }
       : { action: 'claim', kind: claim.kind, fromHand: claim.fromHand };
   }
+  // A locked hand throws its draw by the room's automatic discard.
+  if (xmjBotIsLocked(view, seat)) return null;
   if (legal.discard.length > 0) {
     const concealed = view.hands[seat] ?? [];
     const tile = xmjBotDiscard(concealed, view.melds[seat], legal.discard, xmjUnseen(view, seat));
-    return { action: 'discard', tile };
+    return xmjBotDiscardAction(view, seat, tile);
   }
   return null;
 }

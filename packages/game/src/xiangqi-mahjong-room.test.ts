@@ -7,7 +7,15 @@ import {
   xmjOrderedTiles,
   xmjShuffle,
 } from './xiangqi-mahjong.js';
-import { xmjBotAction, xmjBotDiscard, xmjDistance, xmjUnseen } from './xiangqi-mahjong-bot.js';
+import {
+  XMJ_BOT_DECLARE_MIN_OUTS,
+  xmjBotAction,
+  xmjBotDiscard,
+  xmjDistance,
+  xmjLiveWinningOuts,
+  xmjUnseen,
+} from './xiangqi-mahjong-bot.js';
+import { xmjSearchBotAction } from './xiangqi-mahjong-bot-search.js';
 import {
   applyXmjMove,
   createXmjRoomState,
@@ -85,10 +93,10 @@ test('a fresh setup is one full wall per match hand and passes its own validator
   assert.ok(!isXmjRoomSetup({ ...setup, firstDealer: 'north' }));
 });
 
-test('table 3 accepts an atomic declaration only by explicit setup; new rooms stay on table 2', () => {
-  assert.equal(XMJ_TAI_TABLE, 2);
-  for (const correspondence of [false, true]) {
-    assert.equal(createXmjSetup(seeded(1), { correspondence }).taiTable, 2);
+test('new live and correspondence setups are stamped table 3 and accept an atomic declaration', () => {
+  assert.equal(XMJ_TAI_TABLE, 3);
+  for (const options of [{}, { sideChosen: true }, { correspondence: true }]) {
+    assert.equal(createXmjSetup(seeded(1), options).taiTable, 3);
   }
   const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']);
   const setup = { walls: [wall], firstDealer: 'east', taiTable: 3 } as const;
@@ -237,6 +245,37 @@ test('a match scores on the 台 table its setup was stamped with; no stamp is ta
   assert.equal(totalOn({}), 1, 'an unstamped (pre-10-26) game keeps its old score');
   assert.equal(totalOn({ taiTable: 1 }), 1);
   assert.equal(totalOn({ taiTable: 2 }), 2);
+  assert.equal(totalOn({ taiTable: 3 }), 2, 'an undeclared table-3 win scores as table 2');
+});
+
+test('a stored table-2 game keeps table 2 after new rooms move to table 3', () => {
+  // East declares on 馬 and later self-draws 兵. Stamped 2 the same moves are a
+  // plain discard and win, with no 聽牌 line and no declaration in any view.
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bP', 'rP']);
+  const finish = (taiTable: 2 | 3) => {
+    let state = createXmjRoomState({ walls: [wall], firstDealer: 'east', taiTable });
+    state =
+      taiTable === 3
+        ? play(state, 'east', { action: 'declare-ready', tile: 'bH' })
+        : play(state, 'east', { action: 'discard', tile: 'bH' });
+    state = play(state, 'west', { action: 'pass' });
+    state = play(state, 'west', { action: 'discard', tile: 'bR' });
+    state = play(state, 'east', { action: 'pass' });
+    assert.equal('declared' in xmjViewFor(state, 'west'), taiTable === 3);
+    return play(state, 'east', { action: 'self-draw' }).match.results[0]?.score;
+  };
+  const old = finish(2);
+  const now = finish(3);
+  assert.ok(old && now);
+  assert.equal(
+    old.lines.some((line) => line.key === 'declared-ready'),
+    false,
+  );
+  assert.equal(now.total, old.total + 1, '聽牌 is the only difference');
+  assert.deepEqual(
+    now.lines.map((line) => line.key),
+    [...old.lines.map((line) => line.key), 'declared-ready'],
+  );
 });
 
 /** Deal the next hand of a match that is between hands. */
@@ -561,6 +600,123 @@ test('the bot claims a set only when it gets strictly closer', () => {
     kind: 'chow',
     fromHand: ['bK', 'bA'],
   });
+});
+
+const BOTS = [
+  ['heuristic', xmjBotAction],
+  ['search', xmjSearchBotAction],
+] as const;
+
+test('on table 3 the bots declare a ready discard with enough live outs, and only on table 3', () => {
+  // 帥仕相兵 waits on 兵: four of five unseen from east's side.
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']);
+  for (const [name, bot] of BOTS) {
+    const view = xmjViewFor(
+      createXmjRoomState({ walls: [wall], firstDealer: 'east', taiTable: 3 }),
+      'east',
+    );
+    assert.equal(xmjLiveWinningOuts(['rK', 'rA', 'rE', 'rP'], [], xmjUnseen(view, 'east')), 4);
+    assert.deepEqual(bot(view, 'east'), { action: 'declare-ready', tile: 'bH' }, name);
+    for (const taiTable of [1, 2] as const) {
+      const legacy = xmjViewFor(
+        createXmjRoomState({ walls: [wall], firstDealer: 'east', taiTable }),
+        'east',
+      );
+      assert.equal(bot(legacy, 'east')?.action, 'discard', `${name} on table ${taiTable}`);
+    }
+  }
+  // 仕相兵兵 waits only on the single 帥: ready, offered, and not declared.
+  const thin = wallWith(['rA', 'rE', 'rP', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']);
+  const view = xmjViewFor(
+    createXmjRoomState({ walls: [thin], firstDealer: 'east', taiTable: 3 }),
+    'east',
+  );
+  assert.ok(view.legal.declareReady?.includes('bH'));
+  assert.ok(
+    xmjLiveWinningOuts(['rA', 'rE', 'rP', 'rP'], [], xmjUnseen(view, 'east')) <
+      XMJ_BOT_DECLARE_MIN_OUTS,
+  );
+  assert.deepEqual(xmjBotAction(view, 'east'), { action: 'discard', tile: 'bH' });
+});
+
+test('a declared bot takes its win first and leaves a non-winning draw to the automatic discard', () => {
+  const lockedOn = (draw: XmjTile) => {
+    const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bP', draw]);
+    let state = createXmjRoomState({ walls: [wall], firstDealer: 'east', taiTable: 3 });
+    state = play(state, 'east', { action: 'declare-ready', tile: 'bH' });
+    state = play(state, 'west', { action: 'pass' });
+    state = play(state, 'west', { action: 'discard', tile: 'bR' });
+    return play(state, 'east', { action: 'pass' });
+  };
+  for (const [name, bot] of BOTS) {
+    const winning = lockedOn('rP');
+    assert.deepEqual(bot(xmjViewFor(winning, 'east'), 'east'), { action: 'self-draw' }, name);
+    const blank = lockedOn('rA');
+    assert.equal(bot(xmjViewFor(blank, 'east'), 'east'), null, name);
+    const pending = xmjPendingAction(blank);
+    assert.ok(pending && xmjIsLegalMove(blank, pending.move));
+  }
+  // West throws the 兵 a declared east waits on: east may only win, and does.
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'rP'], ['bR']);
+  let state = createXmjRoomState({ walls: [wall], firstDealer: 'east', taiTable: 3 });
+  state = play(state, 'east', { action: 'declare-ready', tile: 'bH' });
+  state = play(state, 'west', { action: 'pass' });
+  state = play(state, 'west', { action: 'discard', tile: 'rP' });
+  const view = xmjViewFor(state, 'east');
+  assert.deepEqual(
+    view.legal.claims.map((claim) => claim.kind),
+    ['win'],
+  );
+  for (const [name, bot] of BOTS) {
+    assert.deepEqual(bot(view, 'east'), { action: 'claim', kind: 'win', fromHand: [] }, name);
+  }
+});
+
+test('the declare decision reads only the seat’s view: swapping two hidden tiles changes nothing', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bC', 'rP']);
+  const start = createXmjRoomState({ walls: [wall], firstDealer: 'east', taiTable: 3 });
+  const { hand } = start.match;
+  // West's concealed 車 trades places with a 兵 deep in the wall; east sees neither.
+  const at = hand.wall.lastIndexOf('rP');
+  assert.ok(at > 2);
+  const wallTiles = [...hand.wall];
+  wallTiles[at] = 'bR';
+  const west = hand.hands[1].map((tile) => (tile === 'bR' ? 'rP' : tile));
+  const swapped = {
+    ...start,
+    match: {
+      ...start.match,
+      hand: { ...hand, wall: wallTiles, hands: [hand.hands[0], west] as const },
+    },
+  } as XmjRoomState;
+  const before = xmjViewFor(start, 'east');
+  const after = xmjViewFor(swapped, 'east');
+  assert.deepEqual(after, before, 'the swap is invisible to east');
+  assert.notDeepEqual(xmjViewFor(swapped, 'west').hands.west, xmjViewFor(start, 'west').hands.west);
+  for (const [name, bot] of BOTS) {
+    assert.deepEqual(bot(after, 'east'), bot(before, 'east'), name);
+    assert.deepEqual(bot(before, 'east'), { action: 'declare-ready', tile: 'bH' }, name);
+  }
+});
+
+test('bots playing table 3 only make legal moves and some declared wins score the 聽牌 line', () => {
+  let declaredWins = 0;
+  for (let seed = 1; seed <= 40; seed += 1) {
+    let state = createXmjRoomState(createXmjSetup(seeded(seed)), `t3-${seed}`);
+    assert.equal(state.match.hand.taiTable, 3);
+    let at = 0;
+    for (let step = 0; step < 2_000 && state.status.type === 'playing'; step += 1) {
+      at += 500;
+      const next = botStep(state, at);
+      assert.ok(next, `seed ${seed}: nobody can act at step ${step}`);
+      state = next;
+    }
+    assert.equal(state.status.type, 'finished');
+    for (const result of state.match.results) {
+      if (result.score?.lines.some((line) => line.key === 'declared-ready')) declaredWins += 1;
+    }
+  }
+  assert.ok(declaredWins > 0);
 });
 
 test('two bots play 200 seeded matches to the end, each score the hands its seat won', () => {
