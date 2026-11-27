@@ -87,6 +87,16 @@ export function pieceAnimationDurationMs(opts?: { fog?: boolean }): number {
 }
 
 /**
+ * A motion tuned at the 'normal' piece speed, scaled to the player's current
+ * piece-animation pref: `baseMs` at normal, longer at slow, shorter at fast,
+ * and 0 (skip the motion) for 'none' or reduced motion. For animations that
+ * are not piece glides (tile flights) but should keep pace with them.
+ */
+export function scaledPieceAnimationMs(baseMs: number): number {
+  return Math.round((baseMs * pieceAnimationDurationMs()) / PIECE_ANIMATION_DURATION_MS.normal!);
+}
+
+/**
  * May a step-through diagram of this variant glide its pieces? Decided by the
  * variant's visibility, failing closed: only perfect information ('open') and
  * public positions with hidden identities ('hidden-identity': banqi, jieqi)

@@ -20,6 +20,7 @@ import {
   type XmjSeat,
   type XmjTile,
 } from '@mistboard/game';
+import { scaledPieceAnimationMs } from './board-anim.js';
 import { xiangqiMahjongEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
@@ -307,15 +308,22 @@ function tileSources(board: HTMLElement): TileSources {
  * Play a tile in from where it was, to the place it was just drawn at. A
  * tile that lands sideways (`turned`) leaves upright and turns in flight, so
  * it is measured where it lands and scaled by its upright width.
+ *
+ * `baseDuration` and `baseDelay` are the timings at the 'normal' piece speed;
+ * the flight keeps pace with the player's piece animation pref, and at 'none'
+ * (or reduced motion) the tile is simply placed, with no flight.
  */
-function flyIn(
+export function flyIn(
   target: Element | null,
   from: DOMRect | null,
-  duration: number,
-  delay = 0,
+  baseDuration: number,
+  baseDelay = 0,
   turned = false,
 ): void {
   if (!(target instanceof HTMLElement) || !from || typeof target.animate !== 'function') return;
+  const duration = scaledPieceAnimationMs(baseDuration);
+  if (duration <= 0) return;
+  const delay = scaledPieceAnimationMs(baseDelay);
   const to = target.getBoundingClientRect();
   if (to.width === 0) return;
   const dx = from.left + from.width / 2 - (to.left + to.width / 2);
